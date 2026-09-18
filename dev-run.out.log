@@ -1,0 +1,12 @@
+
+> eserbisyo-frontend@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.4 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.100.19:3000
+- Environments: .env.local
+✓ Ready in 1684ms
+
+ GET / 200 in 2.2s (next.js: 1131ms, proxy.ts: 318ms, application-code: 766ms)
+ GET / 200 in 288ms (next.js: 12ms, proxy.ts: 16ms, application-code: 260ms)

@@ -1,0 +1,455 @@
+export type UserRole = 'admin' | 'staff' | 'resident';
+export type UserApprovalStatus =
+  | 'pending_staff_review'
+  | 'staff_forwarded_to_admin'
+  | 'staff_rejected'
+  | 'admin_approved'
+  | 'admin_rejected';
+
+export type Locale = 'en' | 'fil';
+
+export type RequestStatus =
+  | 'pending'
+  | 'staff_reviewed'
+  | 'approved'
+  | 'processing'
+  | 'completed'
+  | 'declined'
+  | 'cancelled';
+
+export type ReportStatus = 'pending' | 'under_review' | 'resolved' | 'declined';
+
+export type CheckupAppointmentStatus = 'pending' | 'approved' | 'completed' | 'declined' | 'cancelled';
+
+export type QueueStatus = 'waiting' | 'serving' | 'completed' | 'cancelled';
+export type OcrJobStatus = 'processing' | 'completed' | 'failed';
+
+export type NotificationType = 'account' | 'request' | 'report' | 'system';
+export type NotificationPriority = 'info' | 'warning' | 'urgent';
+
+export interface User {
+  id: string;
+  fullName: string;
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  suffix?: string;
+  sex?: string;
+  civilStatus?: string;
+  citizenship?: string;
+  birthdate: string;
+  address: string;
+  addressLine?: string;
+  province?: string;
+  city?: string;
+  barangay?: string;
+  email: string;
+  phone: string;
+  idType?: string;
+  idNumber: string;
+  idFileName?: string;
+  idFilePath?: string;
+  idFileNameBack?: string;
+  idFilePathBack?: string;
+  termsAcceptedAt?: string;
+  privacyAcceptedAt?: string;
+  password: string;
+  role: UserRole;
+  isDeleted: boolean;
+  isVerified: boolean;
+  approvalStatus: UserApprovalStatus;
+  staffReviewedAt?: string;
+  staffReviewNote?: string;
+  approvalReviewedAt?: string;
+  approvalReviewNote?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Session {
+  userId: string;
+  role: UserRole;
+  locale: Locale;
+  createdAt: string;
+}
+
+export interface DocumentCatalogItem {
+  id: string;
+  category: string;
+  type: string;
+  price: number;
+  pricingNote?: string;
+}
+
+export interface DocumentRequestAttachment {
+  id: string;
+  requestId: string;
+  uploadedBy?: string;
+  fileName: string;
+  mimeType?: string;
+  fileSizeBytes?: number;
+  downloadUrl: string;
+  createdAt: string;
+}
+
+export interface DocumentRequest {
+  id: string;
+  referenceNumber: string;
+  residentId: string;
+  residentName: string;
+  typeId: string;
+  typeLabel: string;
+  selectedTypeLabel?: string;
+  category: string;
+  purpose: string;
+  amount: number;
+  status: RequestStatus;
+  createdAt: string;
+  updatedAt: string;
+  feedbackPromptedAt?: string;
+  adminDecisionReason?: string;
+  processingDeclineReason?: string;
+  processedBy?: string;
+  staffReviewNote?: string;
+  staffReviewedAt?: string;
+  attachments?: DocumentRequestAttachment[];
+}
+
+export interface DocumentTemplate {
+  id: string;
+  name: string;
+  body: string;
+  dynamicFields: string[];
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export interface GeneratedDocument {
+  id: string;
+  requestId?: string;
+  referenceNumber?: string;
+  documentType: string;
+  residentName: string;
+  dateIssued: string;
+  processedBy: string;
+  verificationStatus: 'verified' | 'pending';
+  qrPayload: string;
+  digitalSeal: boolean;
+  eSignatureName: string;
+}
+
+export interface IncidentReport {
+  id: string;
+  residentId: string;
+  residentName: string;
+  kind: string;
+  otherCategoryText?: string;
+  title: string;
+  details: string;
+  location: string;
+  dateOfIncident: string;
+  status: ReportStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Feedback {
+  id: string;
+  requestId: string;
+  residentId: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  audience: 'all' | 'resident' | 'staff';
+  startAt?: string;
+  endAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+}
+
+export type CensusOwnershipStatus = 'owned' | 'rented';
+export type ResidencyClassification =
+  | 'owner'
+  | 'permanent_resident'
+  | 'informal_settler'
+  | 'tenant_renter'
+  | 'boarder_lodger'
+  | 'temporary_resident';
+
+export interface Census {
+  residentId: string;
+  householdSize: number;
+  minorsCount: number;
+  ownershipStatus: CensusOwnershipStatus;
+  residencyClassification: ResidencyClassification;
+  yearsOfResidenceYears?: number;
+  yearsOfResidenceMonths?: number;
+  updatedAt: string;
+}
+
+export interface QueueEntry {
+  id: string;
+  residentId: string;
+  residentName: string;
+  service: string;
+  status: QueueStatus;
+  position: number;
+  createdAt: string;
+}
+
+export interface IncidentCategory {
+  id: string;
+  name: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Doctor {
+  id: string;
+  name: string;
+  specialization?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DoctorAvailabilitySlot {
+  id: string;
+  doctorName: string;
+  date: string;
+  startAt: string;
+  endAt: string;
+  capacity: number;
+  isBlocked: boolean;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CheckupAppointment {
+  id: string;
+  residentId: string;
+  residentName: string;
+  slotId: string;
+  doctorName: string;
+  date: string;
+  startAt: string;
+  endAt: string;
+  reason: string;
+  status: CheckupAppointmentStatus;
+  staffNote?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Medicine {
+  id: string;
+  name: string;
+  description: string;
+  quantity: number;
+  unit: string;
+  expiryDate?: string;
+  available: boolean;
+  isDeleted: boolean;
+  updatedAt: string;
+}
+
+export interface Equipment {
+  id: string;
+  name: string;
+  quantity: number;
+  isDeleted: boolean;
+  updatedAt: string;
+}
+
+export interface MedicineRequest {
+  id: string;
+  referenceNumber: string;
+  residentId: string;
+  residentName: string;
+  medicineId: string;
+  medicineName: string;
+  purpose: string;
+  requestedQuantity: number;
+  status: RequestStatus;
+  createdAt: string;
+  updatedAt: string;
+  adminDecisionReason?: string;
+  processingDeclineReason?: string;
+  processedBy?: string;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  priority: NotificationPriority;
+  eventKey: string;
+  entityType?: string;
+  entityId?: string;
+  actionHref?: string;
+  createdAt: string;
+  read: boolean;
+}
+
+export interface EmailLog {
+  id: string;
+  toUserId: string;
+  toEmail: string;
+  subject: string;
+  body: string;
+  createdAt: string;
+}
+
+export interface AuditEvent {
+  id: string;
+  action: string;
+  actorId: string;
+  actorRole: UserRole;
+  targetId: string;
+  context: string;
+  createdAt: string;
+}
+
+export interface OcrJob {
+  id: string;
+  residentId: string;
+  fileName: string;
+  extractedText: string;
+  requestId?: string;
+  parsedFields?: Record<string, string>;
+  templateKey?: string;
+  templateVersion?: string;
+  status: OcrJobStatus;
+  mimeType?: string;
+  fileSizeBytes?: number;
+  filePath?: string;
+  model?: string;
+  errorMessage?: string;
+  updatedAt?: string;
+  createdAt: string;
+}
+
+export type StandaloneIssuanceStatus = 'draft' | 'ocr_completed' | 'issued';
+
+export interface StandaloneOcrIssuance {
+  id: string;
+  residentId?: string;
+  status: StandaloneIssuanceStatus;
+  templateKey: string;
+  templateVersion: string;
+  ocrProgressPercent: number | null;
+  parsedFields: Record<string, string>;
+  extractedText: string;
+  model?: string;
+  errorMessage?: string;
+  sourceFileName?: string;
+  sourceFilePath?: string;
+  sourceMimeType?: string;
+  sourceFileSizeBytes?: number;
+  linkedRequestId?: string;
+  generatedDocumentId?: string;
+  issuedAt?: string;
+  updatedAt?: string;
+  createdAt: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  sender: 'resident' | 'assistant';
+  text: string;
+  createdAt: string;
+}
+
+export interface ChatSession {
+  id: string;
+  residentId: string;
+  messages: ChatMessage[];
+  updatedAt: string;
+}
+
+export type KnowledgeSourceKind =
+  | 'how_to_use'
+  | 'document_catalog'
+  | 'role_pages'
+  | 'requirements'
+  | 'chatbot_context';
+
+export interface KnowledgeChunk {
+  id: string;
+  tenantId: string;
+  sourceKind: KnowledgeSourceKind;
+  sourceKey: string;
+  title: string;
+  section: string;
+  body: string;
+  locale: 'en' | 'fil' | 'both';
+  keywords: string[];
+  priority: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DigitalId {
+  id: string;
+  residentId: string;
+  fullName: string;
+  address: string;
+  issuedAt: string;
+  validUntil: string;
+}
+
+export interface AppMeta {
+  idCounters: Record<string, number>;
+}
+
+export interface AppState {
+  users: User[];
+  session: Session | null;
+  documentRequests: DocumentRequest[];
+  documentTemplates: DocumentTemplate[];
+  generatedDocuments: GeneratedDocument[];
+  reports: IncidentReport[];
+  incidentCategories: IncidentCategory[];
+  feedback: Feedback[];
+  announcements: Announcement[];
+  censusRecords: Census[];
+  queueEntries: QueueEntry[];
+  doctorAvailabilitySlots: DoctorAvailabilitySlot[];
+  checkupAppointments: CheckupAppointment[];
+  doctors: Doctor[];
+  medicines: Medicine[];
+  equipment: Equipment[];
+  medicineRequests: MedicineRequest[];
+  notifications: Notification[];
+  emailLogs: EmailLog[];
+  auditLogs: AuditEvent[];
+  ocrJobs: OcrJob[];
+  chatSessions: ChatSession[];
+  digitalIds: DigitalId[];
+  meta: AppMeta;
+}
+
+export interface DashboardMetrics {
+  totalRequests: number;
+  pendingRequests: number;
+  approvedRequests: number;
+  completedRequests: number;
+  reportSummary: {
+    pending: number;
+    underReview: number;
+    resolved: number;
+  };
+  averageRating: number;
+}

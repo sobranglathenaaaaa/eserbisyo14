@@ -1,0 +1,133 @@
+:root {
+  --brand-700: #0f4c2d;
+  --brand-600: #1d7a52;
+  --brand-500: #2fa27f;
+  --brand-300: #9dd5bf;
+  --forest-900: #0b2f20;
+  --forest-800: #114531;
+  --mint-300: #b9e5d2;
+  --mint-200: #d9f1e7;
+  --slate-700: #2e3f4d;
+  --slate-500: #5f7483;
+  --amber-500: #b8832e;
+  --amber-100: #f5ead4;
+  --surface-0: #f7fcfa;
+  --surface-1: #ffffff;
+  --surface-2: #eff7f2;
+  --surface-hero: #0f3f2a;
+  --text-900: #0a2216;
+  --text-700: #2a4a3a;
+  --text-100: #edf8f3;
+  --border: rgba(15, 42, 26, 0.14);
+  --border-strong: rgba(15, 42, 26, 0.26);
+  --shadow-1: 0 10px 26px rgba(7, 22, 14, 0.12);
+  --shadow-2: 0 22px 50px rgba(7, 22, 14, 0.2);
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --space-2xs: 0.375rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+
+  --status-success-bg: rgba(44, 138, 95, 0.16);
+  --status-success-text: #226848;
+  --status-warning-bg: rgba(178, 128, 47, 0.18);
+  --status-warning-text: #6f4f1f;
+  --status-danger-bg: rgba(179, 58, 58, 0.18);
+  --status-danger-text: #6d2323;
+  --status-info-bg: rgba(47, 126, 162, 0.18);
+  --status-info-text: #1b5672;
+  --status-neutral-bg: rgba(50, 65, 76, 0.14);
+  --status-neutral-text: #2c3d47;
+
+  --portal-shell-bg: #0d3526;
+  --portal-shell-border: rgba(8, 31, 21, 0.6);
+  --portal-shell-text: #f2fbf6;
+  --portal-shell-muted: rgba(227, 245, 237, 0.7);
+  --portal-surface-0: #f7fcfa;
+  --portal-surface-1: #ffffff;
+  --portal-surface-2: #edf6f1;
+  --portal-surface-3: #f4faf6;
+  --portal-border-soft: rgba(12, 41, 28, 0.12);
+  --portal-border-strong: rgba(12, 41, 28, 0.24);
+  --portal-accent: #2f8f68;
+  --portal-accent-strong: #1b6145;
+  --portal-accent-soft: rgba(47, 143, 104, 0.18);
+  --portal-ink-900: #0a2216;
+  --portal-ink-700: #2a4a3a;
+  --portal-ink-500: #4a6355;
+  --portal-shadow-1: 0 12px 34px rgba(7, 22, 14, 0.14);
+  --portal-shadow-2: 0 24px 56px rgba(7, 22, 14, 0.2);
+  --portal-radius-lg: 20px;
+  --portal-radius-md: 14px;
+  --portal-radius-sm: 10px;
+  --portal-space-xs: clamp(0.5rem, 0.8vw, 0.75rem);
+  --portal-space-sm: clamp(0.75rem, 1.1vw, 1.1rem);
+  --portal-space-md: clamp(1rem, 1.8vw, 1.55rem);
+  --portal-space-lg: clamp(1.5rem, 2.6vw, 2.35rem);
+  --portal-space-xl: clamp(2.25rem, 3.4vw, 3.1rem);
+  --portal-focus-ring: 0 0 0 3px rgba(47, 143, 104, 0.35);
+
+  --resident-shell-bg: #0b2f22;
+  --resident-shell-border: rgba(11, 47, 32, 0.7);
+  --resident-shell-text: #f5fcf8;
+  --resident-shell-muted: rgba(229, 246, 238, 0.78);
+  --resident-surface-0: #f3f8f4;
+  --resident-surface-1: #ffffff;
+  --resident-surface-2: #e8f0eb;
+  --resident-surface-3: #f6faf7;
+  --resident-surface-tint: #eff5f1;
+  --resident-border-soft: rgba(12, 41, 28, 0.1);
+  --resident-border-strong: rgba(12, 41, 28, 0.22);
+  --resident-accent: #2f8f68;
+  --resident-accent-strong: #1d5f47;
+  --resident-accent-soft: rgba(47, 143, 104, 0.14);
+  --resident-accent-muted: rgba(29, 95, 71, 0.08);
+  --resident-ink-900: #0a2216;
+  --resident-ink-700: #294536;
+  --resident-ink-500: #617466;
+  --resident-ink-300: #8ba091;
+  --resident-hero-gradient:
+    radial-gradient(circle at 16% 18%, rgba(112, 190, 150, 0.24) 0%, rgba(112, 190, 150, 0) 42%),
+    radial-gradient(circle at 84% 10%, rgba(17, 69, 49, 0.22) 0%, rgba(17, 69, 49, 0) 54%),
+    linear-gradient(145deg, #0b2f22 0%, #103d2d 38%, #16503a 72%, #1c6247 100%);
+  --resident-panel-gradient:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(246, 250, 247, 0.96) 100%);
+  --resident-status-info: rgba(35, 119, 160, 0.18);
+  --resident-status-alert: rgba(171, 96, 49, 0.18);
+  --resident-status-alert-text: #7b4326;
+  --resident-shadow-1: 0 14px 34px rgba(8, 26, 17, 0.08);
+  --resident-shadow-2: 0 26px 56px rgba(8, 26, 17, 0.12);
+  --resident-shadow-3: 0 36px 80px rgba(8, 26, 17, 0.16);
+  --resident-radius-xl: 28px;
+  --resident-radius-lg: 22px;
+  --resident-radius-md: 16px;
+  --resident-radius-sm: 10px;
+  --resident-space-2xs: clamp(0.35rem, 0.5vw, 0.5rem);
+  --resident-space-xs: clamp(0.55rem, 0.8vw, 0.8rem);
+  --resident-space-sm: clamp(0.8rem, 1vw, 1.05rem);
+  --resident-space-md: clamp(1.05rem, 1.6vw, 1.55rem);
+  --resident-space-lg: clamp(1.6rem, 2.4vw, 2.4rem);
+  --resident-space-xl: clamp(2.4rem, 3.2vw, 3.2rem);
+  --resident-space-2xl: clamp(3rem, 4vw, 4.5rem);
+  --resident-focus-ring: 0 0 0 3px rgba(47, 143, 104, 0.22), 0 0 0 7px rgba(47, 143, 104, 0.08);
+  --resident-motion-fast: 180ms;
+  --resident-motion-medium: 320ms;
+  --resident-motion-slow: 520ms;
+  --resident-motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --landing-space-xs: clamp(0.5rem, 0.6vw, 0.75rem);
+  --landing-space-sm: clamp(0.75rem, 1vw, 1rem);
+  --landing-space-md: clamp(1rem, 1.8vw, 1.5rem);
+  --landing-space-lg: clamp(1.5rem, 2.8vw, 2.4rem);
+  --landing-space-xl: clamp(2.5rem, 6vw, 4rem);
+  --landing-space-2xl: clamp(3rem, 7vw, 5.5rem);
+
+  --landing-hero-gradient:
+    radial-gradient(circle at 18% 24%, rgba(157, 213, 191, 0.28) 0%, rgba(157, 213, 191, 0) 52%),
+    radial-gradient(circle at 83% 10%, rgba(46, 152, 118, 0.26) 0%, rgba(46, 152, 118, 0) 42%),
+    linear-gradient(155deg, #0b3523 0%, #145236 44%, #1d7a52 100%);
+}

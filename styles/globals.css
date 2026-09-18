@@ -1,0 +1,220 @@
+@import './design-tokens.css';
+@import 'tailwindcss';
+
+:root {
+  --background: 152 33% 97%;
+  --foreground: 149 44% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 149 44% 11%;
+  --primary: 152 61% 30%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 151 42% 94%;
+  --secondary-foreground: 149 44% 18%;
+  --muted: 150 24% 94%;
+  --muted-foreground: 148 28% 33%;
+  --accent: 156 55% 41%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 49% 52%;
+  --destructive-foreground: 0 0% 100%;
+  --border-color: 149 32% 83%;
+  --input: 149 32% 83%;
+  --ring: 156 55% 41%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.88) 0%, rgba(244, 249, 245, 0.92) 34%, rgba(232, 241, 236, 0.96) 100%);
+  color: var(--text-900);
+  font-family: var(--font-body), 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100vh;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading), 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: var(--portal-focus-ring, 0 0 0 3px rgba(47, 143, 104, 0.35));
+  outline-offset: 2px;
+}
+
+@keyframes resident-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.resident-motion {
+  animation: resident-fade-up var(--resident-motion-medium) var(--resident-motion-ease) both;
+}
+
+.resident-motion-delay-1 {
+  animation-delay: 90ms;
+}
+
+.resident-motion-delay-2 {
+  animation-delay: 180ms;
+}
+
+.resident-motion-delay-3 {
+  animation-delay: 260ms;
+}
+
+.resident-motion-delay-4 {
+  animation-delay: 340ms;
+}
+
+.portal-focusable:focus-visible,
+.resident-focusable:focus-visible {
+  outline: none;
+  box-shadow: var(--portal-focus-ring, 0 0 0 3px rgba(47, 143, 104, 0.35));
+}
+
+.resident-focusable:focus-visible {
+  box-shadow: var(--resident-focus-ring, 0 0 0 3px rgba(47, 143, 104, 0.35));
+}
+
+::selection {
+  background: rgba(47, 143, 104, 0.2);
+  color: var(--resident-ink-900);
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--resident-ink-300) 70%, transparent);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media (hover: hover) {
+  .resident-interactive-lift {
+    transition:
+      transform var(--resident-motion-fast) var(--resident-motion-ease),
+      box-shadow var(--resident-motion-fast) var(--resident-motion-ease),
+      border-color var(--resident-motion-fast) var(--resident-motion-ease),
+      background-color var(--resident-motion-fast) var(--resident-motion-ease);
+  }
+
+  .resident-interactive-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--resident-shadow-2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .resident-motion,
+  .resident-motion-delay-1,
+  .resident-motion-delay-2,
+  .resident-motion-delay-3,
+  .resident-motion-delay-4,
+  .resident-interactive-lift {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .resident-shell-layout {
+    display: grid;
+    grid-template-columns: 248px minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+  .resident-shell-sidebar {
+    display: block;
+    position: sticky;
+    top: 88px;
+    max-height: calc(100vh - 108px);
+    overflow-y: auto;
+  }
+  .resident-shell-chips {
+    display: none !important;
+  }
+  .resident-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .resident-quickactions-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .portal-shell-layout {
+    display: grid;
+    grid-template-columns: 268px minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+  .portal-shell-sidebar {
+    display: block;
+    position: sticky;
+    top: 88px;
+    max-height: calc(100vh - 108px);
+    overflow-y: auto;
+  }
+}
+
+/* Disable movement/translate/scale inside the portal sidebar to prevent visual lift on click */
+.portal-shell-sidebar,
+.portal-shell-sidebar * {
+  transition: none !important;
+  transform: none !important;
+}
+
+/* Responsive Table & Overflow Helpers */
+.table-responsive-wrapper,
+.table-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+img, video, canvas, svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Touch-friendly interactive targets for smaller screens */
+@media (max-width: 767px) {
+  button, input, select, textarea, a {
+    min-height: 38px;
+  }
+}
+
