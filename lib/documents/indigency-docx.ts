@@ -332,7 +332,7 @@ export async function renderIndigencyCertificateFromDocx(
   fields: CertificateFieldMap,
 ) {
   const templatePath = await resolveTemplatePath();
-  const templateBuffer = await fs.readFile(templatePath);
+  const templateBuffer = await fs.readFile(/*turbopackIgnore: true*/ templatePath);
   const data = toIndigencyDocxTemplateData(doc, fields);
 
   return {

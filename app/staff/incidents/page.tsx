@@ -17,7 +17,7 @@ import { useAppState } from '../../../lib/frontend-data/use-app-state';
 
 type ReportFilter = 'all' | 'pending' | 'under_review' | 'resolved';
 
-const reportFilterOptions: Array<{ value: ReportFilter; label: string }> = [
+const reportFilterOptions: Array<{ value: 'pending' | 'under_review'; label: string }> = [
 	{ value: 'pending', label: 'Pending' },
 	{ value: 'under_review', label: 'Under Review' },
 ];
@@ -95,7 +95,7 @@ export default function StaffIncidentsPage() {
 		setProcessingStatus('none');
 	};
 
-	const applyStatusUpdate = async (status: 'under_review') => {
+	const applyStatusUpdate = async (status: 'under_review' | 'resolved') => {
 		if (!selectedReport) return;
 		setProcessingStatus(status);
 		try {

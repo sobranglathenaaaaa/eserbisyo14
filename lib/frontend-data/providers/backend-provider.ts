@@ -973,14 +973,6 @@ async function createState(): Promise<AppState> {
     })),
     chatSessions: [],
     digitalIds: [],
-    doctors: ((doctorsRes.data as any[] | null) ?? []).map((item) => ({
-      id: item.id,
-      name: item.name,
-      specialization: item.specialization ?? undefined,
-      isActive: Boolean(item.is_active),
-      createdAt: item.created_at,
-      updatedAt: item.updated_at,
-    })),
     meta: {
       idCounters: ((appMetaRes.data as any[] | null)?.[0]?.id_counters ?? {}) as Record<string, number>,
     },
@@ -1886,13 +1878,6 @@ export const backendProvider: DataProvider = {
 
   async getDashboardMetrics(): Promise<DashboardMetrics> {
     return apiFetch<DashboardMetrics>('/api/v1/dashboard/summary');
-  },
-
-  async loadReports(params: { type: string; startDate?: string; endDate?: string }) {
-    return apiFetch<any[]>('/api/v1/reports', {
-      method: 'GET',
-      query: params,
-    });
   },
 
   async exportCsv(rows: Record<string, string | number | boolean | undefined>[]) {

@@ -7,7 +7,7 @@ import { FileDown, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import 'react-quill-new/dist/quill.snow.css';
 
 // Dynamically import ReactQuill to avoid SSR issues
-const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
+const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false }) as any;
 
 // ── Paper size definitions (portrait, in inches) ──────────────────────────
 export type PaperSize = 'letter' | 'legal' | 'a4';

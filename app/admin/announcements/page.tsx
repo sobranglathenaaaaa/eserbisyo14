@@ -485,7 +485,7 @@ export default function AdminAnnouncementsPage() {
               </div>
               <div className="border-t border-[color:var(--portal-border-soft)] mt-2 mb-3" />
               <div className="text-sm text-[color:var(--portal-ink-700)] mb-2">
-                {locale === 'fil' ? 'Nai-post:' : 'Posted date:'} {formatDateTime(viewing.createdAt || viewing.startAt, locale)}
+                {locale === 'fil' ? 'Nai-post:' : 'Posted date:'} {formatDateTime(viewing.createdAt || viewing.startAt || '', locale)}
               </div>
               <div className="grid gap-3">
                 <div className="rounded-lg border border-[color:var(--portal-border-soft)] bg-[color:#eef9f2] p-4">

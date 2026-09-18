@@ -4,6 +4,7 @@ out
 dist
 .env
 .env.local
+.env.example
 .env.development.local
 .env.production.local
 coverage

@@ -13,6 +13,7 @@ import type {
   OcrJob,
   QueueEntry,
   ReportStatus,
+  Reservation,
   Session,
   StandaloneOcrIssuance,
   User,
@@ -160,7 +161,7 @@ export interface DataProvider {
   updateQueueStatus(entryId: string, status: QueueEntry['status']): Promise<void>;
   cancelQueue(entryId: string): Promise<void>;
 
-  createReservation(payload: {
+  createReservation?(payload: {
     resource: Reservation['resource'];
     itemName?: string;
     quantityRequested?: number;
@@ -169,9 +170,9 @@ export interface DataProvider {
     purpose: string;
   }): Promise<Reservation>;
 
-  deleteReservation(reservationId: string): Promise<void>;
-  reviewReservation(reservationId: string, status: 'approved' | 'declined', reason?: string): Promise<void>;
-  cancelReservation(reservationId: string): Promise<void>;
+  deleteReservation?(reservationId: string): Promise<void>;
+  reviewReservation?(reservationId: string, status: 'approved' | 'declined', reason?: string): Promise<void>;
+  cancelReservation?(reservationId: string): Promise<void>;
 
   upsertDoctor(payload: {
     id?: string;

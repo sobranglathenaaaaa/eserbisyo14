@@ -13,15 +13,9 @@ import { copyText } from '@/features/resident/model/copy';
 import { ResidentEmpty, ResidentSection } from '@/features/resident/view/resident-primitives';
 import { ResidentShell } from '@/features/resident/view/resident-shell';
 import { getSupabaseBrowserClient, getSupabaseSessionSafely } from '@/lib/supabase/client';
-import type { Reservation } from '@/lib/types/models';
+import type { Equipment, Reservation } from '@/lib/types/models';
 
 const DRAFT_KEY = 'eserbisyo.draft.reservation';
-
-interface Equipment {
-  id: string;
-  name: string;
-  quantity: number;
-}
 
 type ResourceType = 'barangay_hall' | 'covered_court' | 'equipment' | 'service_vehicle';
 const RESOURCES: { id: ResourceType; label: Record<'en' | 'fil', string> }[] = [
@@ -60,7 +54,7 @@ export default function ResidentReservationsPage() {
         });
         const data = (await response.json().catch(() => null)) as { equipment?: Equipment[] } | null;
         if (!cancelled && data?.equipment) {
-          setEquipment(data.equipment.filter((e) => !e.is_deleted));
+          setEquipment(data.equipment.filter((e) => !e.isDeleted));
         }
       } catch (error) {
         console.error('Failed to load equipment:', error);
@@ -186,8 +180,9 @@ export default function ResidentReservationsPage() {
         | { success: false; code?: string; message?: string; error?: { code?: string; message?: string } }
         | null;
 
-      if (!response.ok || !result?.success) {
-        const errorMsg = result?.message || result?.error?.message || 'Failed to create reservation';
+      if (!response.ok || !result || !result.success) {
+        const errorResult = result && !result.success ? result : null;
+        const errorMsg = errorResult?.message || errorResult?.error?.message || 'Failed to create reservation';
         setFeedback({
           tone: 'error',
           text: copyText(locale, `Error: ${errorMsg}`, `Error: ${errorMsg}`),
@@ -264,7 +259,7 @@ export default function ResidentReservationsPage() {
     }
   };
 
-  const getResourceLabel = (resource: ResourceType): string => {
+  const getResourceLabel = (resource: string): string => {
     const item = RESOURCES.find((r) => r.id === resource);
     return item?.label[locale] || resource;
   };
@@ -416,7 +411,7 @@ export default function ResidentReservationsPage() {
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="text-sm font-semibold text-[color:#123726]">{getResourceLabel(res.resource)}</p>
-                            <StatusBadge status={res.status} tone={statusToneFromState(res.status)} label={getStatusLabel(res.status)} />
+                            <StatusBadge tone={statusToneFromState(res.status)}>{getStatusLabel(res.status)}</StatusBadge>
                           </div>
                           {res.itemName && <p className="mt-2 text-xs text-[color:#456453]">Item: {res.itemName}{res.quantityRequested ? ` (x${res.quantityRequested})` : ''}</p>}
                           {res.startAt && res.endAt && (
@@ -461,7 +456,7 @@ export default function ResidentReservationsPage() {
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="text-sm font-semibold text-[color:#456453]">{getResourceLabel(res.resource)}</p>
-                            <StatusBadge status={res.status} tone={statusToneFromState(res.status)} label={getStatusLabel(res.status)} />
+                            <StatusBadge tone={statusToneFromState(res.status)}>{getStatusLabel(res.status)}</StatusBadge>
                           </div>
                           {res.itemName && <p className="mt-2 text-xs text-[color:#888]">Item: {res.itemName}</p>}
                           <p className="mt-2 text-sm text-[color:#888]">{res.purpose}</p>

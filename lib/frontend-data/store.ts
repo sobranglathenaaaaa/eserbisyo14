@@ -114,7 +114,10 @@ export const createReservation = async (payload: {
   endAt: string;
   purpose: string;
 }) => {
-  return provider.createReservation(payload);
+  if (provider.createReservation) {
+    return provider.createReservation(payload);
+  }
+  throw new Error('createReservation is not supported by the current data provider');
 };
 
 export const submitDocumentRequest = async (payload: { typeId: string; purpose: string; selectedTypeLabel?: string; attachments?: File[] }) => {

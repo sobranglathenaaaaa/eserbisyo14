@@ -238,7 +238,7 @@ export async function renderBarangayCertificateFromDocx(
   fields: CertificateFieldMap,
 ) {
   const templatePath = await resolveTemplatePath();
-  const templateBuffer = await fs.readFile(templatePath);
+  const templateBuffer = await fs.readFile(/*turbopackIgnore: true*/ templatePath);
   const residentName = (fields.residentName ?? fields.name ?? fields.fullName ?? doc.residentName).trim() || doc.residentName;
   const residentAddressLine = (fields.residentAddressLine ?? fields.address ?? '').trim();
   const reasons = REASON_FIELDS.filter((reason) => hasReasonMark(fields[reason.key])).map((reason) => reason.label);

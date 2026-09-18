@@ -30,7 +30,7 @@ export async function renderConstructionPermitFromDocx(
   templatePath: string;
 }> {
   const templatePath = await resolveTemplatePath();
-  const templateBuffer = await fs.readFile(templatePath);
+  const templateBuffer = await fs.readFile(/*turbopackIgnore: true*/ templatePath);
 
   return {
     docxBuffer: templateBuffer,

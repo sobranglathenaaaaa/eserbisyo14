@@ -271,6 +271,30 @@ export interface Equipment {
   updatedAt: string;
 }
 
+export type ReservationStatus = 'pending' | 'approved' | 'declined' | 'cancelled';
+
+export interface Reservation {
+  id: string;
+  residentId: string;
+  residentName: string;
+  resource: string;
+  serviceType?: string;
+  itemName?: string;
+  quantityRequested?: number;
+  purpose?: string;
+  reason?: string;
+  notes?: string;
+  date: string;
+  startAt: string;
+  endAt: string;
+  status: ReservationStatus;
+  createdAt: string;
+  updatedAt?: string;
+  adminDecisionReason?: string;
+  processingDeclineReason?: string;
+  processedBy?: string;
+}
+
 export interface MedicineRequest {
   id: string;
   referenceNumber: string;
@@ -426,6 +450,7 @@ export interface AppState {
   announcements: Announcement[];
   censusRecords: Census[];
   queueEntries: QueueEntry[];
+  reservations: Reservation[];
   doctorAvailabilitySlots: DoctorAvailabilitySlot[];
   checkupAppointments: CheckupAppointment[];
   doctors: Doctor[];

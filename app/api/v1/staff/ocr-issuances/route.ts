@@ -103,5 +103,5 @@ export async function POST(request: NextRequest) {
     targetId: data.id,
   });
 
-  return ok(toStandaloneIssuance(data as StandaloneIssuanceInsertRow), { status: 201 });
+  return ok(toStandaloneIssuance(data as any), { status: 201 });
 }
