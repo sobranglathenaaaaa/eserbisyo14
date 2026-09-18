@@ -34,7 +34,7 @@
     "next": "^16.2.1",
     "pizzip": "^3.2.0",
     "react": "19.2.0",
-    "react-dom": "^19.2.0",
+    "react-dom": "19.2.0",
     "react-quill-new": "^3.3.4",
     "tailwind-merge": "^3.3.1",
     "uuid": "^14.0.0"
