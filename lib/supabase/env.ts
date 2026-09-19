@@ -54,14 +54,11 @@ export function getEmailVerificationEnv(env: EnvMap = process.env): {
   senderEmail: string;
   appBaseUrl: string;
 } {
-  const resendApiKey = firstNonEmpty(env, ['RESEND_API_KEY']);
-  if (!resendApiKey) {
-    throw new Error('Missing required environment variable: RESEND_API_KEY');
-  }
+  const resendApiKey = firstNonEmpty(env, ['RESEND_API_KEY', 'BREVO_API_KEY', 'SMTP_PASS', 'BREVO_SMTP_KEY']) || '';
 
-  const senderEmail = firstNonEmpty(env, ['EMAIL_SENDER', 'RESEND_FROM_EMAIL']);
+  const senderEmail = firstNonEmpty(env, ['EMAIL_SENDER', 'RESEND_FROM_EMAIL', 'BREVO_SENDER_EMAIL', 'SMTP_USER']);
   if (!senderEmail) {
-    throw new Error('Missing required environment variable: EMAIL_SENDER or RESEND_FROM_EMAIL');
+    throw new Error('Missing required environment variable: EMAIL_SENDER, BREVO_SENDER_EMAIL, or RESEND_FROM_EMAIL');
   }
 
   const appBaseUrl = firstNonEmpty(env, [

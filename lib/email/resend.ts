@@ -1,33 +1,20 @@
-import { getEmailVerificationEnv } from '@/lib/supabase/env';
+import { sendEmail, SendEmailPayload } from './sender';
 
-type ResendEmailPayload = {
-  to: string;
+export type ResendEmailPayload = {
+  to: string | string[];
   subject: string;
   html: string;
   text?: string;
+  replyTo?: string;
 };
 
+/**
+ * Legacy wrapper function to send emails.
+ * Delegates to the unified `sendEmail` helper, which automatically selects
+ * Brevo API, Brevo SMTP (Nodemailer), custom SMTP, or Resend depending on environment configuration.
+ */
 export async function sendResendEmail(payload: ResendEmailPayload): Promise<void> {
-  const env = getEmailVerificationEnv();
-
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${env.resendApiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: env.senderEmail,
-      to: [payload.to],
-      subject: payload.subject,
-      html: payload.html,
-      text: payload.text,
-    }),
-    cache: 'no-store',
-  });
-
-  if (!response.ok) {
-    const details = await response.text().catch(() => '');
-    throw new Error(`Unable to send verification email (${response.status}): ${details}`);
-  }
+  await sendEmail(payload as SendEmailPayload);
 }
+
+export { sendEmail };
