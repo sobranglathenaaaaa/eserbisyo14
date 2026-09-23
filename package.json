@@ -18,7 +18,7 @@
     "qa:smoke:env": "pwsh -File scripts/run-qa-smoke.ps1",
     "qa:e2e:env": "pwsh -File scripts/run-qa-full.ps1",
     "qa:bootstrap": "node scripts/bootstrap-qa-accounts.mjs",
-    "test:email": "tsx scripts/test-email.ts"
+    "test:email": "npx tsx scripts/test-email.ts"
   },
   "dependencies": {
     "@google/genai": "^1.48.0",
@@ -30,8 +30,10 @@
     "clsx": "^2.1.1",
     "docx": "^8.5.0",
     "docxtemplater": "^3.68.5",
+    "hostinger-mail-api-sdk": "^1.19.3",
     "html2canvas": "^1.4.1",
-    "html2pdf.js": "^0.10.1",
+    "html2pdf.js": "^0.14.0",
+    "jspdf": "^4.2.1",
     "lucide-react": "^0.547.0",
     "mammoth": "^1.12.0",
     "next": "^16.2.1",
@@ -58,5 +60,9 @@
     "tailwindcss": "^4.1.14",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "5.9.3"
+  },
+  "overrides": {
+    "jspdf": "^4.2.1",
+    "html2pdf.js": "^0.14.0"
   }
 }
