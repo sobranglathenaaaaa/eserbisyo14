@@ -1,4 +1,4 @@
-export type EmailProviderType = 'brevo-api' | 'brevo-smtp' | 'nodemailer' | 'resend' | 'auto';
+export type EmailProviderType = 'brevo-api' | 'brevo-smtp' | 'nodemailer' | 'resend' | 'sendgrid' | 'auto';
 
 export interface EmailConfig {
   provider: EmailProviderType;
@@ -11,6 +11,7 @@ export interface EmailConfig {
   smtpPass?: string;
   smtpSecure?: boolean;
   resendApiKey?: string;
+  sendgridApiKey?: string;
 }
 
 type EnvMap = NodeJS.ProcessEnv;
@@ -25,6 +26,7 @@ function getEnvValue(env: EnvMap, keys: string[]): string | undefined {
 
 export function getEmailConfig(env: EnvMap = process.env): EmailConfig {
   const rawSender = getEnvValue(env, [
+    'MAIL_FROM',
     'EMAIL_SENDER',
     'BREVO_SENDER_EMAIL',
     'RESEND_FROM_EMAIL',
@@ -33,14 +35,13 @@ export function getEmailConfig(env: EnvMap = process.env): EmailConfig {
 
   if (!rawSender) {
     throw new Error(
-      'Missing sender email configuration. Please set EMAIL_SENDER in your environment variables.'
+      'Missing sender email configuration. Please set MAIL_FROM or EMAIL_SENDER in your environment variables.'
     );
   }
 
   let cleanSenderEmail = rawSender;
-  let parsedSenderName = getEnvValue(env, ['EMAIL_SENDER_NAME']);
+  let parsedSenderName = getEnvValue(env, ['MAIL_FROM_NAME', 'EMAIL_SENDER_NAME']);
 
-  // Handle formats like: "Display Name <email@example.com>" or "Display Name<email@example.com>"
   const match = rawSender.match(/^(?:["']?([^"'<]+)["']?\s*)?<?([^>]+)>?$/);
   if (match) {
     const extractedName = match[1]?.trim();
@@ -55,6 +56,7 @@ export function getEmailConfig(env: EnvMap = process.env): EmailConfig {
 
   const senderName = parsedSenderName || 'E-Serbisyo';
 
+  const sendgridApiKey = getEnvValue(env, ['SENDGRID_API_KEY']);
   const brevoApiKey = getEnvValue(env, ['BREVO_API_KEY', 'BREVO_API_SECRET']);
   const smtpHost = getEnvValue(env, ['SMTP_HOST']) || (getEnvValue(env, ['BREVO_SMTP_KEY', 'BREVO_SMTP_PASS']) ? 'smtp-relay.brevo.com' : undefined);
   const smtpPortRaw = getEnvValue(env, ['SMTP_PORT']);
@@ -71,7 +73,9 @@ export function getEmailConfig(env: EnvMap = process.env): EmailConfig {
   let provider: EmailProviderType = requestedProvider;
 
   if (provider === 'auto') {
-    if (brevoApiKey) {
+    if (sendgridApiKey) {
+      provider = 'sendgrid';
+    } else if (brevoApiKey) {
       provider = 'brevo-api';
     } else if (smtpHost && smtpPass) {
       provider = 'brevo-smtp';
@@ -81,7 +85,7 @@ export function getEmailConfig(env: EnvMap = process.env): EmailConfig {
       provider = 'resend';
     } else {
       throw new Error(
-        'No valid email provider credentials found. Please configure BREVO_API_KEY, SMTP credentials, or RESEND_API_KEY in your .env file.'
+        'No valid email provider credentials found. Please configure SENDGRID_API_KEY, BREVO_API_KEY, SMTP credentials, or RESEND_API_KEY in your .env file.'
       );
     }
   }
@@ -90,6 +94,7 @@ export function getEmailConfig(env: EnvMap = process.env): EmailConfig {
     provider,
     senderEmail: cleanSenderEmail,
     senderName,
+    sendgridApiKey,
     brevoApiKey,
     smtpHost: smtpHost || 'smtp-relay.brevo.com',
     smtpPort,

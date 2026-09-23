@@ -4,30 +4,36 @@ import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { consumePasswordResetToken } from '@/lib/auth/password-reset';
 
 type ResetPasswordPayload = {
-  token: string;
+  token?: string;
+  email?: string;
+  otp?: string;
   newPassword: string;
 };
 
 export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as ResetPasswordPayload | null;
   const token = body?.token?.trim();
+  const email = body?.email?.trim().toLowerCase();
+  const otp = body?.otp?.trim();
   const newPassword = body?.newPassword ?? '';
 
-  if (!token || !newPassword) {
-    return fail('VALIDATION_ERROR', 'Token and new password are required', 400);
+  if ((!token && (!email || !otp)) || !newPassword) {
+    return fail('VALIDATION_ERROR', 'A valid reset token or (email and verification code) along with new password is required.', 400);
   }
 
   if (newPassword.length < 8) {
     return fail('VALIDATION_ERROR', 'Password must be at least 8 characters.', 400);
   }
 
-  const consumed = await consumePasswordResetToken(token);
+  const consumed = await consumePasswordResetToken({ rawToken: token, email, otp });
   if (!consumed.ok) {
     const message =
       consumed.reason === 'expired'
-        ? 'Reset token has expired. Please request another reset email.'
-        : 'Invalid or already used reset token.';
-    return fail('AUTH_UNAUTHORIZED', message, 401);
+        ? 'Reset code or link has expired. Please request a new password reset.'
+        : consumed.reason === 'max_attempts'
+        ? 'Maximum verification attempts reached. Please request a new password reset.'
+        : 'Invalid or already used password reset code or token.';
+    return fail('AUTH_UNAUTHORIZED', message, 401, { reason: consumed.reason });
   }
 
   const admin = getSupabaseAdminClient();

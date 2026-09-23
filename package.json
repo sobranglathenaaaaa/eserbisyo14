@@ -23,7 +23,9 @@
   "dependencies": {
     "@google/genai": "^1.48.0",
     "@radix-ui/react-dialog": "^1.1.15",
-    "@supabase/supabase-js": "^2.101.1",
+    "@sendgrid/mail": "^8.1.6",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.116.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "docx": "^8.5.0",
