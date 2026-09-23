@@ -1,13 +1,12 @@
-import type { NextConfig } from 'next';
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   outputFileTracingIncludes: {
     '/*': ['./template/**/*.docx'],
   },
   turbopack: {
     ignoreIssue: [
       {
-        path: '**/next.config.ts',
+        path: '**/next.config.*',
         title: 'Encountered unexpected file in NFT list',
       },
     ],

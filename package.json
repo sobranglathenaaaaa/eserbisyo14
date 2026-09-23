@@ -6,7 +6,7 @@
     "dev": "next dev",
     "dev:clean": "node -e \"require('fs').rmSync('.next',{ recursive: true, force: true })\" && next dev",
     "dev:unlock": "node scripts/clear-next-dev-lock.mjs",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx && npm run check:resident-shell && npm run check:ocr-permits && npm run check:resident-print-popup",
     "check:resident-shell": "node scripts/check-resident-shell.mjs",
