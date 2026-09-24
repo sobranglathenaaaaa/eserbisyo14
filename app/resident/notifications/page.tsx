@@ -66,12 +66,12 @@ export default function ResidentNotificationsPage() {
             {copyText(locale, `${unreadCount} unread`, `${unreadCount} hindi pa nababasa`)}
           </p>
           <Button
-            variant="secondary"
+            variant="residentOutline"
             type="button"
             onClick={() => void markAllNotificationsRead()}
             disabled={unreadCount === 0}
           >
-            {copyText(locale, 'Mark all read', 'Mark lahat bilang nabasa')}
+            {copyText(locale, 'Mark as all read', 'Mark lahat bilang nabasa')}
           </Button>
         </div>
         <Table className="text-center">
