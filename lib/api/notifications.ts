@@ -15,6 +15,8 @@ export type NotificationEventKey =
   | 'incident.status_changed'
   | 'announcement.published'
   | 'reservation.created'
+  | 'reservation.approved'
+  | 'reservation.declined'
   | 'reservation.status_changed';
 
 type NotificationEntityType =

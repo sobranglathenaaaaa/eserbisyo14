@@ -49,7 +49,7 @@ export function getResidentDashboardData(state: AppState, residentId: string | u
     .slice(0, 3);
 
   const actionableRequests = myRequests.filter((item) => ['declined', 'cancelled'].includes(item.status));
-  const inProgressRequests = myRequests.filter((item) => ['pending', 'approved', 'processing'].includes(item.status));
+  const inProgressRequests = myRequests.filter((item) => item.status === 'approved');
   const readyForRelease = myRequests.filter((item) => item.status === 'ready_for_pickup');
   const completedRequests = myRequests.filter((item) => item.status === 'completed');
 

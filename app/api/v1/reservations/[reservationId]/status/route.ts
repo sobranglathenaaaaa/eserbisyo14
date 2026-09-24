@@ -138,6 +138,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   const residentNotificationPriority = body.status === 'declined' || body.status === 'cancelled' ? 'warning' : 'info';
   const residentNotificationMessage = `Status changed from ${statusLabel[current]} to ${statusLabel[body.status]}.`;
+  const residentNotificationEventKey = body.status === 'approved'
+    ? 'reservation.approved'
+    : body.status === 'declined'
+      ? 'reservation.declined'
+      : 'reservation.status_changed';
 
   void notifyResident({
     tenantId: auth.tenantId,
@@ -146,7 +151,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     message: residentNotificationMessage,
     type: 'request',
     priority: residentNotificationPriority,
-    eventKey: 'reservation.status_changed',
+    eventKey: residentNotificationEventKey,
     entityType: 'reservation',
     entityId: reservationId,
     actionHref: '/resident/reservations',

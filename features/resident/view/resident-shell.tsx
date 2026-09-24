@@ -31,6 +31,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   acknowledgeDocumentRequestFeedbackPrompt,
   addFeedback,
+  markAllNotificationsRead,
   markNotificationRead,
   sendChatMessage,
 } from '@/lib/frontend-data/store';
@@ -255,11 +256,14 @@ function ResidentFloatingAssistant() {
         onClick={() => setIsFeedbackOpen((previous) => !previous)}
         aria-expanded={isFeedbackOpen}
         aria-label={locale === 'fil' ? 'Buksan ang feedback form' : 'Open feedback form'}
-        className="fixed bottom-40 right-4 z-[55] h-11 rounded-full px-4 shadow-[var(--resident-shadow-3)] md:bottom-20"
+        className={cn(
+          'fixed bottom-40 right-4 z-[55] h-11 shadow-[var(--resident-shadow-3)] transition-[width,padding] md:bottom-20',
+          isFeedbackOpen ? 'w-auto rounded-full px-4' : 'w-11 rounded-full px-0'
+        )}
         variant="secondary"
       >
-        <Star size={16} className="mr-2" />
-        {copyText(locale, 'Feedback', 'Feedback')}
+        <Star size={16} className={isFeedbackOpen ? 'mr-2' : ''} />
+        {isFeedbackOpen ? copyText(locale, 'Feedback', 'Feedback') : null}
       </Button>
 
       <Button
@@ -267,11 +271,14 @@ function ResidentFloatingAssistant() {
         onClick={() => setIsAssistantOpen((previous) => !previous)}
         aria-expanded={isAssistantOpen}
         aria-label={locale === 'fil' ? 'Buksan ang eSerbisyo Chatbot' : 'Open eSerbisyo Chatbot'}
-        className="fixed bottom-24 right-4 z-[55] h-12 rounded-full px-4 shadow-[var(--resident-shadow-3)] md:bottom-5"
+        className={cn(
+          'fixed bottom-24 right-4 z-[55] h-12 shadow-[var(--resident-shadow-3)] transition-[width,padding] md:bottom-5',
+          isAssistantOpen ? 'w-auto rounded-full px-4' : 'w-12 rounded-full px-0'
+        )}
         variant="resident"
       >
-        <MessageCircle size={16} className="mr-2" />
-        {locale === 'fil' ? 'eSerbisyo Chatbot' : 'eSerbisyo Chatbot'}
+        <MessageCircle size={16} className={isAssistantOpen ? 'mr-2' : ''} />
+        {isAssistantOpen ? (locale === 'fil' ? 'eSerbisyo Chatbot' : 'eSerbisyo Chatbot') : null}
       </Button>
 
       {isFeedbackOpen ? (
@@ -612,7 +619,17 @@ function ResidentNotificationBell() {
   const buttonRef = useRef<HTMLButtonElement | null>(null);
 
   const notifications = useMemo(() => {
+    const emailNotificationEvents = new Set([
+      'document.approved',
+      'document.declined',
+      'document.ready_for_pickup',
+      'document.completed',
+      'reservation.approved',
+      'reservation.declined',
+    ]);
+
     return getResidentNotifications(state, user?.id)
+      .filter((item) => emailNotificationEvents.has(item.eventKey))
       .slice()
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }, [state, user?.id]);
@@ -626,6 +643,14 @@ function ResidentNotificationBell() {
     if (entityType === 'document_request' && entityId) {
       setSummaryRequestId(entityId);
       setIsOpen(false);
+    }
+  };
+
+  const onNotificationBellClick = async () => {
+    const willOpen = !isOpen;
+    setIsOpen(willOpen);
+    if (willOpen && unreadCount > 0) {
+      await markAllNotificationsRead();
     }
   };
 
@@ -661,7 +686,7 @@ function ResidentNotificationBell() {
         ref={buttonRef}
         type="button"
         variant="ghost"
-        onClick={() => setIsOpen((previous) => !previous)}
+        onClick={() => void onNotificationBellClick()}
         aria-expanded={isOpen}
         aria-haspopup="dialog"
         aria-controls="resident-notifications-panel"
