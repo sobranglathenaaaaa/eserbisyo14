@@ -5,7 +5,7 @@ test.describe('Resident: Chatbot next-page normalization', () => {
   test('maps aliases and routes to current resident navigation labels', async () => {
     expect(normalizeNextPageForChat('Document Requests', 'en')).toBe('Get Documents (/resident/document-requests)');
     expect(normalizeNextPageForChat('/resident/medicines', 'en')).toBe('Book an Appointment (/resident/medicines)');
-    expect(normalizeNextPageForChat('request history', 'en')).toBe('Past Requests (/resident/request-history)');
+    expect(normalizeNextPageForChat('request history', 'en')).toBe('Request History (/resident/request-history)');
   });
 
   test('supports Filipino labels and fallback behavior', async () => {

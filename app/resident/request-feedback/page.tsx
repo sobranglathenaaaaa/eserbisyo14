@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { PageGuide } from '@/components/portal-ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,12 @@ export default function ResidentFeedbackPage() {
   const pageCopy = getRolePageCopy('resident/request-feedback');
 
   const completedRequests = useMemo(() => getResidentCompletedRequests(state, user?.id), [state, user?.id]);
+  useEffect(() => {
+    const requestedId = new URLSearchParams(window.location.search).get('requestId');
+    if (requestedId && completedRequests.some((item) => item.id === requestedId)) {
+      setRequestId(requestedId);
+    }
+  }, [completedRequests]);
 
   const myFeedback = useMemo(() => getResidentFeedback(state, user?.id), [state, user?.id]);
   const requestIndex = useMemo(() => {

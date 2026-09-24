@@ -14,13 +14,13 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   const { incidentId } = await context.params;
   const body = (await request.json().catch(() => null)) as
-    | { status: 'pending' | 'under_review' | 'resolved' | 'declined'; note?: string }
+    | { status: 'pending' | 'approved' | 'under_review' | 'proceed_to_barangay' | 'resolved' | 'declined'; note?: string }
     | null;
   if (!body?.status) return fail('VALIDATION_ERROR', 'status is required', 400);
   if (auth.role !== 'staff' && auth.role !== 'admin') {
     return fail('AUTH_FORBIDDEN', 'Staff/Admin access required', 403);
   }
-  if (body.status === 'under_review' && auth.role !== 'admin') {
+  if ((body.status === 'approved' || body.status === 'under_review' || body.status === 'proceed_to_barangay') && auth.role !== 'admin') {
     return fail('AUTH_FORBIDDEN', 'Admin access required to approve incidents', 403);
   }
   if (body.status === 'resolved' && auth.role !== 'admin') {
@@ -62,7 +62,17 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   });
 
   const priority = body.status === 'resolved' ? 'info' : body.status === 'under_review' ? 'warning' : body.status === 'declined' ? 'warning' : 'info';
-  const statusLabel = body.status === 'under_review' ? 'Under Review' : body.status === 'resolved' ? 'Resolved' : body.status === 'declined' ? 'Declined' : 'Pending';
+  const statusLabel = body.status === 'approved'
+    ? 'Approved'
+    : body.status === 'under_review'
+      ? 'Under Review'
+      : body.status === 'proceed_to_barangay'
+        ? 'Proceed to Barangay'
+        : body.status === 'resolved'
+          ? 'Resolved'
+          : body.status === 'declined'
+            ? 'Declined'
+            : 'Pending';
   void notifyResident({
     tenantId: auth.tenantId,
     userId: data.resident_id,

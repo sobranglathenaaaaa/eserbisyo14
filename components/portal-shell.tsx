@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   AlertTriangle,
@@ -70,7 +70,7 @@ const navConfig: Record<UserRole, NavSection[]> = {
         },
         {
           href: '/resident/request-history',
-          label: { en: 'Past Requests', fil: 'Nakaraang Kahilingan' },
+          label: { en: 'Request History', fil: 'Nakaraang Kahilingan' },
           hint: { en: 'Your request history', fil: 'Kasaysayan ng kahilingan' },
         },
         {
@@ -113,7 +113,7 @@ const navConfig: Record<UserRole, NavSection[]> = {
       items: [
         {
           href: '/resident/notifications',
-          label: { en: 'Updates', fil: 'Mga Update' },
+          label: { en: 'Notifications', fil: 'Notifications' },
           hint: { en: 'Alerts and messages', fil: 'Mga alert at mensahe' },
         },
         {
@@ -374,6 +374,7 @@ export default function PortalShell({
   showHero?: boolean;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [seenBadgeCounts, setSeenBadgeCounts] = useState<Record<keyof typeof BADGE_STORAGE_KEYS, number>>(() => ({
@@ -390,8 +391,13 @@ export default function PortalShell({
       {({ locale, setLocale, logoutAndRedirect, user, state }) => {
         const shellRole = allowedRoles?.includes(user.role) ? user.role : role;
         const navSections = navConfig[shellRole];
+        const isNavItemActive = (item: NavItem) => {
+          const [itemPath, itemQuery] = item.href.split('?');
+          if (pathname !== itemPath && !pathname.startsWith(`${itemPath}/`)) return false;
+          return itemQuery ? searchParams.toString() === itemQuery : !item.href.includes('?');
+        };
         const activeSection = navSections.find((section) =>
-          section.items.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+          section.items.some(isNavItemActive)
         );
         const primaryAction = primaryActions[shellRole];
         const roleTitle =
@@ -558,7 +564,7 @@ export default function PortalShell({
 
                   <nav className="grid gap-3" aria-label="Portal navigation">
                     {navSections.map((section) => {
-                      const hasActiveRoute = section.items.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+                      const hasActiveRoute = section.items.some(isNavItemActive);
                       const sectionBodyId = `portal-nav-section-${section.id}`;
 
                       return (
@@ -588,7 +594,7 @@ export default function PortalShell({
                           </div>
                           <div id={sectionBodyId} className="mt-2 grid gap-1.5 border-t border-[color:var(--portal-border-soft)] pt-2">
                             {section.items.map((item) => {
-                              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                              const isActive = isNavItemActive(item);
                               const Icon = resolveNavIcon(item.href);
                               let pendingCount = 0;
                               let badgeKey: keyof typeof BADGE_STORAGE_KEYS | null = null;

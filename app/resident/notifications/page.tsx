@@ -10,14 +10,16 @@ import { markAllNotificationsRead, markNotificationRead } from '@/lib/frontend-d
 import { useAppState } from '@/lib/frontend-data/use-app-state';
 import { copyText } from '@/features/resident/model/copy';
 import { getResidentNotificationContext } from '@/features/resident/model/notifications';
-import { ResidentSection, ResidentTableShell } from '@/features/resident/view/resident-primitives';
+import { ResidentSection } from '@/features/resident/view/resident-primitives';
 import { ResidentShell } from '@/features/resident/view/resident-shell';
 import { getRolePageCopy, resolveRoleCopy, resolveSteps } from '@/lib/content/role-pages';
 
 export default function ResidentNotificationsPage() {
   const { state, user, locale } = useAppState();
   const { notifications, urgentAlerts } = getResidentNotificationContext(state, user?.id, locale);
+  const PAGE_SIZE = 10;
   const [summaryRequestId, setSummaryRequestId] = useState<string | null>(null);
+  const [notificationPage, setNotificationPage] = useState(1);
   const pageCopy = getRolePageCopy('resident/notifications');
   const sortedNotifications = useMemo(
     () =>
@@ -27,6 +29,9 @@ export default function ResidentNotificationsPage() {
       }),
     [notifications]
   );
+  const totalPages = Math.max(1, Math.ceil(sortedNotifications.length / PAGE_SIZE));
+  const currentPage = Math.min(notificationPage, totalPages);
+  const visibleNotifications = sortedNotifications.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const unreadCount = sortedNotifications.filter((item) => !item.read).length;
   const summaryRequest = state.documentRequests.find((item) => item.id === summaryRequestId) ?? null;
 
@@ -50,70 +55,46 @@ export default function ResidentNotificationsPage() {
           cta={{ label: resolveRoleCopy(locale, pageCopy.guide.cta.label), href: pageCopy.guide.cta.href }}
         />
       ) : null}
-      {urgentAlerts.length ? (
-        <ResidentSection
-          title={copyText(locale, 'Urgent Alerts', 'Mga Agarang Alert')}
-          description={copyText(locale, 'Important notices that need immediate action.', 'Mahahalagang notice na kailangang aksyunan agad.')}
-          tone="accent"
-        >
-          <div className="grid gap-2">
-            {urgentAlerts.map((item) => (
-              <div
-                key={item.id}
-                className="rounded-[var(--resident-radius-md)] border border-[color:var(--resident-status-alert)] bg-[color:#fff6f1] px-3 py-3"
-                role="status"
-                aria-live="polite"
-              >
-                <p className="text-sm font-semibold text-[color:var(--resident-status-alert-text)]">{item.title}</p>
-                <p className="mt-1 text-sm text-[color:var(--resident-status-alert-text)]/80">{item.body}</p>
-              </div>
-            ))}
-          </div>
-        </ResidentSection>
-      ) : null}
 
       <ResidentSection
-        title={copyText(locale, 'In-app Notifications', 'In-app na Mga Abiso')}
-        description={copyText(locale, 'Mark items as read to keep your feed clean.', 'I-mark bilang read para malinis ang feed mo.')}
+        title={copyText(locale, 'Notification Feed', 'Notification Feed')}
+        description={copyText(locale, 'Keep track of request alerts and reminders.', 'Subaybayan ang request alerts at reminders.')}
+        className="bg-white"
       >
-        <ResidentTableShell
-          title={copyText(locale, 'Notification Feed', 'Notification Feed')}
-          description={copyText(locale, 'Keep track of request alerts and reminders.', 'Subaybayan ang request alerts at reminders.')}
-        >
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <p className="text-xs text-[color:var(--resident-ink-500)]">
-              {copyText(locale, `${unreadCount} unread`, `${unreadCount} hindi pa nababasa`)}
-            </p>
-            <Button
-              variant="secondary"
-              type="button"
-              onClick={() => void markAllNotificationsRead()}
-              disabled={unreadCount === 0}
-            >
-              {copyText(locale, 'Mark all read', 'Mark lahat bilang nabasa')}
-            </Button>
-          </div>
-          <Table>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="text-xs text-[color:var(--resident-ink-500)]">
+            {copyText(locale, `${unreadCount} unread`, `${unreadCount} hindi pa nababasa`)}
+          </p>
+          <Button
+            variant="secondary"
+            type="button"
+            onClick={() => void markAllNotificationsRead()}
+            disabled={unreadCount === 0}
+          >
+            {copyText(locale, 'Mark all read', 'Mark lahat bilang nabasa')}
+          </Button>
+        </div>
+        <Table className="text-center">
             <TableHeader>
               <TableRow>
-                <TableHead>{copyText(locale, 'Title', 'Pamagat')}</TableHead>
-                <TableHead>{copyText(locale, 'Message', 'Mensahe')}</TableHead>
-                <TableHead>{copyText(locale, 'Type', 'Uri')}</TableHead>
-                <TableHead>{copyText(locale, 'Priority', 'Prayoridad')}</TableHead>
-                <TableHead>{copyText(locale, 'Action', 'Aksyon')}</TableHead>
-                <TableHead>{copyText(locale, 'Status', 'Katayuan')}</TableHead>
+                <TableHead className="text-center">{copyText(locale, 'Title', 'Pamagat')}</TableHead>
+                <TableHead className="text-center">{copyText(locale, 'Message', 'Mensahe')}</TableHead>
+                <TableHead className="text-center">{copyText(locale, 'Type', 'Uri')}</TableHead>
+                <TableHead className="text-center">{copyText(locale, 'Priority', 'Prayoridad')}</TableHead>
+                <TableHead className="text-center">{copyText(locale, 'Action', 'Aksyon')}</TableHead>
+                <TableHead className="text-center">{copyText(locale, 'Status', 'Katayuan')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedNotifications.map((item) => (
+              {visibleNotifications.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.title}</TableCell>
-                  <TableCell>{item.message}</TableCell>
-                  <TableCell className="capitalize">{item.type}</TableCell>
-                  <TableCell>
+                  <TableCell className="text-center font-medium">{item.title}</TableCell>
+                  <TableCell className="text-center">{item.message}</TableCell>
+                  <TableCell className="text-center capitalize">{item.type}</TableCell>
+                  <TableCell className="text-center">
                     <StatusBadge tone={statusToneFromState(item.priority)}>{item.priority}</StatusBadge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-center">
                     {item.actionHref?.includes('documentId=') ? (
                       <Button asChild size="sm" variant="residentOutline">
                         <Link href={item.actionHref} onClick={() => markLinkedNotificationRead(item.id)}>
@@ -139,7 +120,7 @@ export default function ResidentNotificationsPage() {
                       <span className="text-xs text-[color:var(--resident-ink-500)]">{copyText(locale, 'No action', 'Walang aksyon')}</span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-center">
                     {item.read ? (
                       <StatusBadge tone={statusToneFromState('read')}>{copyText(locale, 'Read', 'Nabasa na')}</StatusBadge>
                     ) : (
@@ -151,8 +132,33 @@ export default function ResidentNotificationsPage() {
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
-        </ResidentTableShell>
+        </Table>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-sm text-[color:var(--portal-ink-500)]">
+            {sortedNotifications.length === 0
+              ? ''
+              : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(currentPage * PAGE_SIZE, sortedNotifications.length)} of ${sortedNotifications.length}`}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={currentPage <= 1}
+              onClick={() => setNotificationPage((page) => Math.max(1, page - 1))}
+            >
+              {locale === 'fil' ? 'Nakaraan' : 'Previous'}
+            </Button>
+            <div className="text-sm text-[color:var(--portal-ink-600)]">{currentPage} / {totalPages}</div>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={currentPage >= totalPages}
+              onClick={() => setNotificationPage((page) => Math.min(totalPages, page + 1))}
+            >
+              {locale === 'fil' ? 'Susunod' : 'Next'}
+            </Button>
+          </div>
+        </div>
       </ResidentSection>
 
       <DocumentRequestSummaryModal

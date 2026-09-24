@@ -780,6 +780,7 @@ export function ResidentShell({
   showHero?: boolean;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -978,7 +979,11 @@ export function ResidentShell({
 
                   <nav className="grid gap-3" aria-label="Resident navigation">
                     {sidebarSections.map((section) => {
-                      const hasActiveRoute = section.items.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+                      const hasActiveRoute = section.items.some((item) => {
+                        const [itemPath, itemQuery] = item.href.split('?');
+                        if (pathname !== itemPath && !pathname.startsWith(`${itemPath}/`)) return false;
+                        return itemQuery ? searchParams.toString() === itemQuery : !item.href.includes('?');
+                      });
                       const sectionBodyId = `resident-nav-section-${section.id}`;
 
                       return (
@@ -1006,7 +1011,10 @@ export function ResidentShell({
                           </div>
                           <div id={sectionBodyId} className="mt-2 grid gap-1.5 border-t border-[color:var(--portal-border-soft)] pt-2">
                             {section.items.map((item) => {
-                              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                              const [itemPath, itemQuery] = item.href.split('?');
+                              const isActive =
+                                (pathname === itemPath || pathname.startsWith(`${itemPath}/`)) &&
+                                (itemQuery ? searchParams.toString() === itemQuery : !item.href.includes('?'));
                               const Icon = resolveIcon(item.href);
                               return (
                                 <Link

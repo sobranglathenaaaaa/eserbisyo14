@@ -53,13 +53,13 @@ function getRequestNextStep(status: string, locale: 'en' | 'fil') {
     return copyText(locale, 'Reviewed by staff. Waiting for admin approval.', 'Nasuri na ng staff. Naghihintay ng admin approval.');
   }
   if (status === 'approved') {
-    return copyText(locale, 'Approved. Staff will prepare the document next.', 'Approved na. Ihahanda na ito ng staff.');
-  }
-  if (status === 'processing') {
-    return copyText(locale, 'Staff is preparing the final document. You will be notified when it is ready.', 'Inihahanda na ng staff ang final document. Makakatanggap ka ng abiso kapag ready na.');
+    return copyText(locale, 'Approved. Please wait for further instructions. We will notify you when your document is ready for pickup.', 'Approved na. Maghintay ng susunod na abiso. Aabisuhan ka namin kapag ready nang kunin ang dokumento.');
   }
   if (status === 'completed') {
-    return copyText(locale, 'Ready. Open Generated Documents to print or save your copy.', 'Ready na. Buksan ang Generated Documents para i-print o i-save ang kopya.');
+    return copyText(locale, 'Your request is complete. We would appreciate your feedback about the service.', 'Tapos na ang request mo. Malaking tulong sa amin ang feedback mo tungkol sa serbisyo.');
+  }
+  if (status === 'ready_for_pickup') {
+    return copyText(locale, 'Your document is ready for pickup at the barangay hall. Please bring a valid ID.', 'Ready nang kunin ang dokumento sa barangay hall. Magdala ng valid ID.');
   }
   if (status === 'declined') {
     return copyText(locale, 'Declined. Open the summary to see the reason before submitting again.', 'Tinanggihan. Buksan ang buod para makita ang dahilan bago muling magsumite.');
@@ -539,8 +539,8 @@ export default function ResidentDocumentRequestsPage() {
             title={copyText(locale, 'Cancellation and status rules', 'Mga panuntunan sa cancellation at status')}
             description={copyText(
               locale,
-              'Pending requests can be cancelled. Once approved or processing starts, cancellation is disabled and status updates continue through admin/staff workflow.',
-              'Ang pending request lang ang puwedeng kanselahin. Kapag approved o processing na, disabled na ang cancellation at tuloy ang admin/staff workflow.'
+              'Pending requests can be cancelled. Once approved, cancellation is disabled while staff prepares your document and sends status updates.',
+              'Ang pending request lang ang puwedeng kanselahin. Kapag approved na, disabled na ang cancellation habang inihahanda ng staff ang dokumento at nagpapadala ng update.'
             )}
           />
         </div>
@@ -550,6 +550,7 @@ export default function ResidentDocumentRequestsPage() {
 
       <ResidentSection
         title={copyText(locale, 'Request Status', 'Katayuan ng Kahilingan')}
+        className="hidden"
         description={copyText(
           locale,
           'Active requests are listed from most recent to least recent.',
@@ -600,8 +601,8 @@ export default function ResidentDocumentRequestsPage() {
               title={copyText(locale, 'No active requests', 'Walang active requests')}
               description={copyText(
                 locale,
-                'Pending, approved, and processing requests will appear here.',
-                'Lalabas dito ang pending, approved, at processing na kahilingan.'
+                'Pending, approved, and ready for pickup requests will appear here.',
+                'Lalabas dito ang pending, approved, at ready for pickup na mga kahilingan.'
               )}
             />
           ) : (

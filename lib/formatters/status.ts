@@ -4,7 +4,7 @@ const requestStatusLabel: Record<RequestStatus, { en: string; fil: string }> = {
   pending: { en: 'Pending', fil: 'Naghihintay' },
   staff_reviewed: { en: 'Staff reviewed', fil: 'Nasuri ng staff' },
   approved: { en: 'Approved', fil: 'Inaprubahan' },
-  processing: { en: 'Working on it', fil: 'Ginagawa' },
+  ready_for_pickup: { en: 'Ready for pickup', fil: 'Handa nang kunin' },
   completed: { en: 'Ready', fil: 'Handa na' },
   declined: { en: 'Declined', fil: 'Hindi aprubado' },
   cancelled: { en: 'Cancelled', fil: 'Kinansela' },
@@ -12,7 +12,9 @@ const requestStatusLabel: Record<RequestStatus, { en: string; fil: string }> = {
 
 const reportStatusLabel: Record<ReportStatus, { en: string; fil: string }> = {
   pending: { en: 'Waiting', fil: 'Naghihintay' },
+  approved: { en: 'Approved', fil: 'Inaprubahan' },
   under_review: { en: 'Under Review', fil: 'Sinusuri' },
+  proceed_to_barangay: { en: 'Proceed to Barangay', fil: 'Pumunta sa Barangay' },
   resolved: { en: 'Done', fil: 'Naresolba' },
   declined: { en: 'Declined', fil: 'Tinanggihan' },
 };

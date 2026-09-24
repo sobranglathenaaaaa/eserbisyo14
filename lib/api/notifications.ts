@@ -5,7 +5,7 @@ export type NotificationEventKey =
   | 'document.status_changed'
   | 'document.staff_reviewed'
   | 'document.approved'
-  | 'document.processing'
+  | 'document.ready_for_pickup'
   | 'document.declined'
   | 'document.cancelled'
   | 'document.completed'

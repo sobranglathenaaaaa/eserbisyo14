@@ -7,22 +7,18 @@ import { writeAuditLog } from '@/lib/api/audit';
 import { notifyResident } from '@/lib/api/notifications';
 import type { NotificationEventKey } from '@/lib/api/notifications';
 import {
-  DocumentReleaseError,
-  releaseGeneratedDocumentForRequest,
-} from '@/lib/documents/document-release';
-import {
   sendDocumentRequestStatusEmail,
   type DocumentRequestStatusEmail,
 } from '@/lib/documents/document-request-emails';
 
 type RouteContext = { params: Promise<{ requestId: string }> };
-type AllowedStatus = 'pending' | 'staff_reviewed' | 'approved' | 'declined' | 'processing' | 'completed' | 'cancelled';
+type AllowedStatus = 'pending' | 'staff_reviewed' | 'approved' | 'declined' | 'ready_for_pickup' | 'completed' | 'cancelled';
 
 const allowedTransitions: Record<AllowedStatus, AllowedStatus[]> = {
   pending: ['approved', 'declined', 'cancelled'],
   staff_reviewed: ['approved', 'declined', 'cancelled'],
-  approved: ['processing', 'declined'],
-  processing: ['completed', 'declined'],
+  approved: ['ready_for_pickup', 'declined'],
+  ready_for_pickup: ['completed'],
   declined: [],
   completed: [],
   cancelled: [],
@@ -33,6 +29,8 @@ function shouldEmailStatus(status: AllowedStatus): status is DocumentRequestStat
     status === 'staff_reviewed'
     || status === 'approved'
     || status === 'declined'
+    || status === 'ready_for_pickup'
+    || status === 'completed'
     || status === 'cancelled'
   );
 }
@@ -84,53 +82,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return fail('VALIDATION_ERROR', 'Decline reason is required.', 400);
   }
 
-  if (body.status === 'completed') {
-    try {
-      const release = await releaseGeneratedDocumentForRequest({
-        tenantId: auth.tenantId,
-        actorId: auth.userId,
-        actorRole: auth.role,
-        requestId,
-        releaseNotes: body.reason,
-      });
-
-      await writeAuditLog({
-        tenantId: auth.tenantId,
-        actorId: auth.userId,
-        actorRole: auth.role,
-        action: 'document_requests.status_update',
-        targetId: requestId,
-        context: {
-          from: current,
-          to: body.status,
-          generatedDocumentId: release.generatedDocumentId,
-          emailSent: release.email.sent,
-          reusedExistingDocument: release.reusedExistingDocument,
-        },
-      });
-
-      return ok(release.request);
-    } catch (error) {
-      if (error instanceof DocumentReleaseError) {
-        return fail(error.code, error.message, error.status, error.details);
-      }
-      return fail(
-        'INTERNAL_ERROR',
-        error instanceof Error ? error.message : 'Unable to complete request',
-        500,
-      );
-    }
-  }
-
   const updates: Record<string, unknown> = { status: body.status, updated_at: new Date().toISOString() };
   if (body.status === 'declined') {
     if (auth.role === 'admin') updates.admin_decision_reason = body.reason ?? null;
     else if (auth.role === 'staff') updates.processing_decline_reason = body.reason ?? null;
   }
-  if (body.status === 'processing') {
-    updates.processed_by = auth.userId;
-  }
-
   const { data, error } = await admin.from('document_requests').update(updates).eq('id', requestId).select('*').single();
   if (error || !data) return fail('INTERNAL_ERROR', error?.message ?? 'Unable to update status', 500);
 
@@ -148,14 +104,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     staff_reviewed: 'Staff Reviewed',
     approved: 'Approved',
     declined: 'Declined',
-    processing: 'Processing',
+    ready_for_pickup: 'Ready for Pickup',
     completed: 'Completed',
     cancelled: 'Cancelled',
   };
   const eventKeyByStatus: Partial<Record<AllowedStatus, NotificationEventKey>> = {
     staff_reviewed: 'document.staff_reviewed',
     approved: 'document.approved',
-    processing: 'document.processing',
+    ready_for_pickup: 'document.ready_for_pickup',
     declined: 'document.declined',
     cancelled: 'document.cancelled',
   };

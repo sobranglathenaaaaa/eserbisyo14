@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { Filter } from 'lucide-react';
 import PortalShell from '../../../components/portal-shell';
 import { EmptyState, FormFeedback, PageGuide, SectionCard, StatusBadge, statusToneFromState } from '@/components/portal-ui';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,7 @@ import { useAppState } from '../../../lib/frontend-data/use-app-state';
 import type { UIStatusTone } from '../../../lib/types/ui';
 import type { RequestStatus } from '@/lib/types/models';
 
-const PROCESSABLE_STATUSES: RequestStatus[] = ['pending', 'approved', 'processing', 'completed'];
+const PROCESSABLE_STATUSES: RequestStatus[] = ['pending', 'approved', 'ready_for_pickup', 'completed'];
 
 function formatFileSize(bytes: number | undefined) {
   if (!bytes) return '';
@@ -76,7 +77,7 @@ export default function StaffProcessRequestsPage() {
       all: 0,
       pending: 0,
       staff_reviewed: 0,
-      processing: 0,
+      ready_for_pickup: 0,
       approved: 0,
       declined: 0,
       cancelled: 0,
@@ -93,6 +94,9 @@ export default function StaffProcessRequestsPage() {
 
     return counts;
   }, [state.documentRequests]);
+
+  const hasActionableFilterItems =
+    statusCounts.approved > 0 || statusCounts.ready_for_pickup > 0;
 
   const selected = filteredRequests.find((item) => item.id === selectedId) ?? filteredRequests[0] ?? null;
   const selectedResident = selected ? state.users.find((user) => user.id === selected.residentId) ?? null : null;
@@ -132,7 +136,7 @@ export default function StaffProcessRequestsPage() {
 
   
 
-  const updateRequest = async (id: string, status: 'processing' | 'completed' | 'declined') => {
+  const updateRequest = async (id: string, status: 'ready_for_pickup' | 'completed' | 'declined') => {
     if (status === 'declined' && !reason.trim()) {
       setFeedback({
         tone: 'danger',
@@ -141,7 +145,7 @@ export default function StaffProcessRequestsPage() {
       return;
     }
 
-    if (status === 'completed') {
+    if (status === 'ready_for_pickup') {
       // Allow completion even when there's no OCR template configured.
       // If a template is present, still enforce required fields.
       if (selectedTemplate && missingFieldLabels.length) {
@@ -161,7 +165,7 @@ export default function StaffProcessRequestsPage() {
         id,
         status,
         status === 'declined' ? reason.trim() : undefined,
-        status === 'completed' && selectedTemplate
+        status === 'ready_for_pickup' && selectedTemplate
           ? {
               verificationMetadata: { parsedFields: fieldDraft },
               documentLabel: selectedTemplate.documentLabel,
@@ -170,31 +174,31 @@ export default function StaffProcessRequestsPage() {
       );
       setReason('');
       const completedMessage = (() => {
-        if (status !== 'completed') return null;
+        if (status !== 'ready_for_pickup') return null;
         const email = result && typeof result === 'object' && 'email' in result ? result.email : undefined;
         if (email?.sent) {
           return locale === 'fil'
-            ? 'Nakumpleto ang dokumento. Available na ito sa resident portal at naipadala rin ang email.'
-            : 'Document completed. It is available in the resident portal and the email was sent.';
+            ? 'Ready for pickup na ang dokumento. Naipadala na rin ang email.'
+            : 'The document is ready for pickup and the email was sent.';
         }
         if (email?.error) {
           return locale === 'fil'
-            ? `Nakumpleto ang dokumento at available na sa resident portal. Hindi naipadala ang email: ${email.error}`
-            : `Document completed and is available in the resident portal. Email was not sent: ${email.error}`;
+            ? `Ready for pickup na ang dokumento. Hindi naipadala ang email: ${email.error}`
+            : `The document is ready for pickup. Email was not sent: ${email.error}`;
         }
         return locale === 'fil'
-          ? 'Nakumpleto ang dokumento at available na sa resident portal.'
-          : 'Document completed and is available in the resident portal.';
+          ? 'Ready for pickup na ang dokumento.'
+          : 'The document is ready for pickup.';
       })();
       setFeedback({
         tone: 'success',
         text:
-          status === 'completed'
+          status === 'ready_for_pickup'
             ? completedMessage ?? ''
-            : status === 'processing'
+            : status === 'completed'
               ? locale === 'fil'
-                ? 'Nasa processing lane na ang request.'
-                : 'Request moved to processing lane.'
+                ? 'Na-mark na bilang completed/claimed ang request.'
+                : 'Request marked as completed/claimed.'
               : locale === 'fil'
                 ? 'Na-decline ang request at naitala ang dahilan.'
                 : 'Request declined and reason recorded.',
@@ -245,48 +249,42 @@ export default function StaffProcessRequestsPage() {
                     : ''}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="relative flex items-center gap-2">
+                  <label htmlFor="staff-process-status-filter" className="sr-only">
+                    {locale === 'fil' ? 'I-filter ayon sa status' : 'Filter by status'}
+                  </label>
+                  <Select
+                    id="staff-process-status-filter"
+                    value={filterStatus}
+                    onChange={(event) => {
+                      setFilterStatus(event.target.value as 'all' | RequestStatus);
+                      setCurrentPage(1);
+                    }}
+                    className="h-9 w-[190px] text-xs"
+                  >
+                    <option value="all">{locale === 'fil' ? `Lahat (${statusCounts.all})` : `All (${statusCounts.all})`}</option>
+                    <option value="pending">{locale === 'fil' ? `Naghihintay (${statusCounts.pending})` : `Pending (${statusCounts.pending})`}</option>
+                    <option value="approved">{locale === 'fil' ? `Aprubado (${statusCounts.approved})` : `Approved (${statusCounts.approved})`}</option>
+                    <option value="ready_for_pickup">{locale === 'fil' ? `Handa nang kunin (${statusCounts.ready_for_pickup})` : `Ready for Pickup (${statusCounts.ready_for_pickup})`}</option>
+                    <option value="completed">{locale === 'fil' ? `Nakumpleto (${statusCounts.completed})` : `Completed (${statusCounts.completed})`}</option>
+                  </Select>
                   <button
                     type="button"
-                    className={`rounded px-3 py-1 text-sm ${filterStatus === 'all' ? 'bg-[color:var(--portal-border-soft)]' : 'hover:bg-[color:var(--portal-border-soft)]'}`}
-                    onClick={() => { setFilterStatus('all'); setCurrentPage(1); }}
+                    aria-label={locale === 'fil' ? 'Ipakita ang approved requests' : 'Show approved requests'}
+                    title={locale === 'fil' ? 'Ipakita ang approved requests' : 'Show approved requests'}
+                    onClick={() => {
+                      setFilterStatus('approved');
+                      setCurrentPage(1);
+                    }}
+                    className="relative inline-flex h-9 w-9 items-center justify-center rounded-md border-0 bg-[color:var(--portal-surface-1)] text-[color:var(--portal-ink-700)] outline-none hover:bg-[color:var(--portal-border-soft)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--portal-accent)]"
                   >
-                    {locale === 'fil' ? 'Lahat' : 'All'} ({statusCounts.all})
-                  </button>
-
-                  <button
-                    type="button"
-                    className={`relative rounded px-3 py-1 text-sm ${filterStatus === 'approved' ? 'bg-[color:#ecfdf5]' : 'hover:bg-[color:#ecfdf5]'}`}
-                    onClick={() => { setFilterStatus('approved' as any); setCurrentPage(1); }}
-                  >
-                    {locale === 'fil' ? 'Aprubado' : 'Approved'} ({statusCounts.approved})
-                    {statusCounts.approved > 0 ? (
-                      <span className="absolute -right-2 -top-2 inline-block h-3 w-3 rounded-full bg-red-600" aria-hidden />
+                    <Filter size={16} aria-hidden />
+                    {hasActionableFilterItems ? (
+                      <span
+                        className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-red-600 ring-2 ring-white"
+                        aria-hidden
+                      />
                     ) : null}
-                  </button>
-
-                  <button
-                    type="button"
-                    className={`rounded px-3 py-1 text-sm ${filterStatus === 'processing' ? 'bg-[color:#fff7ed]' : 'hover:bg-[color:#fff7ed]'}`}
-                    onClick={() => { setFilterStatus('processing' as any); setCurrentPage(1); }}
-                  >
-                    {locale === 'fil' ? 'Ginagawa' : 'Processing'} ({statusCounts.processing})
-                  </button>
-
-                  <button
-                    type="button"
-                    className={`rounded px-3 py-1 text-sm ${filterStatus === 'completed' ? 'bg-[color:#ecfdf5]' : 'hover:bg-[color:#ecfdf5]'}`}
-                    onClick={() => { setFilterStatus('completed' as any); setCurrentPage(1); }}
-                  >
-                    {locale === 'fil' ? 'Nakumpleto' : 'Completed'} ({statusCounts.completed})
-                  </button>
-
-                  <button
-                    type="button"
-                    className={`rounded px-3 py-1 text-sm ${filterStatus === 'pending' ? 'bg-[color:#fff7ed]' : 'hover:bg-[color:#fff7ed]'}`}
-                    onClick={() => { setFilterStatus('pending' as any); setCurrentPage(1); }}
-                  >
-                    {locale === 'fil' ? 'Naghihintay' : 'Pending'} ({statusCounts.pending})
                   </button>
                 </div>
               </div>
@@ -305,16 +303,16 @@ export default function StaffProcessRequestsPage() {
             ) : (
               <>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full min-w-[900px] table-fixed text-sm">
                     <thead>
                       <tr className="border-b border-[color:var(--portal-border-soft)]">
-                        <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">ID</th>
-                        <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">{locale === 'fil' ? 'Reference' : 'Reference'}</th>
-                        <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">{locale === 'fil' ? 'Resident' : 'Resident'}</th>
-                        <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">{locale === 'fil' ? 'Type' : 'Type'}</th>
-                        <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">{locale === 'fil' ? 'Amount' : 'Amount'}</th>
-                        <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">{locale === 'fil' ? 'Status' : 'Status'}</th>
-                        <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">{locale === 'fil' ? 'Action' : 'Action'}</th>
+                        <th className="w-[12%] px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">ID</th>
+                        <th className="w-[15%] px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">{locale === 'fil' ? 'Reference' : 'Reference'}</th>
+                        <th className="w-[20%] px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">{locale === 'fil' ? 'Resident' : 'Resident'}</th>
+                        <th className="w-[18%] px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">{locale === 'fil' ? 'Type' : 'Type'}</th>
+                        <th className="w-[10%] px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">{locale === 'fil' ? 'Amount' : 'Amount'}</th>
+                        <th className="w-[15%] px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">{locale === 'fil' ? 'Status' : 'Status'}</th>
+                        <th className="w-[10%] px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">{locale === 'fil' ? 'Action' : 'Action'}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -325,16 +323,16 @@ export default function StaffProcessRequestsPage() {
                             index % 2 === 0 ? 'bg-white' : 'bg-[color:var(--portal-surface-1)]'
                           }`}
                         >
-                          <td className="px-4 py-3 text-xs text-[color:var(--portal-ink-600)] font-mono text-center">
+                          <td className="truncate px-4 py-3 text-center font-mono text-xs text-[color:var(--portal-ink-600)]">
                             {request.id.substring(0, 8)}
                           </td>
-                            <td className="px-4 py-3 font-semibold text-[color:var(--portal-ink-900)] text-center">
+                            <td className="truncate px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-900)]">
                             {request.referenceNumber}
                           </td>
-                            <td className="px-4 py-3 text-[color:var(--portal-ink-700)] text-center">
+                            <td className="truncate px-4 py-3 text-center text-[color:var(--portal-ink-700)]">
                             {request.residentName}
                           </td>
-                            <td className="px-4 py-3 text-[color:var(--portal-ink-700)] text-center">
+                            <td className="truncate px-4 py-3 text-center text-[color:var(--portal-ink-700)]">
                             {request.typeLabel}
                           </td>
                             <td className="px-4 py-3 text-[color:var(--portal-ink-700)] text-center">
@@ -342,9 +340,7 @@ export default function StaffProcessRequestsPage() {
                           </td>
                             <td className="px-4 py-3 text-center">
                               <StatusBadge tone={statusToneFromState(request.status)}>
-                              {request.status === 'processing'
-                                ? (locale === 'fil' ? 'Ginagawa' : 'Working on it')
-                                : getRequestStatusLabel(request.status, locale)}
+                              {getRequestStatusLabel(request.status, locale)}
                               </StatusBadge>
                             </td>
                             <td className="px-4 py-3 text-center">
@@ -425,9 +421,7 @@ export default function StaffProcessRequestsPage() {
                 <p className="mt-1 text-sm text-[color:var(--portal-ink-700)]">{locale === 'fil' ? 'Purpose' : 'Purpose'}: {selected.purpose}</p>
                 <div className="mt-2">
                   <StatusBadge tone={statusToneFromState(selected.status)}>
-                    {selected.status === 'processing'
-                      ? (locale === 'fil' ? 'Ginagawa' : 'Working on it')
-                      : getRequestStatusLabel(selected.status, locale)}
+                    {getRequestStatusLabel(selected.status, locale)}
                   </StatusBadge>
                 </div>
               </div>
@@ -451,7 +445,7 @@ export default function StaffProcessRequestsPage() {
 
               
 
-              {selected.status === 'processing' && selectedTemplate && activeTemplate ? (
+              {(selected.status === 'approved' || selected.status === 'ready_for_pickup') && selectedTemplate && activeTemplate ? (
                 <div className="grid gap-2 rounded-[var(--portal-radius-md)] border border-[color:var(--portal-border-soft)] bg-white p-3">
                   <div>
                     <p className="text-xs uppercase tracking-[0.08em] text-[color:var(--portal-ink-500)]">
@@ -509,21 +503,21 @@ export default function StaffProcessRequestsPage() {
 
               <div className="flex flex-wrap gap-2">
                 {selected.status === 'approved' ? (
-                  <Button type="button" onClick={() => void updateRequest(selected.id, 'processing')}>
-                    {locale === 'fil' ? 'Ilipat sa Processing' : 'Move to Processing'}
-                  </Button>
-                ) : null}
-                {selected.status === 'approved' ? (
                   <Button variant="destructive" type="button" onClick={() => void updateRequest(selected.id, 'declined')}>
                     {locale === 'fil' ? 'I-decline' : 'Decline'}
                   </Button>
                 ) : null}
-                {selected.status === 'processing' ? (
+                {selected.status === 'approved' ? (
                   <Button
                     type="button"
-                    onClick={() => void updateRequest(selected.id, 'completed')}
+                    onClick={() => void updateRequest(selected.id, 'ready_for_pickup')}
                   >
-                    {locale === 'fil' ? 'I-issue at Tapusin' : 'Issue and Complete'}
+                    {locale === 'fil' ? 'I-release bilang Ready for Pickup' : 'Mark Ready for Pickup'}
+                  </Button>
+                ) : null}
+                {selected.status === 'ready_for_pickup' ? (
+                  <Button type="button" onClick={() => void updateRequest(selected.id, 'completed')}>
+                    {locale === 'fil' ? 'Markahan bilang Nakumpleto/Claimed' : 'Mark as Completed / Claimed'}
                   </Button>
                 ) : null}
               </div>

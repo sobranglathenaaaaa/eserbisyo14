@@ -2,14 +2,14 @@ import type { AppState } from '@/lib/types/models';
 
 export function getStaffRequestCounts(state: AppState) {
   const approved = state.documentRequests.filter((item) => item.status === 'approved').length;
-  const processing = state.documentRequests.filter((item) => item.status === 'processing').length;
+  const readyForPickup = state.documentRequests.filter((item) => item.status === 'ready_for_pickup').length;
   const completed = state.documentRequests.filter((item) => item.status === 'completed').length;
 
-  return { approved, processing, completed };
+  return { approved, readyForPickup, completed };
 }
 
 export function getStaffRequestQueue(state: AppState) {
-  return state.documentRequests.filter((item) => item.status === 'approved' || item.status === 'processing');
+  return state.documentRequests.filter((item) => item.status === 'approved' || item.status === 'ready_for_pickup');
 }
 
 export function getStaffNotifications(state: AppState, staffId: string | undefined) {

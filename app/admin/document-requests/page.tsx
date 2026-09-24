@@ -26,7 +26,7 @@ export default function AdminDocumentRequestsPage() {
   const { state, locale } = useAppState();
   const [reason, setReason] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'approved' | 'declined' | 'cancelled' | 'pending' | 'staff_reviewed' | 'processing'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'approved' | 'declined' | 'cancelled' | 'pending' | 'staff_reviewed'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState('');
   const pageCopy = getRolePageCopy('admin/document-requests');
@@ -46,7 +46,7 @@ export default function AdminDocumentRequestsPage() {
   const PAGE_SIZE = 10;
   const filteredRequests = useMemo(() => {
     const base = statusFilter === 'all'
-      ? state.documentRequests.filter((item) => item.status !== 'processing')
+      ? state.documentRequests
       : statusFilter === 'staff_reviewed'
         ? staffReviewed
         : statusFilter === 'declined'
@@ -357,7 +357,7 @@ export default function AdminDocumentRequestsPage() {
                   {locale === 'fil' ? 'Aprubahan' : 'Approve'}
                 </Button>
               )}
-              {['pending', 'staff_reviewed', 'approved', 'processing'].includes(selectedRequest.status) && (
+              {['pending', 'staff_reviewed', 'approved'].includes(selectedRequest.status) && (
                 <Button
                   type="button"
                   disabled={!reason.trim()}

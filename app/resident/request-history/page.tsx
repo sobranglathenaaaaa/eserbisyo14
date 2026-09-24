@@ -1,20 +1,23 @@
 'use client';
 
-import { Suspense, useMemo } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { PageGuide, StatusBadge, statusToneFromState } from '@/components/portal-ui';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Select } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DocumentRequestSummaryModal } from '@/features/resident/view/document-request-summary-modal';
 import { copyText } from '@/features/resident/model/copy';
-import { getResidentNotifications, getResidentReports, getResidentRequests } from '@/features/resident/model/selectors';
+import { getResidentFeedback, getResidentReports, getResidentRequests } from '@/features/resident/model/selectors';
 import { ResidentEmpty, ResidentSection } from '@/features/resident/view/resident-primitives';
 import { ResidentShell } from '@/features/resident/view/resident-shell';
 import { formatDateTime, formatIncidentCaseNumber, getReportStatusLabel, getRequestStatusLabel } from '@/lib/formatters';
 import { useAppState } from '@/lib/frontend-data/use-app-state';
 import { getRolePageCopy, resolveRoleCopy, resolveSteps } from '@/lib/content/role-pages';
-import type { ReportStatus, RequestStatus } from '@/lib/types/models';
+import type { CheckupAppointmentStatus, ReportStatus, RequestStatus, ReservationStatus } from '@/lib/types/models';
 
-type HistoryCategory = 'all' | 'requests' | 'notifications' | 'report-progress';
+type HistoryCategory = 'all' | 'requests' | 'reservations' | 'report-progress' | 'appointments' | 'feedback';
+type HistoryStatusFilter = 'all' | RequestStatus | ReservationStatus | ReportStatus | CheckupAppointmentStatus | 'submitted';
 
 type HistoryFeedItem =
   | {
@@ -27,12 +30,13 @@ type HistoryFeedItem =
       status: RequestStatus;
     }
   | {
-      kind: 'notifications';
-      category: Exclude<HistoryCategory, 'all'>;
+      kind: 'reservations';
+      category: 'reservations';
       id: string;
       sortAt: string;
       heading: string;
-      message: string;
+      summary: string;
+      status: ReservationStatus;
     }
   | {
       kind: 'report-progress';
@@ -44,9 +48,27 @@ type HistoryFeedItem =
       submittedAt: string;
       incidentMeta: string;
       status: ReportStatus;
+    }
+  | {
+      kind: 'appointments';
+      category: 'appointments';
+      id: string;
+      sortAt: string;
+      heading: string;
+      summary: string;
+      status: CheckupAppointmentStatus;
+    }
+  | {
+      kind: 'feedback';
+      category: 'feedback';
+      id: string;
+      sortAt: string;
+      heading: string;
+      summary: string;
+      status: 'submitted';
     };
 
-const CATEGORY_ORDER: HistoryCategory[] = ['all', 'requests', 'notifications', 'report-progress'];
+const CATEGORY_ORDER: HistoryCategory[] = ['all', 'requests', 'reservations', 'report-progress', 'appointments', 'feedback'];
 
 function toEpoch(value: string) {
   const parsed = Date.parse(value);
@@ -61,9 +83,11 @@ function compareByDateDesc<T>(a: T, b: T, dateSelector: (item: T) => string, idS
 
 function resolveCategoryLabel(locale: 'en' | 'fil', category: HistoryCategory) {
   if (category === 'all') return copyText(locale, 'All History', 'Lahat ng History');
-  if (category === 'requests') return copyText(locale, 'Requests', 'Mga Kahilingan');
-  if (category === 'notifications') return copyText(locale, 'Notifications', 'Mga Abiso');
-  return copyText(locale, 'Report Progress', 'Pag-usad ng Ulat');
+  if (category === 'requests') return copyText(locale, 'Document Requests', 'Mga Kahilingan sa Dokumento');
+  if (category === 'reservations') return copyText(locale, 'Facilities & Equipment', 'Pasilidad at Equipment');
+  if (category === 'report-progress') return copyText(locale, 'Report Progress', 'Pag-usad ng Ulat');
+  if (category === 'appointments') return copyText(locale, 'Appointments', 'Appointments');
+  return copyText(locale, 'Feedback', 'Feedback');
 }
 
 function resolveActiveCategory(rawCategory: string | null): HistoryCategory {
@@ -71,23 +95,95 @@ function resolveActiveCategory(rawCategory: string | null): HistoryCategory {
   return CATEGORY_ORDER.includes(rawCategory as HistoryCategory) ? (rawCategory as HistoryCategory) : 'all';
 }
 
+function getReservationStatusLabel(status: ReservationStatus, locale: 'en' | 'fil') {
+  const labels: Record<ReservationStatus, string> = {
+    pending: copyText(locale, 'Pending', 'Pending'),
+    approved: copyText(locale, 'Approved', 'Approved'),
+    declined: copyText(locale, 'Declined', 'Declined'),
+    cancelled: copyText(locale, 'Cancelled', 'Nakansela'),
+      ready_for_pickup: copyText(locale, 'Ready for Pickup', 'Handa nang kunin'),
+      returned: copyText(locale, 'Returned', 'Naibalik'),
+      completed: copyText(locale, 'Completed', 'Nakumpleto'),
+  };
+  return labels[status];
+}
+
+function getAppointmentStatusLabel(status: CheckupAppointmentStatus, locale: 'en' | 'fil') {
+  const labels: Record<CheckupAppointmentStatus, string> = {
+    pending: copyText(locale, 'Pending', 'Pending'),
+    approved: copyText(locale, 'Approved', 'Approved'),
+    proceed_to_barangay: copyText(locale, 'Proceed to Barangay', 'Pumunta sa Barangay'),
+    declined: copyText(locale, 'Declined', 'Tinanggihan'),
+    completed: copyText(locale, 'Completed', 'Nakumpleto'),
+    cancelled: copyText(locale, 'Cancelled', 'Nakansela'),
+  };
+  return labels[status];
+}
+
+function getHistoryStatusOptions(locale: 'en' | 'fil', category: HistoryCategory) {
+  const options = (values: Array<[HistoryStatusFilter, string, string]>) => [
+    ['all' as const, copyText(locale, 'All', 'Lahat'), copyText(locale, 'All', 'Lahat')],
+    ...values.map(([value, en, fil]) => [value, en, fil] as const),
+  ];
+  if (category === 'feedback') return [];
+  if (category === 'requests') return options([
+    ['pending', 'Pending', 'Pending'], ['approved', 'Approved', 'Approved'],
+    ['ready_for_pickup', 'Ready for Pickup', 'Handa nang kunin'], ['completed', 'Completed', 'Nakumpleto'],
+    ['declined', 'Declined', 'Tinanggihan'], ['cancelled', 'Cancelled', 'Nakansela'],
+  ]);
+  if (category === 'reservations') return options([
+    ['approved', 'Approved', 'Approved'], ['declined', 'Declined', 'Tinanggihan'],
+    ['ready_for_pickup', 'Ready for Pickup', 'Handa nang kunin'], ['returned', 'Returned', 'Naibalik'],
+    ['completed', 'Completed', 'Nakumpleto'],
+  ]);
+  if (category === 'report-progress') return options([
+    ['approved', 'Approved', 'Approved'], ['declined', 'Declined', 'Tinanggihan'],
+    ['proceed_to_barangay', 'Proceed to Barangay', 'Pumunta sa Barangay'], ['resolved', 'Completed', 'Nakumpleto'],
+  ]);
+  if (category === 'appointments') return options([
+    ['approved', 'Approved', 'Approved'], ['declined', 'Declined', 'Tinanggihan'],
+    ['proceed_to_barangay', 'Proceed to Barangay', 'Pumunta sa Barangay'], ['completed', 'Completed', 'Nakumpleto'],
+  ]);
+  return options([
+    ['pending', 'Pending', 'Pending'], ['approved', 'Approved', 'Approved'],
+    ['ready_for_pickup', 'Ready for Pickup', 'Handa nang kunin'], ['proceed_to_barangay', 'Proceed to Barangay', 'Pumunta sa Barangay'],
+    ['returned', 'Returned', 'Naibalik'], ['completed', 'Completed', 'Nakumpleto'], ['resolved', 'Completed', 'Nakumpleto'],
+    ['declined', 'Declined', 'Tinanggihan'], ['cancelled', 'Cancelled', 'Nakansela'], ['submitted', 'Submitted', 'Naipasa'],
+  ]);
+}
+
 function ResidentRequestHistoryPageContent() {
   const { state, user, locale } = useAppState();
+  const PAGE_SIZE = 10;
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [historyPage, setHistoryPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<HistoryStatusFilter>('all');
+  const [summaryRequestId, setSummaryRequestId] = useState<string | null>(null);
   const pageCopy = getRolePageCopy('resident/request-history') ?? {
     title: { en: 'Service History', fil: 'Kasaysayan ng Serbisyo' },
     description: {
-      en: 'Review your requests, notifications, and report progress.',
-      fil: 'Suriin ang requests, notifications, at report progress mo.',
+      en: 'Review your requests and report progress.',
+      fil: 'Suriin ang requests at report progress mo.',
     },
   };
 
   const activeCategory = resolveActiveCategory(searchParams.get('category'));
   const requests = useMemo(() => getResidentRequests(state, user?.id), [state, user?.id]);
+  const reservations = useMemo(
+    () => state.reservations.filter((item) => item.residentId === user?.id),
+    [state.reservations, user?.id]
+  );
   const reports = useMemo(() => getResidentReports(state, user?.id), [state, user?.id]);
-  const notifications = useMemo(() => getResidentNotifications(state, user?.id), [state, user?.id]);
+  const appointments = useMemo(
+    () => state.checkupAppointments.filter((item) => item.residentId === user?.id),
+    [state.checkupAppointments, user?.id]
+  );
+  const feedback = useMemo(
+    () => getResidentFeedback(state, user?.id),
+    [state, user?.id]
+  );
   const sortedRequests = useMemo(
     () => [...requests].sort((a, b) => compareByDateDesc(a, b, (item) => item.updatedAt, (item) => item.id)),
     [requests]
@@ -98,9 +194,19 @@ function ResidentRequestHistoryPageContent() {
     [reports]
   );
 
-  const sortedNotifications = useMemo(
-    () => [...notifications].sort((a, b) => compareByDateDesc(a, b, (item) => item.createdAt, (item) => item.id)),
-    [notifications]
+  const sortedReservations = useMemo(
+    () => [...reservations].sort((a, b) => compareByDateDesc(a, b, (item) => item.updatedAt || item.createdAt, (item) => item.id)),
+    [reservations]
+  );
+
+  const sortedAppointments = useMemo(
+    () => [...appointments].sort((a, b) => compareByDateDesc(a, b, (item) => item.updatedAt || item.createdAt, (item) => item.id)),
+    [appointments]
+  );
+
+  const sortedFeedback = useMemo(
+    () => [...feedback].sort((a, b) => compareByDateDesc(a, b, (item) => item.createdAt, (item) => item.id)),
+    [feedback]
   );
 
   const allHistoryItems = useMemo(() => {
@@ -114,13 +220,14 @@ function ResidentRequestHistoryPageContent() {
       status: item.status,
     }));
 
-    const notificationItems: HistoryFeedItem[] = sortedNotifications.map((item) => ({
-      kind: 'notifications',
-      category: 'notifications',
+    const reservationItems: HistoryFeedItem[] = sortedReservations.map((item) => ({
+      kind: 'reservations',
+      category: 'reservations',
       id: item.id,
-      sortAt: item.createdAt,
-      heading: item.title,
-      message: item.message,
+      sortAt: item.updatedAt || item.createdAt,
+      heading: `${item.resource}${item.itemName ? ` - ${item.itemName}` : ''}`,
+      summary: item.purpose || `${item.date} ${item.startAt} - ${item.endAt}`,
+      status: item.status,
     }));
 
     const reportItems: HistoryFeedItem[] = sortedReports.map((report) => ({
@@ -135,17 +242,45 @@ function ResidentRequestHistoryPageContent() {
       status: report.status,
     }));
 
-    return [...requestItems, ...notificationItems, ...reportItems].sort((a, b) => {
+    const appointmentItems: HistoryFeedItem[] = sortedAppointments.map((item) => ({
+      kind: 'appointments',
+      category: 'appointments',
+      id: item.id,
+      sortAt: item.updatedAt || item.createdAt,
+      heading: `Dr. ${item.doctorName}`,
+      summary: `${item.date} ${item.startAt} - ${item.endAt}${item.reason ? ` - ${item.reason}` : ''}`,
+      status: item.status,
+    }));
+
+    const feedbackItems: HistoryFeedItem[] = sortedFeedback.map((item) => ({
+      kind: 'feedback',
+      category: 'feedback',
+      id: item.id,
+      sortAt: item.createdAt,
+      heading: item.requestId,
+      summary: `${item.rating}/5${item.comment ? ` - ${item.comment}` : ''}`,
+      status: 'submitted',
+    }));
+
+    return [...requestItems, ...reservationItems, ...reportItems, ...appointmentItems, ...feedbackItems].sort((a, b) => {
       const dateDelta = toEpoch(b.sortAt) - toEpoch(a.sortAt);
       if (dateDelta !== 0) return dateDelta;
       return b.id.localeCompare(a.id);
     });
-  }, [sortedNotifications, sortedReports, sortedRequests]);
+  }, [sortedAppointments, sortedFeedback, sortedReports, sortedRequests, sortedReservations]);
 
   const categoryItems = useMemo(() => {
     if (activeCategory === 'all') return allHistoryItems;
     return allHistoryItems.filter((item) => item.category === activeCategory);
   }, [activeCategory, allHistoryItems]);
+
+  const filteredCategoryItems = useMemo(
+    () => (statusFilter === 'all' ? categoryItems : categoryItems.filter((item) => item.status === statusFilter)),
+    [categoryItems, statusFilter]
+  );
+  const totalPages = Math.max(1, Math.ceil(filteredCategoryItems.length / PAGE_SIZE));
+  const currentPage = Math.min(historyPage, totalPages);
+  const visibleCategoryItems = filteredCategoryItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const categories = useMemo(
     () =>
@@ -155,9 +290,13 @@ function ResidentRequestHistoryPageContent() {
             ? allHistoryItems.length
             : category === 'requests'
               ? sortedRequests.length
-              : category === 'notifications'
-                  ? sortedNotifications.length
-                  : sortedReports.length;
+              : category === 'reservations'
+                ? sortedReservations.length
+                : category === 'report-progress'
+                  ? sortedReports.length
+                  : category === 'appointments'
+                    ? sortedAppointments.length
+                    : sortedFeedback.length;
 
         return {
           id: category,
@@ -165,12 +304,16 @@ function ResidentRequestHistoryPageContent() {
           count,
         };
       }),
-    [allHistoryItems.length, locale, sortedNotifications.length, sortedReports.length, sortedRequests.length]
+    [allHistoryItems.length, locale, sortedAppointments.length, sortedFeedback.length, sortedReports.length, sortedRequests.length, sortedReservations.length]
   );
 
   const activeCategoryLabel = resolveCategoryLabel(locale, activeCategory);
+  const statusOptions = getHistoryStatusOptions(locale, activeCategory);
+  const summaryRequest = requests.find((item) => item.id === summaryRequestId) ?? null;
 
   const setCategory = (nextCategory: HistoryCategory) => {
+    setHistoryPage(1);
+    setStatusFilter('all');
     const params = new URLSearchParams(searchParams.toString());
     if (nextCategory === 'all') {
       params.delete('category');
@@ -182,56 +325,67 @@ function ResidentRequestHistoryPageContent() {
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   };
 
-  const renderHistoryCard = (item: HistoryFeedItem) => {
+  const renderHistoryRow = (item: HistoryFeedItem) => {
     const categoryText = resolveCategoryLabel(locale, item.category);
 
-    if (item.kind === 'requests') {
+    if (item.kind === 'feedback') {
       return (
-        <Card key={`${item.kind}-${item.id}`} className="rounded-[var(--resident-radius-md)] border-[color:var(--resident-border-soft)] p-4">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <div className="grid gap-1">
-              <p className="text-sm font-semibold text-[color:var(--resident-ink-900)]">{item.heading}</p>
-              <p className="text-xs text-[color:var(--resident-ink-700)]">{item.summary}</p>
-            </div>
-            <StatusBadge tone={statusToneFromState(item.status)}>{getRequestStatusLabel(item.status, locale)}</StatusBadge>
-          </div>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[color:var(--resident-ink-500)]">
-            <span className="rounded-full border border-[color:var(--resident-border-soft)] px-2 py-0.5">{categoryText}</span>
-            <span>{formatDateTime(item.sortAt, locale)}</span>
-          </div>
-        </Card>
+        <TableRow key={`${item.kind}-${item.id}`}>
+          <TableCell className="max-w-0 truncate text-center font-medium" title={item.heading}>{item.heading}</TableCell>
+          <TableCell className="text-center">{categoryText}</TableCell>
+          <TableCell className="text-center"><StatusBadge tone="info">{copyText(locale, 'Submitted', 'Naipasa')}</StatusBadge></TableCell>
+          <TableCell className="text-center">{formatDateTime(item.sortAt, locale)}</TableCell>
+          <TableCell className="max-w-0 truncate text-center" title={item.summary}>{item.summary}</TableCell>
+        </TableRow>
       );
     }
 
-    if (item.kind === 'notifications') {
+    if (item.kind === 'appointments') {
       return (
-        <Card key={`${item.kind}-${item.id}`} className="rounded-[var(--resident-radius-md)] border-[color:var(--resident-border-soft)] p-4">
-          <p className="text-sm font-semibold text-[color:var(--resident-ink-900)]">{item.heading}</p>
-          <p className="mt-1 text-xs text-[color:var(--resident-ink-700)]">{item.message}</p>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[color:var(--resident-ink-500)]">
-            <span className="rounded-full border border-[color:var(--resident-border-soft)] px-2 py-0.5">{categoryText}</span>
-            <span>{formatDateTime(item.sortAt, locale)}</span>
-          </div>
-        </Card>
+        <TableRow key={`${item.kind}-${item.id}`}>
+          <TableCell className="max-w-0 truncate text-center font-medium" title={item.heading}>{item.heading}</TableCell>
+          <TableCell className="text-center">{categoryText}</TableCell>
+          <TableCell className="text-center"><StatusBadge tone={statusToneFromState(item.status)}>{getAppointmentStatusLabel(item.status, locale)}</StatusBadge></TableCell>
+          <TableCell className="text-center">{formatDateTime(item.sortAt, locale)}</TableCell>
+          <TableCell className="max-w-0 truncate text-center" title={item.summary}>{item.summary}</TableCell>
+        </TableRow>
+      );
+    }
+
+    if (item.kind === 'requests' || item.kind === 'reservations') {
+      return (
+        <TableRow key={`${item.kind}-${item.id}`}>
+          <TableCell className="max-w-0 truncate text-center font-medium" title={item.heading}>{item.heading}</TableCell>
+          <TableCell className="text-center">{categoryText}</TableCell>
+          <TableCell className="text-center">
+            <StatusBadge tone={statusToneFromState(item.status)}>
+              {item.kind === 'requests' ? getRequestStatusLabel(item.status, locale) : getReservationStatusLabel(item.status, locale)}
+            </StatusBadge>
+          </TableCell>
+          <TableCell className="text-center">{formatDateTime(item.sortAt, locale)}</TableCell>
+          <TableCell className="text-center">
+            {item.kind === 'requests' ? (
+              <Button type="button" size="sm" variant="residentOutline" onClick={() => setSummaryRequestId(item.id)}>
+                {copyText(locale, 'Review', 'Suriin')}
+              </Button>
+            ) : null}
+          </TableCell>
+        </TableRow>
       );
     }
 
     return (
-      <Card key={`${item.kind}-${item.id}`} className="rounded-[var(--resident-radius-md)] border-[color:var(--resident-border-soft)] p-4">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="grid gap-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--resident-ink-500)]">{item.caseNumber}</p>
-            <p className="text-sm font-semibold text-[color:var(--resident-ink-900)]">{item.heading}</p>
-            <p className="text-xs text-[color:var(--resident-ink-700)]">{item.incidentMeta}</p>
-          </div>
+      <TableRow key={`${item.kind}-${item.id}`}>
+        <TableCell className="max-w-0 truncate text-center font-medium" title={`${item.caseNumber} - ${item.heading}`}>
+          {item.caseNumber} - {item.heading}
+        </TableCell>
+        <TableCell className="text-center">{categoryText}</TableCell>
+        <TableCell className="text-center">
           <StatusBadge tone={statusToneFromState(item.status)}>{getReportStatusLabel(item.status, locale)}</StatusBadge>
-        </div>
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[color:var(--resident-ink-500)]">
-          <span className="rounded-full border border-[color:var(--resident-border-soft)] px-2 py-0.5">{categoryText}</span>
-          <span>{copyText(locale, 'Submitted', 'Na-submit')}: {formatDateTime(item.submittedAt, locale)}</span>
-          <span>{formatDateTime(item.sortAt, locale)}</span>
-        </div>
-      </Card>
+        </TableCell>
+        <TableCell className="text-center">{formatDateTime(item.sortAt, locale)}</TableCell>
+        <TableCell />
+      </TableRow>
     );
   };
 
@@ -246,26 +400,6 @@ function ResidentRequestHistoryPageContent() {
           cta={{ label: resolveRoleCopy(locale, pageCopy.guide.cta.label), href: pageCopy.guide.cta.href }}
         />
       ) : null}
-
-      <ResidentSection
-        title={copyText(locale, 'Service History', 'Kasaysayan ng Serbisyo')}
-        description={copyText(locale, 'Request history, notifications, and report progress in one place.', 'Magkakasama rito ang request history, notifications, at report progress.')}
-      >
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Card className="rounded-[var(--resident-radius-md)] border-[color:var(--resident-border-soft)] p-4">
-            <p className="text-xs uppercase tracking-[0.1em] text-[color:var(--resident-ink-500)]">{copyText(locale, 'Requests', 'Mga Kahilingan')}</p>
-            <p className="mt-1 text-3xl font-semibold text-[color:var(--resident-ink-900)]">{sortedRequests.length}</p>
-          </Card>
-          <Card className="rounded-[var(--resident-radius-md)] border-[color:var(--resident-border-soft)] p-4">
-            <p className="text-xs uppercase tracking-[0.1em] text-[color:var(--resident-ink-500)]">{copyText(locale, 'Notifications', 'Mga Abiso')}</p>
-            <p className="mt-1 text-3xl font-semibold text-[color:var(--resident-ink-900)]">{sortedNotifications.length}</p>
-          </Card>
-          <Card className="rounded-[var(--resident-radius-md)] border-[color:var(--resident-border-soft)] p-4">
-            <p className="text-xs uppercase tracking-[0.1em] text-[color:var(--resident-ink-500)]">{copyText(locale, 'Report Progress', 'Pag-usad ng Ulat')}</p>
-            <p className="mt-1 text-3xl font-semibold text-[color:var(--resident-ink-900)]">{sortedReports.length}</p>
-          </Card>
-        </div>
-      </ResidentSection>
 
       <ResidentSection
         title={copyText(locale, 'History Categories', 'Mga Kategorya ng History')}
@@ -309,13 +443,38 @@ function ResidentRequestHistoryPageContent() {
 
       <ResidentSection
         title={activeCategoryLabel}
+        className="bg-white"
+        actions={
+          <>
+            {statusOptions.length ? (
+              <>
+                <label htmlFor="request-history-status" className="sr-only">
+                  {copyText(locale, 'Filter by status', 'I-filter ayon sa status')}
+                </label>
+                <Select
+                  id="request-history-status"
+                  value={statusFilter}
+                  onChange={(event) => {
+                    setStatusFilter(event.target.value as HistoryStatusFilter);
+                    setHistoryPage(1);
+                  }}
+                  className="h-9 w-[190px] text-xs"
+                >
+                  {statusOptions.map(([value, en, fil]) => (
+                    <option key={value} value={value}>{locale === 'fil' ? fil : en}</option>
+                  ))}
+                </Select>
+              </>
+            ) : null}
+          </>
+        }
         description={copyText(
           locale,
           'Records are sorted by latest activity first with stable ordering for ties.',
           'Ayos ang records mula pinakabago pababa, na may stable na tie-break kapag pareho ang oras.'
         )}
       >
-        {!categoryItems.length ? (
+        {!filteredCategoryItems.length ? (
           <ResidentEmpty
             title={copyText(locale, 'No history yet in this category', 'Wala pang history sa kategoryang ito')}
             description={copyText(
@@ -325,9 +484,53 @@ function ResidentRequestHistoryPageContent() {
             )}
           />
         ) : (
-          <div className="grid gap-2">{categoryItems.map((item) => renderHistoryCard(item))}</div>
+          <Table className="table-fixed text-center">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[30%] text-center">{copyText(locale, 'Record', 'Record')}</TableHead>
+                <TableHead className="w-[20%] text-center">{copyText(locale, 'Category', 'Kategorya')}</TableHead>
+                <TableHead className="w-[18%] text-center">{copyText(locale, 'Status', 'Katayuan')}</TableHead>
+                <TableHead className="w-[20%] text-center">{copyText(locale, 'Updated', 'Na-update')}</TableHead>
+                <TableHead className="w-[12%] text-center">{copyText(locale, 'Action', 'Aksyon')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>{visibleCategoryItems.map((item) => renderHistoryRow(item))}</TableBody>
+          </Table>
         )}
+        {filteredCategoryItems.length > 0 ? (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="text-sm text-[color:var(--portal-ink-500)]">
+              {`Showing ${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(currentPage * PAGE_SIZE, filteredCategoryItems.length)} of ${filteredCategoryItems.length}`}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={currentPage <= 1}
+                onClick={() => setHistoryPage((page) => Math.max(1, page - 1))}
+              >
+                {locale === 'fil' ? 'Nakaraan' : 'Previous'}
+              </Button>
+              <div className="text-sm text-[color:var(--portal-ink-600)]">{currentPage} / {totalPages}</div>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={currentPage >= totalPages}
+                onClick={() => setHistoryPage((page) => Math.min(totalPages, page + 1))}
+              >
+                {locale === 'fil' ? 'Susunod' : 'Next'}
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </ResidentSection>
+
+      <DocumentRequestSummaryModal
+        open={Boolean(summaryRequest)}
+        requestItem={summaryRequest}
+        locale={locale}
+        onClose={() => setSummaryRequestId(null)}
+      />
     </ResidentShell>
   );
 }

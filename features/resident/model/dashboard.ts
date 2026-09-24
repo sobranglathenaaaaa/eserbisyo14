@@ -50,9 +50,8 @@ export function getResidentDashboardData(state: AppState, residentId: string | u
 
   const actionableRequests = myRequests.filter((item) => ['declined', 'cancelled'].includes(item.status));
   const inProgressRequests = myRequests.filter((item) => ['pending', 'approved', 'processing'].includes(item.status));
+  const readyForRelease = myRequests.filter((item) => item.status === 'ready_for_pickup');
   const completedRequests = myRequests.filter((item) => item.status === 'completed');
-  const generatedRequestIds = new Set(state.generatedDocuments.map((item) => item.requestId));
-  const readyForRelease = completedRequests.filter((item) => !generatedRequestIds.has(item.id));
 
   const urgentAlerts: ResidentAlert[] = [];
   if (actionableRequests.length > 0) {

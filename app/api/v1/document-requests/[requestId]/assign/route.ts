@@ -34,7 +34,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   const { data, error } = await admin
     .from('document_requests')
-    .update({ processed_by: assignee.id, status: 'processing', updated_at: new Date().toISOString() })
+    .update({ processed_by: assignee.id, updated_at: new Date().toISOString() })
     .eq('id', requestId)
     .eq('tenant_id', auth.tenantId)
     .select('*')

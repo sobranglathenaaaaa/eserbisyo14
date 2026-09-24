@@ -69,6 +69,18 @@ export class DocumentReleaseError extends Error {
   }
 }
 
+function throwRequestStatusMigrationError(message?: string): never {
+  if (message && /invalid input value for enum request_status: "ready_for_pickup"/i.test(message)) {
+    throw new DocumentReleaseError(
+      'MIGRATION_REQUIRED',
+      'The database is missing the ready_for_pickup request status. Apply supabase/migrations/20260924_add_ready_for_pickup_request_status.sql, then retry.',
+      500,
+    );
+  }
+
+  throw new DocumentReleaseError('INTERNAL_ERROR', message ?? 'Unable to complete request', 500);
+}
+
 function normalizeMetadata(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
@@ -132,7 +144,7 @@ async function sendReleaseEmail(input: {
   try {
     const env = getEmailVerificationEnv();
     const portalUrl = `${env.appBaseUrl}${input.portalHref}`;
-    const subject = `Request ${input.referenceNumber} completed`;
+    const subject = `Request ${input.referenceNumber} is ready for pickup`;
     const text = `Your ${input.documentLabel} is ready for pick up at the barangay hall. Reference: ${input.referenceNumber}. Date issued: ${input.issuedDate}.`;
     const html = buildEmailHtml({
       residentName: input.residentName,
@@ -216,7 +228,7 @@ export async function releaseGeneratedDocumentForRequest(input: ReleaseDocumentI
     const { data: updatedRequest, error: updateError } = await admin
       .from('document_requests')
       .update({
-        status: 'completed',
+        status: 'ready_for_pickup',
         processed_by: input.actorId,
         updated_at: completionIso,
       })
@@ -225,7 +237,7 @@ export async function releaseGeneratedDocumentForRequest(input: ReleaseDocumentI
       .select('*')
       .single();
     if (updateError || !updatedRequest) {
-      throw new DocumentReleaseError('INTERNAL_ERROR', updateError?.message ?? 'Unable to complete request', 500);
+      throwRequestStatusMigrationError(updateError?.message);
     }
 
     return {
@@ -239,10 +251,10 @@ export async function releaseGeneratedDocumentForRequest(input: ReleaseDocumentI
     };
   }
 
-  if (requestRow.status !== 'processing' && requestRow.status !== 'approved') {
+  if (requestRow.status !== 'approved') {
     throw new DocumentReleaseError(
       'RESOURCE_CONFLICT',
-      'Request must be approved or processing before completion.',
+      'Request must be approved before marking it ready for pickup.',
       409,
     );
   }
@@ -276,7 +288,7 @@ export async function releaseGeneratedDocumentForRequest(input: ReleaseDocumentI
     const { data: updatedRequest, error: updateError } = await admin
       .from('document_requests')
       .update({
-        status: 'completed',
+        status: 'ready_for_pickup',
         processed_by: input.actorId,
         updated_at: completionIso,
       })
@@ -285,7 +297,7 @@ export async function releaseGeneratedDocumentForRequest(input: ReleaseDocumentI
       .select('*')
       .single();
     if (updateError || !updatedRequest) {
-      throw new DocumentReleaseError('INTERNAL_ERROR', updateError?.message ?? 'Unable to complete request', 500);
+      throwRequestStatusMigrationError(updateError?.message);
     }
 
     const finalDocumentType = input.documentLabel?.trim() || typeLabel;
@@ -294,11 +306,11 @@ export async function releaseGeneratedDocumentForRequest(input: ReleaseDocumentI
     void notifyResident({
       tenantId: input.tenantId,
       userId: requestRow.resident_id,
-      title: `Request ${requestRow.reference_number} completed`,
-      message: `Your ${finalDocumentType} is available in your generated documents.`,
+      title: `Request ${requestRow.reference_number} ready for pickup`,
+      message: `Your ${finalDocumentType} is ready for pickup at the barangay hall.`,
       type: 'request',
       priority: 'info',
-      eventKey: 'document.completed',
+      eventKey: 'document.ready_for_pickup',
       entityType: 'document_request',
       entityId: input.requestId,
       actionHref: portalHref,
@@ -465,7 +477,7 @@ export async function releaseGeneratedDocumentForRequest(input: ReleaseDocumentI
   const { data: updatedRequest, error: updateError } = await admin
     .from('document_requests')
     .update({
-      status: 'completed',
+      status: 'ready_for_pickup',
       processed_by: input.actorId,
       updated_at: completionIso,
     })
@@ -474,7 +486,7 @@ export async function releaseGeneratedDocumentForRequest(input: ReleaseDocumentI
     .select('*')
     .single();
   if (updateError || !updatedRequest) {
-    throw new DocumentReleaseError('INTERNAL_ERROR', updateError?.message ?? 'Unable to complete request', 500);
+    throwRequestStatusMigrationError(updateError?.message);
   }
 
   const portalHref = buildPortalHref(generatedDoc.id);
@@ -482,11 +494,11 @@ export async function releaseGeneratedDocumentForRequest(input: ReleaseDocumentI
   void notifyResident({
     tenantId: input.tenantId,
     userId: requestRow.resident_id,
-    title: `Request ${requestRow.reference_number} completed`,
-    message: `Your ${finalDocumentType} is available in your generated documents.`,
+    title: `Request ${requestRow.reference_number} ready for pickup`,
+    message: `Your ${finalDocumentType} is ready for pickup at the barangay hall.`,
     type: 'request',
     priority: 'info',
-    eventKey: 'document.completed',
+    eventKey: 'document.ready_for_pickup',
     entityType: 'document_request',
     entityId: input.requestId,
     actionHref: portalHref,

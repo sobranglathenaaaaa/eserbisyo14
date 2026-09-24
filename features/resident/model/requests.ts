@@ -4,7 +4,7 @@ import { getResidentRequests } from './selectors';
 export function getResidentDocumentRequestView(state: AppState, residentId: string | undefined) {
   const myRequests = getResidentRequests(state, residentId);
   const activeRequests = myRequests
-    .filter((item) => ['pending', 'staff_reviewed', 'approved', 'processing'].includes(item.status))
+    .filter((item) => ['pending', 'staff_reviewed', 'approved', 'processing', 'ready_for_pickup'].includes(item.status))
     .sort((a, b) => {
       const createdDifference = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       if (createdDifference !== 0) return createdDifference;

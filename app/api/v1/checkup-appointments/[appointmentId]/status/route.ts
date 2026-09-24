@@ -8,7 +8,7 @@ import { sendCheckupAppointmentDecisionEmail } from '@/lib/checkups/appointment-
 
 type RouteContext = { params: Promise<{ appointmentId: string }> };
 type AppointmentStatusPayload = {
-  status?: 'pending' | 'approved' | 'completed' | 'declined' | 'cancelled';
+  status?: 'pending' | 'approved' | 'proceed_to_barangay' | 'completed' | 'declined' | 'cancelled';
   staffNote?: string;
 };
 

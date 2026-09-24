@@ -65,14 +65,6 @@ export default function ResidentMedicinesPage() {
 
   const selectedSlot = availableSlots.find((slot) => slot.id === selectedSlotId) ?? availableSlots[0] ?? null;
 
-  const myAppointments = useMemo(
-    () =>
-      state.checkupAppointments
-        .filter((item) => item.residentId === user?.id)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-    [state.checkupAppointments, user?.id]
-  );
-
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selectedSlot) {
@@ -154,7 +146,7 @@ export default function ResidentMedicinesPage() {
         )}
         tone="accent"
       >
-        <div className="grid gap-4 xl:grid-cols-[1.2fr_minmax(260px,0.8fr)]">
+        <div className="grid gap-4">
           <Card className="rounded-[var(--resident-radius-md)] border-[color:var(--resident-border-soft)] bg-white p-4">
             {!availableSlots.length ? (
               <ResidentEmpty
@@ -211,7 +203,7 @@ export default function ResidentMedicinesPage() {
                   />
                 </label>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center justify-end gap-3">
                   <Button
                     type="submit"
                     disabled={submitting}
@@ -228,81 +220,9 @@ export default function ResidentMedicinesPage() {
             )}
           </Card>
 
-          <Card className="rounded-[var(--resident-radius-md)] border-[color:var(--resident-border-soft)] bg-[linear-gradient(180deg,#ffffff_0%,#f4faf7_100%)] p-4">
-            <p className="text-xs uppercase tracking-[0.08em] text-[color:var(--resident-ink-500)]">
-              {copyText(locale, 'Appointment stats', 'Appointment stats')}
-            </p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-              <div className="rounded-xl border border-[color:var(--resident-border-soft)] bg-white p-3">
-                <p className="text-xs text-[color:var(--resident-ink-500)]">{copyText(locale, 'Total appointments', 'Kabuuang appointment')}</p>
-                <p className="mt-1 text-2xl font-semibold text-[color:var(--resident-ink-900)]">{myAppointments.length}</p>
-              </div>
-              <div className="rounded-xl border border-[color:var(--resident-border-soft)] bg-white p-3">
-                <p className="text-xs text-[color:var(--resident-ink-500)]">{copyText(locale, 'Pending/approved', 'Pending/approved')}</p>
-                <p className="mt-1 text-2xl font-semibold text-[color:var(--resident-ink-900)]">
-                  {myAppointments.filter((item) => item.status === 'pending' || item.status === 'approved').length}
-                </p>
-              </div>
-            </div>
-          </Card>
         </div>
-      </ResidentSection>
-
-      <ResidentSection
-        title={copyText(locale, 'My appointments', 'Aking appointments')}
-        description={copyText(locale, 'Track your check-up status and cancel upcoming appointments if needed.', 'Subaybayan ang status ng check-up at i-cancel ang upcoming appointment kung kailangan.')}
-      >
-        {!myAppointments.length ? (
-          <ResidentEmpty
-            title={copyText(locale, 'No appointments yet', 'Wala ka pang appointment')}
-            description={copyText(locale, 'Book your first check-up appointment above.', 'I-book ang unang check-up appointment sa itaas.')}
-          />
-        ) : (
-          <div className="grid gap-3 md:grid-cols-2">
-            {myAppointments.map((item) => {
-              const spec = doctorSpecializationMap.get(item.doctorName.trim().toLowerCase());
-              return (
-                <Card key={item.id} className="rounded-[var(--resident-radius-md)] border-[color:var(--resident-border-soft)] bg-white p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[color:var(--resident-ink-900)]">
-                        Dr. {item.doctorName}
-                        {spec ? (
-                          <span className="ml-1.5 font-normal text-xs text-[color:var(--resident-ink-600)]">
-                            ({spec})
-                          </span>
-                        ) : null}
-                      </p>
-                      <p className="mt-1 text-xs text-[color:var(--resident-ink-700)]">{item.date} · {slotLabel(item.startAt, item.endAt)}</p>
-                      <p className="mt-2 text-xs text-[color:var(--resident-ink-700)]">
-                        {copyText(locale, 'Reason', 'Dahilan')}: {item.reason}
-                      </p>
-                      <p className="mt-1 text-xs text-[color:var(--resident-ink-500)]">
-                        {copyText(locale, 'Updated', 'Na-update')}: {formatDateTime(item.updatedAt, locale)}
-                      </p>
-                    </div>
-                    <StatusBadge tone={statusToneFromState(item.status)}>{item.status}</StatusBadge>
-                  </div>
-                {(item.status === 'pending' || item.status === 'approved') ? (
-                  <div className="mt-3">
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      disabled={cancelingId === item.id}
-                      onClick={() => void onCancel(item.id)}
-                    >
-                      {cancelingId === item.id
-                        ? copyText(locale, 'Cancelling...', 'Kini-cancel...')
-                        : copyText(locale, 'Cancel appointment', 'I-cancel ang appointment')}
-                    </Button>
-                  </div>
-                ) : null}
-              </Card>
-            );
-          })}
-          </div>
-        )}
       </ResidentSection>
     </ResidentShell>
   );
 }
+
