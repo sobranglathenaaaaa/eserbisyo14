@@ -21,7 +21,7 @@ import { getAdminAuditLogPreview } from '@/features/admin/model/selectors';
 export default function StaffDashboardPage() {
     const { state, locale, user } = useAppState();
     const firstName = user?.fullName?.trim().split(/\s+/)[0] ?? 'Staff';
-    const { approved, processing, completed } = getStaffRequestCounts(state);
+    const { approved, readyForPickup, completed } = getStaffRequestCounts(state);
     const pageCopy = getRolePageCopy('staff/dashboard');
 
     const auditPreview = getAdminAuditLogPreview(state, 5);
@@ -64,10 +64,10 @@ export default function StaffDashboardPage() {
                   hint={locale === 'fil' ? 'Handa nang gawin' : 'Ready to work on'}
                 />
                 <DashboardSummaryCard
-                  label={locale === 'fil' ? 'Ginagawa' : 'Working'}
-                  value={processing}
+                  label={locale === 'fil' ? 'Ready nang kunin' : 'Ready for Pickup'}
+                  value={readyForPickup}
                   icon={<Clock size={18} />}
-                  hint={locale === 'fil' ? 'Kasalukuyang inaasikaso' : 'In progress now'}
+                  hint={locale === 'fil' ? 'Naghihintay na ma-claim' : 'Waiting to be claimed'}
                 />
                 <DashboardSummaryCard
                   label={locale === 'fil' ? 'Tapos na' : 'Done'}

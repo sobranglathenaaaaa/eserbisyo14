@@ -59,7 +59,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     });
 
     return ok({
-      completed: true,
+      readyForPickup: true,
       request: release.request,
       generatedDocumentId: release.generatedDocumentId,
       documentLabel: release.documentLabel,

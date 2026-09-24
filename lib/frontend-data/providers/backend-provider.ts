@@ -1321,7 +1321,7 @@ export const backendProvider: DataProvider = {
 
   async staffUpdateRequest(
     requestId: string,
-    status: 'processing' | 'completed' | 'declined',
+    status: 'ready_for_pickup' | 'completed' | 'declined',
     reason?: string,
     options?: {
       ocrJobId?: string;
@@ -1329,7 +1329,7 @@ export const backendProvider: DataProvider = {
       documentLabel?: string;
     }
   ) {
-    if (status === 'completed') {
+    if (status === 'ready_for_pickup') {
       const completion = await apiFetch<StaffDocumentCompletionResult>(`/api/v1/document-requests/${requestId}/complete`, {
         method: 'POST',
         body: JSON.stringify({
@@ -1618,7 +1618,7 @@ export const backendProvider: DataProvider = {
 
   async updateCheckupAppointmentStatus(
     appointmentId: string,
-    status: 'pending' | 'approved' | 'completed' | 'declined' | 'cancelled',
+    status: 'pending' | 'approved' | 'proceed_to_barangay' | 'completed' | 'declined' | 'cancelled',
     staffNote?: string
   ) {
     await apiFetch(`/api/v1/checkup-appointments/${appointmentId}/status`, {

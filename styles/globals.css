@@ -208,7 +208,6 @@ textarea:focus-visible {
 
 img, video, canvas, svg {
   max-width: 100%;
-  height: auto;
 }
 
 /* Touch-friendly interactive targets for smaller screens */

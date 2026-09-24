@@ -66,7 +66,7 @@ export interface UpdateCurrentProfilePayload {
 }
 
 export interface StaffDocumentCompletionResult {
-  completed: boolean;
+  readyForPickup: boolean;
   generatedDocumentId: string | null;
   portalHref: string;
   email: {
@@ -117,7 +117,7 @@ export interface DataProvider {
   staffApproveRequest(requestId: string, note?: string): Promise<void>;
   staffUpdateRequest(
     requestId: string,
-    status: 'processing' | 'completed' | 'declined',
+    status: 'ready_for_pickup' | 'completed' | 'declined',
     reason?: string,
     options?: {
       ocrJobId?: string;

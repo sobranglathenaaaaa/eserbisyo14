@@ -8,13 +8,16 @@ import { notifyResident } from '@/lib/api/notifications';
 
 type RouteContext = { params: Promise<{ reservationId: string }> };
 
-type AllowedStatus = 'pending' | 'approved' | 'declined' | 'cancelled';
+type AllowedStatus = 'pending' | 'approved' | 'declined' | 'cancelled' | 'ready_for_pickup' | 'returned' | 'completed';
 
 const allowedTransitions: Record<AllowedStatus, AllowedStatus[]> = {
   pending: ['approved', 'declined', 'cancelled'],
-  approved: ['cancelled'],
+  approved: ['cancelled', 'ready_for_pickup', 'completed'],
   declined: [],
   cancelled: [],
+  ready_for_pickup: ['returned', 'completed'],
+  returned: ['completed'],
+  completed: [],
 };
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
@@ -127,6 +130,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     approved: 'Approved',
     declined: 'Declined',
     cancelled: 'Cancelled',
+    ready_for_pickup: 'Ready for Pickup',
+    returned: 'Returned',
+    completed: 'Completed',
   };
 
   void notifyResident({

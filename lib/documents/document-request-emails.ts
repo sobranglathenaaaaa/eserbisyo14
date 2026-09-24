@@ -6,7 +6,13 @@ import { getEmailVerificationEnv } from '@/lib/supabase/env';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import type { UserRole } from '@/lib/types/models';
 
-export type DocumentRequestStatusEmail = 'staff_reviewed' | 'approved' | 'declined' | 'processing' | 'cancelled';
+export type DocumentRequestStatusEmail =
+  | 'staff_reviewed'
+  | 'approved'
+  | 'declined'
+  | 'ready_for_pickup'
+  | 'completed'
+  | 'cancelled';
 
 type SendStatusEmailInput = {
   tenantId: string;
@@ -30,7 +36,7 @@ const statusLabels: Record<string, string> = {
   staff_reviewed: 'Staff Reviewed',
   approved: 'Approved',
   declined: 'Declined',
-  processing: 'Processing',
+  ready_for_pickup: 'Ready for Pickup',
   completed: 'Completed',
   cancelled: 'Cancelled',
 };
@@ -44,8 +50,11 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
-function buildPortalUrl(): string {
+function buildPortalUrl(nextStatus: DocumentRequestStatusEmail, requestId: string): string {
   const env = getEmailVerificationEnv();
+  if (nextStatus === 'completed') {
+    return `${env.appBaseUrl}/resident/request-feedback?requestId=${encodeURIComponent(requestId)}`;
+  }
   return `${env.appBaseUrl}/resident/document-requests`;
 }
 
@@ -60,19 +69,22 @@ function buildStatusEmailContent(input: {
   const previousLabel = statusLabels[input.previousStatus] ?? input.previousStatus;
   const nextLabel = statusLabels[input.nextStatus] ?? input.nextStatus;
   const trimmedNote = input.note?.trim() || null;
+  const portalLinkLabel = input.nextStatus === 'completed' ? 'Share your feedback' : 'Open your request';
 
   const subjectByStatus: Record<DocumentRequestStatusEmail, string> = {
     staff_reviewed: `Request ${input.referenceNumber} reviewed by staff`,
     approved: `Request ${input.referenceNumber} approved`,
-    processing: `Request ${input.referenceNumber} is now being processed`,
+    ready_for_pickup: `Request ${input.referenceNumber} is ready for pickup`,
+    completed: `Request ${input.referenceNumber} has been completed`,
     declined: `Request ${input.referenceNumber} was declined`,
     cancelled: `Request ${input.referenceNumber} was cancelled`,
   };
 
   const messageByStatus: Record<DocumentRequestStatusEmail, string> = {
     staff_reviewed: 'Your document request has been reviewed by staff and is waiting for the next step.',
-    approved: 'Your document request has been approved and is ready for processing.',
-    processing: 'Your document request is now being processed by barangay staff.',
+    approved: 'Your document request has been approved. Please wait for further instructions. We will notify you when it is ready for pickup.',
+    ready_for_pickup: 'Your document is ready for pickup at the barangay hall. Please bring a valid ID when claiming it.',
+    completed: 'Your document request has been completed. Please share your feedback about the service.',
     declined: 'Your document request was declined. For clarifications, email eserbisyo2026@gmail.com.',
     cancelled: 'Your document request was cancelled.',
   };
@@ -84,7 +96,7 @@ function buildStatusEmailContent(input: {
     `<strong>Status:</strong> ${escapeHtml(previousLabel)} to ${escapeHtml(nextLabel)}</p>`,
     trimmedNote ? `<p><strong>Note:</strong> ${escapeHtml(trimmedNote)}</p>` : '',
     // Only include portal link for non-declined status updates
-    input.nextStatus !== 'declined' ? `<p><a href="${escapeHtml(input.portalUrl)}">Open your request</a></p>` : '',
+    input.nextStatus !== 'declined' ? `<p><a href="${escapeHtml(input.portalUrl)}">${portalLinkLabel}</a></p>` : '',
   ].filter(Boolean).join('');
 
   const text = [
@@ -93,7 +105,7 @@ function buildStatusEmailContent(input: {
     `Reference: ${input.referenceNumber}`,
     `Status: ${previousLabel} to ${nextLabel}`,
     trimmedNote ? `Note: ${trimmedNote}` : '',
-    input.nextStatus !== 'declined' ? `Open your request: ${input.portalUrl}` : '',
+    input.nextStatus !== 'declined' ? `${portalLinkLabel}: ${input.portalUrl}` : '',
   ].filter(Boolean).join('\n');
 
   return {
@@ -117,7 +129,7 @@ export async function sendDocumentRequestStatusEmail(input: SendStatusEmailInput
     if (residentError) throw new Error(residentError.message);
     if (!resident?.email) throw new Error('Resident email address is missing.');
 
-    const portalUrl = buildPortalUrl();
+    const portalUrl = buildPortalUrl(input.nextStatus, input.requestId);
     const email = buildStatusEmailContent({
       residentName: resident.full_name ?? 'Resident',
       referenceNumber: input.referenceNumber,

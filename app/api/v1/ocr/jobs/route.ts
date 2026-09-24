@@ -180,8 +180,8 @@ export async function POST(request: NextRequest) {
     .eq('tenant_id', auth.tenantId)
     .maybeSingle();
   if (!requestRow) return fail('RESOURCE_NOT_FOUND', 'Document request not found', 404);
-  if (requestRow.status !== 'approved' && requestRow.status !== 'processing') {
-    return fail('RESOURCE_CONFLICT', 'Request must be in approved or processing status before OCR issuance.', 409);
+  if (requestRow.status !== 'approved') {
+    return fail('RESOURCE_CONFLICT', 'Request must be approved before OCR issuance.', 409);
   }
 
   const { data: typeRow } = await admin

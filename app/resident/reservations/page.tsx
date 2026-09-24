@@ -286,7 +286,7 @@ export default function ResidentReservationsPage() {
         <form className="grid gap-5" onSubmit={handleSubmit}>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="grid gap-3 text-sm">
-              <span className="font-medium text-[color:#123726]">{copyText(locale, 'Resource Type *', 'Tipo ng Resource *')}</span>
+              <span className="font-medium text-[color:#123726]">{copyText(locale, 'Resource Type', 'Tipo ng Resource')}</span>
               <Select
                 value={selectedResource}
                 onChange={(e) => setSelectedResource(e.target.value as ResourceType)}
@@ -303,7 +303,7 @@ export default function ResidentReservationsPage() {
 
             {selectedResource === 'equipment' && (
               <label className="grid gap-3 text-sm">
-                <span className="font-medium text-[color:#123726]">{copyText(locale, 'Equipment *', 'Equipment *')}</span>
+                <span className="font-medium text-[color:#123726]">{copyText(locale, 'Equipment', 'Equipment')}</span>
                 <Select
                   value={selectedEquipmentId}
                   onChange={(e) => setSelectedEquipmentId(e.target.value)}
@@ -322,7 +322,7 @@ export default function ResidentReservationsPage() {
 
           {selectedResource === 'equipment' && selectedEquipmentItem && (
             <label className="grid gap-3 text-sm">
-              <span className="font-medium text-[color:#123726]">{copyText(locale, 'Quantity *', 'Dami *')}</span>
+              <span className="font-medium text-[color:#123726]">{copyText(locale, 'Quantity', 'Dami')}</span>
               <Input
                 type="number"
                 min="1"
@@ -339,7 +339,7 @@ export default function ResidentReservationsPage() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <label className="grid gap-3 text-sm">
-              <span className="font-medium text-[color:#123726]">{copyText(locale, 'Start Date & Time *', 'Start Date & Time *')}</span>
+              <span className="font-medium text-[color:#123726]">{copyText(locale, 'Start Date & Time', 'Start Date & Time')}</span>
               <Input
                 type="datetime-local"
                 value={startAt}
@@ -349,7 +349,7 @@ export default function ResidentReservationsPage() {
             </label>
 
             <label className="grid gap-3 text-sm">
-              <span className="font-medium text-[color:#123726]">{copyText(locale, 'End Date & Time *', 'End Date & Time *')}</span>
+              <span className="font-medium text-[color:#123726]">{copyText(locale, 'End Date & Time', 'End Date & Time')}</span>
               <Input
                 type="datetime-local"
                 value={endAt}
@@ -360,7 +360,7 @@ export default function ResidentReservationsPage() {
           </div>
 
           <label className="grid gap-3 text-sm">
-            <span className="font-medium text-[color:#123726]">{copyText(locale, 'Purpose *', 'Layunin *')}</span>
+            <span className="font-medium text-[color:#123726]">{copyText(locale, 'Purpose', 'Layunin')}</span>
             <Textarea
               value={purpose}
               onChange={(e) => setPurpose(e.target.value)}
@@ -382,93 +382,6 @@ export default function ResidentReservationsPage() {
         </form>
 
         {feedback ? <div className="mt-4"><FormFeedback tone={feedback.tone} text={feedback.text} /></div> : null}
-      </ResidentSection>
-
-      <ResidentSection
-        title={copyText(locale, 'Your Reservations', 'Ang Iyong Reservations')}
-        description={copyText(locale, 'View the status of your reservation requests', 'Tingnan ang status ng requests')}
-      >
-        {isLoading ? (
-          <div className="text-center text-sm text-[color:#456453]">
-            {copyText(locale, 'Loading...', 'Loading...')}
-          </div>
-        ) : !reservations.length ? (
-          <ResidentEmpty
-            title={copyText(locale, 'No reservations yet', 'Walang reservations pa')}
-            description={copyText(locale, 'Create your first reservation above', 'Gumawa ng first reservation sa itaas')}
-          />
-        ) : (
-          <div className="grid gap-3">
-            {activeReservations.length > 0 && (
-              <div>
-                <h3 className="mb-3 text-sm font-semibold text-[color:#123726]">
-                  {copyText(locale, 'Active Reservations', 'Active Reservations')}
-                </h3>
-                <div className="grid gap-3">
-                  {activeReservations.map((res) => (
-                    <Card key={res.id} className="rounded-xl border-[color:#d2e5da] p-4">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-semibold text-[color:#123726]">{getResourceLabel(res.resource)}</p>
-                            <StatusBadge tone={statusToneFromState(res.status)}>{getStatusLabel(res.status)}</StatusBadge>
-                          </div>
-                          {res.itemName && <p className="mt-2 text-xs text-[color:#456453]">Item: {res.itemName}{res.quantityRequested ? ` (x${res.quantityRequested})` : ''}</p>}
-                          {res.startAt && res.endAt && (
-                            <p className="mt-1 text-xs text-[color:#456453]">
-                              {formatDateTime(res.startAt, locale)} - {formatDateTime(res.endAt, locale)}
-                            </p>
-                          )}
-                          <p className="mt-2 text-sm text-[color:#456453]">{res.purpose}</p>
-                        </div>
-                        {res.status === 'pending' && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="residentOutline"
-                            onClick={() => handleCancelReservation(res.id)}
-                          >
-                            {copyText(locale, 'Cancel', 'Kanselahin')}
-                          </Button>
-                        )}
-                      </div>
-                      {res.reason && res.status === 'declined' && (
-                        <div className="mt-3 rounded-lg bg-[#fee4e2] p-3 text-xs text-[#c41c00]">
-                          <p className="font-medium">{copyText(locale, 'Reason:', 'Dahilan:')}</p>
-                          <p>{res.reason}</p>
-                        </div>
-                      )}
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {completedReservations.length > 0 && (
-              <div>
-                <h3 className="mb-3 mt-6 text-sm font-semibold text-[color:#123726]">
-                  {copyText(locale, 'Completed', 'Completed')}
-                </h3>
-                <div className="grid gap-3">
-                  {completedReservations.map((res) => (
-                    <Card key={res.id} className="rounded-xl border-[color:#e0e0e0] bg-[color:#f5f5f5] p-4 opacity-75">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-semibold text-[color:#456453]">{getResourceLabel(res.resource)}</p>
-                            <StatusBadge tone={statusToneFromState(res.status)}>{getStatusLabel(res.status)}</StatusBadge>
-                          </div>
-                          {res.itemName && <p className="mt-2 text-xs text-[color:#888]">Item: {res.itemName}</p>}
-                          <p className="mt-2 text-sm text-[color:#888]">{res.purpose}</p>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
       </ResidentSection>
     </ResidentShell>
   );

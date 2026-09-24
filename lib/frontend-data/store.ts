@@ -142,7 +142,7 @@ export const staffReviewRequest = (requestId: string, decision: 'forwarded' | 'r
 export const staffApproveRequest = (requestId: string, note?: string) => provider.staffApproveRequest(requestId, note);
 export const staffUpdateRequest = (
   requestId: string,
-  status: 'processing' | 'completed' | 'declined',
+  status: 'ready_for_pickup' | 'completed' | 'declined',
   reason?: string,
   options?: {
     ocrJobId?: string;
@@ -165,7 +165,7 @@ export const submitReport = (payload: {
   otherCategoryText?: string;
 }) => provider.submitReport(payload);
 
-export const updateReportStatus = (reportId: string, status: 'pending' | 'under_review' | 'resolved' | 'declined', note?: string) =>
+export const updateReportStatus = (reportId: string, status: 'pending' | 'approved' | 'under_review' | 'proceed_to_barangay' | 'resolved' | 'declined', note?: string) =>
   provider.updateReportStatus(reportId, status, note);
 export const upsertIncidentCategory = (payload: { id?: string; name: string; sortOrder?: number; isActive?: boolean }) =>
   provider.upsertIncidentCategory(payload);
@@ -236,7 +236,7 @@ export const createCheckupAppointment = (payload: { slotId: string; reason: stri
 export const cancelCheckupAppointment = (appointmentId: string) => provider.cancelCheckupAppointment(appointmentId);
 export const updateCheckupAppointmentStatus = (
   appointmentId: string,
-  status: 'pending' | 'approved' | 'completed' | 'declined' | 'cancelled',
+  status: 'pending' | 'approved' | 'proceed_to_barangay' | 'completed' | 'declined' | 'cancelled',
   staffNote?: string
 ) => provider.updateCheckupAppointmentStatus(appointmentId, status, staffNote);
 

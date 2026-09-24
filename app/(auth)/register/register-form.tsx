@@ -9,6 +9,7 @@ import { registerResident } from '../../../lib/frontend-data/store';
 
 const MAX_ID_UPLOAD_BYTES = 5 * 1024 * 1024;
 const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const REGISTRATION_DRAFT_KEY = 'eserbisyo.registration-draft.v1';
 const citizenshipSuggestions = [
   'Filipino',
   'American',
@@ -56,9 +57,9 @@ const initialState: FormState = {
   citizenship: 'Filipino',
   birthdate: '',
   addressLine: '',
-  province: '',
-  city: '',
-  barangay: '',
+  province: 'Metro Manila',
+  city: 'San Juan',
+  barangay: 'Progreso',
   contactNumber: '',
   email: '',
   idType: '',
@@ -70,6 +71,12 @@ const initialState: FormState = {
   terms: false,
   dataPrivacy: false,
 };
+
+async function clearRegistrationDraft() {
+  if (typeof window !== 'undefined') {
+    window.localStorage.removeItem(REGISTRATION_DRAFT_KEY);
+  }
+}
 
 function focusFieldById(fieldId: string) {
   if (typeof document === 'undefined') return;
@@ -168,9 +175,44 @@ async function computeFileHash(file: File): Promise<string> {
 
 export default function RegisterForm({ initialLegalDocuments }: { initialLegalDocuments?: any[] } = {}) {
   const [isMounted, setIsMounted] = useState(false);
+  const [isDraftReady, setIsDraftReady] = useState(false);
+  const [draftWasRestored, setDraftWasRestored] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
+    let cancelled = false;
+
+    const restoreDraft = async () => {
+      try {
+        const rawDraft = window.localStorage.getItem(REGISTRATION_DRAFT_KEY);
+        const storedDraft = rawDraft ? (JSON.parse(rawDraft) as Partial<FormState>) : null;
+
+        if (cancelled) return;
+
+        if (storedDraft) {
+          setForm((previous) => ({
+            ...previous,
+            ...storedDraft,
+            password: '',
+            confirmPassword: '',
+            idImageFileFront: null,
+            idImageFileBack: null,
+          }));
+          setDraftWasRestored(true);
+        }
+      } catch {
+        window.localStorage.removeItem(REGISTRATION_DRAFT_KEY);
+      } finally {
+        if (!cancelled) {
+          setIsDraftReady(true);
+          setIsMounted(true);
+        }
+      }
+    };
+
+    void restoreDraft();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const [form, setForm] = useState<FormState>(initialState);
@@ -183,6 +225,30 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [legalModalSlug, setLegalModalSlug] = useState<'terms-and-conditions' | 'data-privacy' | null>(null);
   const [initialLegalDocs] = useState(initialLegalDocuments ?? null);
+
+  useEffect(() => {
+    if (!isDraftReady) return;
+
+    const timeout = window.setTimeout(() => {
+      const {
+        idImageFileFront: _front,
+        idImageFileBack: _back,
+        password: _password,
+        confirmPassword: _confirmPassword,
+        ...draft
+      } = form;
+      try {
+        window.localStorage.setItem(
+          REGISTRATION_DRAFT_KEY,
+          JSON.stringify({ ...draft, savedAt: new Date().toISOString() })
+        );
+      } catch {
+        // Keep the form usable when browser storage is unavailable or full.
+      }
+    }, 400);
+
+    return () => window.clearTimeout(timeout);
+  }, [form, isDraftReady]);
 
   function maskBirthdateDisplay(raw: string) {
     const digits = (raw || '').replace(/\D/g, '');
@@ -376,9 +442,9 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
       // normalize display yyyy/mm/dd to backend-friendly yyyy-mm-dd
       birthdate: form.birthdate ? form.birthdate.replace(/\//g, '-') : form.birthdate,
       addressLine: form.addressLine.trim(),
-      province: form.province.trim(),
-      city: form.city.trim() || undefined,
-      barangay: form.barangay.trim(),
+      province: 'Metro Manila',
+      city: 'San Juan',
+      barangay: 'Progreso',
       contactNumber: form.contactNumber.trim(),
       email: form.email.trim(),
       idType: form.idType,
@@ -398,6 +464,7 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
       return;
     }
 
+    await clearRegistrationDraft();
     const nextEmail = encodeURIComponent(result.data.email);
     const warningParam = result.data.warning ? `&warning=${encodeURIComponent(result.data.warning)}` : '';
     if (result.data.verificationRequired) {
@@ -416,6 +483,11 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
         <p className={styles.pageIntro}>
           Create your profile to submit requests, track status updates, and receive barangay service notifications.
         </p>
+        {draftWasRestored ? (
+          <p className={styles.helperText} role="status">
+            Your previous registration details were restored. Please enter your password again to continue.
+          </p>
+        ) : null}
       </header>
 
       <form className={styles.authForm} onSubmit={onSubmit} noValidate>
@@ -600,8 +672,8 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
                 type="text"
                 placeholder="Metro Manila"
                 required
+                readOnly
                 value={form.province}
-                onChange={(event) => setForm((prev) => ({ ...prev, province: event.target.value }))}
               />
             </div>
             <div className={styles.formField}>
@@ -613,8 +685,8 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
                 id="city"
                 type="text"
                 placeholder="San Juan"
+                readOnly
                 value={form.city}
-                onChange={(event) => setForm((prev) => ({ ...prev, city: event.target.value }))}
               />
             </div>
             <div className={styles.formField}>
@@ -627,8 +699,8 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
                 type="text"
                 placeholder="Progreso"
                 required
+                readOnly
                 value={form.barangay}
-                onChange={(event) => setForm((prev) => ({ ...prev, barangay: event.target.value }))}
               />
             </div>
             <div className={styles.formField}>

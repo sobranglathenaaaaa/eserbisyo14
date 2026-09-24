@@ -49,7 +49,7 @@ export const residentNavigation: ResidentNavItem[] = [
   },
   {
     href: '/resident/notifications',
-    label: { en: 'Updates', fil: 'Mga Update' },
+    label: { en: 'Notifications', fil: 'Notifications' },
     hint: { en: 'Alerts and messages', fil: 'Mga alert at mensahe' },
     priority: 'primary',
     surface: 'sidebar',
@@ -103,7 +103,7 @@ export const residentNavigation: ResidentNavItem[] = [
   },
   {
     href: '/resident/request-history',
-    label: { en: 'Past Requests', fil: 'Nakaraang Kahilingan' },
+    label: { en: 'Request History', fil: 'Nakaraang Kahilingan' },
     hint: { en: 'Your request history', fil: 'Kasaysayan ng kahilingan' },
     priority: 'secondary',
     surface: 'more',

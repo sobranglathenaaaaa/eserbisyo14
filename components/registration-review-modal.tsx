@@ -146,7 +146,8 @@ export default function RegistrationReviewModal({
                     <img
                       src={frontPreviewUrl}
                       alt={frontPreviewAlt}
-                      className="h-[180px] w-full cursor-pointer object-cover object-center transition hover:opacity-90"
+                      className="h-[160px] w-full cursor-pointer object-cover object-center transition hover:opacity-90"
+                      style={{ height: '160px', width: '100%', objectFit: 'cover', objectPosition: 'center' }}
                       onError={onFrontPreviewError}
                       onClick={onFrontPreviewClick}
                     />
@@ -165,7 +166,8 @@ export default function RegistrationReviewModal({
                     <img
                       src={backPreviewUrl}
                       alt={backPreviewAlt}
-                      className="h-[180px] w-full cursor-pointer object-cover object-center transition hover:opacity-90"
+                      className="h-[160px] w-full cursor-pointer object-cover object-center transition hover:opacity-90"
+                      style={{ height: '160px', width: '100%', objectFit: 'cover', objectPosition: 'center' }}
                       onError={onBackPreviewError}
                       onClick={onBackPreviewClick}
                     />

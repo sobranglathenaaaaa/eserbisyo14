@@ -70,16 +70,13 @@ export default function LoginForm({
   const verificationStatusMessage = useMemo(() => {
     if (verified) {
       if (approvalStatus === 'pending_staff_review') {
-        return 'Email verified successfully. Your registration is now pending staff verification.';
-      }
-      if (approvalStatus === 'staff_forwarded_to_admin') {
-        return 'Email verified and checked by staff. Your registration is now waiting for admin final approval.';
+        return 'Email verified successfully. Please wait for approval.';
       }
       if (approvalStatus === 'staff_rejected') {
-        return 'Email verified, but your registration was not accepted after staff verification. Please contact the barangay office.';
+        return 'Email verified, but your registration was not accepted. Please contact the barangay office.';
       }
       if (approvalStatus === 'admin_rejected') {
-        return 'Email verified, but your registration was not approved by admin. Please contact the barangay office.';
+        return 'Email verified, but your registration was not approved. Please contact the barangay office.';
       }
       return 'Email verified successfully. You can now log in.';
     }

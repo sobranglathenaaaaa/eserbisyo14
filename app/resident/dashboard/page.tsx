@@ -30,18 +30,11 @@ export default function ResidentDashboardPage() {
         <div className="grid gap-5">
           <ResidentSection
             title={copyText(locale, 'Today overview', 'Overview ngayon')}
-            description={copyText(locale, 'What needs your attention now.', 'Ano ang kailangang tutukan ngayon.')}
             tone="accent"
             density="compact"
           >
             <div className="grid gap-4">
               <div className="grid gap-3 md:grid-cols-3">
-                <ResidentMetricCard
-                  label={copyText(locale, 'Needs Action', 'Kailangang Aksyonan')}
-                  value={dashboard.actionableRequests.length}
-                  detail={copyText(locale, 'Fix now', 'Ayusin ngayon')}
-                  compact
-                />
                 <ResidentMetricCard
                   label={copyText(locale, 'In Progress', 'Pinoproseso')}
                   value={dashboard.inProgressRequests.length}
@@ -53,50 +46,14 @@ export default function ResidentDashboardPage() {
                   value={dashboard.readyForRelease.length}
                   detail={copyText(locale, 'Ready to claim', 'Handa nang kunin')}
                   compact
+                />
+                <ResidentMetricCard
+                  label={copyText(locale, 'Completed', 'Tapos na')}
+                  value={dashboard.completedRequests.length}
+                  detail={copyText(locale, 'Finished requests', 'Mga natapos na kahilingan')}
+                  compact
                   tone="accent"
                 />
-              </div>
-
-              <div
-                className={
-                  dashboard.priorityState === 'urgent'
-                    ? 'flex flex-wrap items-center justify-between gap-3 rounded-[var(--resident-radius-md)] border border-[color:#e6c29a] bg-[linear-gradient(140deg,#fff2df_0%,#ffe4c8_100%)] px-4 py-3 text-[color:#6b3d15]'
-                    : 'flex flex-wrap items-center justify-between gap-3 rounded-[var(--resident-radius-md)] border border-[color:rgba(29,95,71,0.14)] bg-[linear-gradient(140deg,#f8fcfa_0%,#edf5f0_100%)] px-4 py-3 text-[color:var(--resident-ink-900)]'
-                }
-                role="status"
-                aria-live="polite"
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={
-                      dashboard.priorityState === 'urgent'
-                        ? 'grid h-10 w-10 place-items-center rounded-full bg-[color:#f6d9b0] text-[color:#8a4b2b]'
-                        : 'grid h-10 w-10 place-items-center rounded-full bg-[color:var(--resident-accent-soft)] text-[color:var(--resident-accent-strong)]'
-                    }
-                  >
-                    {dashboard.priorityState === 'urgent' ? <AlertTriangle size={18} /> : <CheckCircle2 size={18} />}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">
-                      {visibleUrgentAlert?.title ?? copyText(locale, 'All clear right now', 'Maayos ang lahat ngayon')}
-                    </p>
-                    <p className="mt-1 text-xs leading-5">
-                      {visibleUrgentAlert?.body ??
-                        copyText(
-                          locale,
-                          'No urgent requests are waiting for your response.',
-                          'Wala pang agarang kahilingan na naghihintay ng tugon mo.'
-                        )}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  asChild
-                  variant={dashboard.actionableRequests.length > 0 ? 'residentOutlineOrange' : 'residentOutlineGray'}
-                  className="h-9 px-3 text-xs"
-                >
-                  <Link href={dashboard.primaryCta.href}>{dashboard.primaryCta.label}</Link>
-                </Button>
               </div>
             </div>
           </ResidentSection>

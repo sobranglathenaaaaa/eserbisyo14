@@ -82,7 +82,7 @@ export async function sendCheckupAppointmentDecisionEmail(input: {
     input.status === 'approved'
       ? [
           `Hello ${residentName},`,
-          `Your check-up appointment with Dr. ${doctorName} has been approved.`,
+          `Your appointment with Dr. ${doctorName} has been approved. You can now proceed to the barangay for your check-up.`,
           `Date: ${appointmentDate}`,
           `Time: ${appointmentStart} to ${appointmentEnd}`,
           `Open My Appointments: ${appointmentsLink}`,

@@ -12,14 +12,14 @@ export type RequestStatus =
   | 'pending'
   | 'staff_reviewed'
   | 'approved'
-  | 'processing'
+  | 'ready_for_pickup'
   | 'completed'
   | 'declined'
   | 'cancelled';
 
-export type ReportStatus = 'pending' | 'under_review' | 'resolved' | 'declined';
+export type ReportStatus = 'pending' | 'approved' | 'under_review' | 'proceed_to_barangay' | 'resolved' | 'declined';
 
-export type CheckupAppointmentStatus = 'pending' | 'approved' | 'completed' | 'declined' | 'cancelled';
+export type CheckupAppointmentStatus = 'pending' | 'approved' | 'proceed_to_barangay' | 'completed' | 'declined' | 'cancelled';
 
 export type QueueStatus = 'waiting' | 'serving' | 'completed' | 'cancelled';
 export type OcrJobStatus = 'processing' | 'completed' | 'failed';
@@ -271,7 +271,7 @@ export interface Equipment {
   updatedAt: string;
 }
 
-export type ReservationStatus = 'pending' | 'approved' | 'declined' | 'cancelled';
+export type ReservationStatus = 'pending' | 'approved' | 'declined' | 'cancelled' | 'ready_for_pickup' | 'returned' | 'completed';
 
 export interface Reservation {
   id: string;

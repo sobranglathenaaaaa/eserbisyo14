@@ -161,45 +161,6 @@ export default function ResidentBlotterReportingPage() {
           </div>
         </form>
       </ResidentSection>
-
-      <ResidentSection
-        title={copyText(locale, 'My Reports', 'Mga Ulat Ko')}
-        description={copyText(locale, 'Track case status and last update timestamps.', 'Subaybayan ang status ng kaso at huling update timestamp.')}
-      >
-        <ResidentScrollTable>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{copyText(locale, 'Case / Reference', 'Case / Reference')}</TableHead>
-                <TableHead>{copyText(locale, 'Category', 'Kategorya')}</TableHead>
-                <TableHead>{copyText(locale, 'Title', 'Pamagat')}</TableHead>
-                <TableHead>{copyText(locale, 'Submitted', 'Na-submit')}</TableHead>
-                <TableHead>{copyText(locale, 'Status', 'Katayuan')}</TableHead>
-                <TableHead>{copyText(locale, 'Updated', 'Na-update')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {myReports.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="whitespace-nowrap text-xs font-medium uppercase tracking-[0.08em] text-[color:#4d6658]">
-                    {formatIncidentCaseNumber(item.id, item.createdAt)}
-                  </TableCell>
-                  <TableCell className="capitalize">
-                    {item.kind}
-                    {item.otherCategoryText ? `: ${item.otherCategoryText}` : ''}
-                  </TableCell>
-                  <TableCell className="font-medium">{item.title}</TableCell>
-                  <TableCell>{formatDateTime(item.createdAt, locale)}</TableCell>
-                  <TableCell>
-                    <StatusBadge tone={statusToneFromState(item.status)}>{getReportStatusLabel(item.status, locale)}</StatusBadge>
-                  </TableCell>
-                  <TableCell>{formatDateTime(item.updatedAt, locale)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </ResidentScrollTable>
-      </ResidentSection>
     </ResidentShell>
   );
 }

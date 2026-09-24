@@ -8,13 +8,13 @@ begin
     create type user_role as enum ('admin', 'staff', 'resident');
   end if;
   if not exists (select 1 from pg_type where typname = 'request_status') then
-    create type request_status as enum ('pending', 'staff_reviewed', 'approved', 'processing', 'completed', 'declined', 'cancelled');
+    create type request_status as enum ('pending', 'staff_reviewed', 'approved', 'ready_for_pickup', 'completed', 'declined', 'cancelled');
   end if;
   if not exists (select 1 from pg_type where typname = 'report_status') then
-    create type report_status as enum ('pending', 'under_review', 'resolved');
+    create type report_status as enum ('pending', 'approved', 'under_review', 'proceed_to_barangay', 'resolved', 'declined');
   end if;
   if not exists (select 1 from pg_type where typname = 'reservation_status') then
-    create type reservation_status as enum ('pending', 'approved', 'declined', 'cancelled');
+    create type reservation_status as enum ('pending', 'approved', 'declined', 'cancelled', 'ready_for_pickup', 'returned', 'completed');
   end if;
   if not exists (select 1 from pg_type where typname = 'queue_status') then
     create type queue_status as enum ('waiting', 'serving', 'completed', 'cancelled');
@@ -316,7 +316,7 @@ create table if not exists public.checkup_appointments (
   start_at timestamptz not null,
   end_at timestamptz not null,
   reason text not null,
-  status text not null default 'pending' check (status in ('pending', 'approved', 'completed', 'declined', 'cancelled')),
+  status text not null default 'pending' check (status in ('pending', 'approved', 'proceed_to_barangay', 'completed', 'declined', 'cancelled')),
   staff_note text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
