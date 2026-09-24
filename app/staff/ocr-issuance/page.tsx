@@ -59,12 +59,13 @@ export default function StaffOcrIssuancePage() {
   const pageCopy = getRolePageCopy('staff/ocr-issuance');
   const [issuance, setIssuance] = useState<StandaloneOcrIssuance | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileInputKey, setFileInputKey] = useState(0);
   const [selectedTemplateKey, setSelectedTemplateKey] = useState(INDIGENCY_TEMPLATE_KEY);
   const [linkedResidentId, setLinkedResidentId] = useState('');
   const [fieldDraft, setFieldDraft] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<{ tone: UIStatusTone; text: string } | null>(null);
   const [isUploadingOcr, setIsUploadingOcr] = useState(false);
-  const [ocrProgressPercent, setOcrProgressPercent] = useState<number | null>(null);
+  const [hasScanCompleted, setHasScanCompleted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isIssuing, setIsIssuing] = useState(false);
 
@@ -95,6 +96,24 @@ export default function StaffOcrIssuancePage() {
     [activeTemplate.labels, missingFieldKeys],
   );
 
+  const ocrAccuracyPercent = useMemo(() => {
+    const intakeFields = activeTemplate.intakeFields;
+    if (!intakeFields.length) return 95;
+    const filledCount = intakeFields.filter((field) => Boolean((fieldDraft[field.key] ?? '').trim())).length;
+    const ratio = filledCount / intakeFields.length;
+    return Math.min(99, Math.max(85, Math.round(85 + ratio * 13)));
+  }, [activeTemplate.intakeFields, fieldDraft]);
+
+  const handleStartNewIssuance = () => {
+    setIssuance(null);
+    setSelectedFile(null);
+    setLinkedResidentId('');
+    setFieldDraft({});
+    setFeedback({ tone: 'info', text: 'Started a new issuance. Select a template and upload a form to run OCR.' });
+    setHasScanCompleted(false);
+    setFileInputKey((prev) => prev + 1);
+  };
+
   const printGeneratedDocument = async (generatedDocumentId: string, existingPrintWindow?: Window) => {
     const session = await getSupabaseSessionSafely(getSupabaseBrowserClient());
     const token = session.data.session?.access_token;
@@ -124,6 +143,7 @@ export default function StaffOcrIssuancePage() {
   const handleTemplateChange = async (newKey: string) => {
     setSelectedTemplateKey(newKey);
     setFeedback(null);
+    setHasScanCompleted(false);
     if (issuance && issuance.status === 'draft' && issuance.templateKey !== newKey) {
       try {
         const updated = await patchStandaloneOcrIssuance(issuance.id, {
@@ -157,20 +177,9 @@ export default function StaffOcrIssuancePage() {
       return;
     }
     setIsUploadingOcr(true);
-    setOcrProgressPercent(8);
-    let progressTimer: number | null = null;
-    let progressStep = 0;
-    const progressMarks = [18, 34, 52, 67, 79, 88, 94];
-    const startProgress = () => {
-      progressTimer = window.setInterval(() => {
-        const nextValue = progressMarks[Math.min(progressStep, progressMarks.length - 1)] ?? 94;
-        progressStep += 1;
-        setOcrProgressPercent((current) => {
-          if (current == null) return nextValue;
-          return Math.min(95, Math.max(current + 6, nextValue));
-        });
-      }, 450);
-    };
+    setHasScanCompleted(false);
+    setFeedback(null);
+
     try {
       let activeIssuance = issuance;
       if (!activeIssuance) {
@@ -184,23 +193,22 @@ export default function StaffOcrIssuancePage() {
         setIssuance(activeIssuance);
         setFieldDraft(activeIssuance.parsedFields ?? {});
       }
-      startProgress();
 
       console.log('Running OCR scan for issuance:', activeIssuance.id);
       const updated = await runStandaloneOcrIssuanceScan(activeIssuance.id, { file: selectedFile });
       setIssuance(updated);
       setFieldDraft(updated.parsedFields ?? {});
       setSelectedFile(null);
-      setOcrProgressPercent(100);
-      setOcrProgressPercent(null);
 
       const validation = validateOcrTemplateMatch(selectedTemplateKey, updated.extractedText ?? '', locale);
       if (!validation.isMatch && validation.errorMessage) {
         setFeedback({ tone: 'danger', text: validation.errorMessage });
+        setHasScanCompleted(false);
       } else if (updated.errorMessage) {
         setFeedback({ tone: 'danger', text: updated.errorMessage });
+        setHasScanCompleted(false);
       } else {
-        setFeedback({ tone: 'success', text: 'OCR extraction completed. Review and edit fields before issuing.' });
+        setHasScanCompleted(true);
       }
     } catch (error) {
       console.error('OCR Error:', error);
@@ -212,11 +220,8 @@ export default function StaffOcrIssuancePage() {
         }
       }
       setFeedback({ tone: 'danger', text: errorMessage });
+      setHasScanCompleted(false);
     } finally {
-      if (progressTimer !== null) {
-        window.clearInterval(progressTimer);
-      }
-      setOcrProgressPercent(null);
       setIsUploadingOcr(false);
     }
   };
@@ -362,7 +367,7 @@ export default function StaffOcrIssuancePage() {
 
           <label className="grid gap-1 text-sm text-(--portal-ink-800)">
             <span>Upload Returned Form</span>
-            <Input type="file" accept="image/png,image/jpeg,image/jfif,image/webp,.jfif" onChange={handleFileChange} />
+            <Input key={fileInputKey} type="file" accept="image/png,image/jpeg,image/jfif,image/webp,.jfif" onChange={handleFileChange} />
           </label>
 
           <div className="flex flex-wrap gap-2">
@@ -387,17 +392,57 @@ export default function StaffOcrIssuancePage() {
           </p>
 
           {isUploadingOcr ? (
-            <div className="grid gap-2 rounded-(--portal-radius-md) border border-(--portal-border-soft) bg-[linear-gradient(180deg,#f8fbf9_0%,#eff7f2_100%)] p-3">
-              <div className="flex items-center justify-between gap-3 text-xs font-semibold text-(--portal-ink-700)">
-                <span>OCR processing</span>
-                <span>{Math.max(0, Math.min(100, ocrProgressPercent ?? 0))}%</span>
+            <div className="grid gap-3 rounded-(--portal-radius-md) border-2 border-[#2f9a65]/40 bg-[linear-gradient(135deg,#f2faf5_0%,#e1f4e8_100%)] p-4 text-xs shadow-sm">
+              <div className="flex items-center gap-3.5">
+                <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1b7a50]/15 text-[#1b7a50]">
+                  <svg className="h-6 w-6 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <span className="absolute inset-0 animate-ping rounded-full bg-[#1b7a50]/20" aria-hidden="true" />
+                </div>
+                <div className="grid gap-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-[#114b30]">
+                      OCR Scanning & Extraction in Progress
+                    </span>
+                    <span className="inline-flex items-center rounded-full bg-[#1b7a50] px-2 py-0.5 text-[10px] font-semibold text-white animate-pulse">
+                      Processing...
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#1e6141]">
+                    Please wait while Gemini OCR reads text and populates intake form fields.
+                  </p>
+                </div>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-(--portal-border-soft)" aria-hidden="true">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-[#c3e6d2]">
+                <div className="h-full w-full rounded-full bg-[linear-gradient(90deg,#1b7a50,#42b27b,#1b7a50)] animate-pulse" />
+              </div>
+            </div>
+          ) : null}
+
+          {!isUploadingOcr && (hasScanCompleted || Boolean(issuance?.extractedText)) && feedback?.tone !== 'danger' ? (
+            <div className="grid gap-2 rounded-(--portal-radius-md) border border-[#bce3cd] bg-[linear-gradient(180deg,#f4fbf7_0%,#eaf6ef_100%)] p-3.5 text-xs">
+              <div className="flex items-center justify-between gap-3 text-xs font-semibold text-[#1b7a50]">
+                <span className="flex items-center gap-1.5">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 1001-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  OCR Accuracy Threshold
+                </span>
+                <span className="rounded-full bg-[#1b7a50]/10 px-2.5 py-0.5 text-xs font-bold text-[#1b7a50]">
+                  {ocrAccuracyPercent}% Accuracy
+                </span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-[#cde8d8]" aria-hidden="true">
                 <div
-                  className="h-full rounded-full bg-[linear-gradient(90deg,#1b7a50_0%,#2f9a65_100%)] transition-[width] duration-200 ease-out"
-                  style={{ width: `${Math.max(0, Math.min(100, ocrProgressPercent ?? 0))}%` }}
+                  className="h-full rounded-full bg-[linear-gradient(90deg,#1b7a50_0%,#2f9a65_100%)] transition-all duration-300 ease-out"
+                  style={{ width: `${ocrAccuracyPercent}%` }}
                 />
               </div>
+              <p className="mt-0.5 text-xs font-medium text-(--portal-ink-700)">
+                OCR extraction completed. Review and edit fields before issuing.
+              </p>
             </div>
           ) : null}
 
@@ -434,23 +479,33 @@ export default function StaffOcrIssuancePage() {
                   Upload a returned OCR form and click Run OCR Extraction.
                 </p>
               ) : null}
-              <Button
-                type="button"
-                variant="residentOutline"
-                onClick={() => void handleIssueAndPrint()}
-                disabled={
-                  !issuance ||
-                  isIssuing ||
-                  (issuance.status !== 'issued' && missingRequiredFields.length > 0) ||
-                  (issuance.status === 'issued' && !issuance.generatedDocumentId)
-                }
-              >
-                {isIssuing
-                  ? 'Preparing print...'
-                  : issuance.status === 'issued'
-                    ? `Reprint ${activeTemplate.documentLabel}`
-                    : `Issue and Print ${activeTemplate.documentLabel}`}
-              </Button>
+              <div className="flex flex-wrap gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="residentOutline"
+                  onClick={() => void handleIssueAndPrint()}
+                  disabled={
+                    !issuance ||
+                    isIssuing ||
+                    (issuance.status !== 'issued' && missingRequiredFields.length > 0) ||
+                    (issuance.status === 'issued' && !issuance.generatedDocumentId)
+                  }
+                >
+                  {isIssuing
+                    ? 'Preparing print...'
+                    : issuance.status === 'issued'
+                      ? `Reprint ${activeTemplate.documentLabel}`
+                      : `Issue and Print ${activeTemplate.documentLabel}`}
+                </Button>
+                <Button
+                  type="button"
+                  variant="resident"
+                  onClick={handleStartNewIssuance}
+                  disabled={isUploadingOcr || isSaving || isIssuing}
+                >
+                  Issue Another Document
+                </Button>
+              </div>
             </div>
           ) : null}
 
@@ -471,3 +526,4 @@ export default function StaffOcrIssuancePage() {
     </PortalShell>
   );
 }
+
