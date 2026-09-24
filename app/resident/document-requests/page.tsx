@@ -17,6 +17,7 @@ import { ResidentShell } from '@/features/resident/view/resident-shell';
 import { DocumentRequestSummaryModal } from '@/features/resident/view/document-request-summary-modal';
 import { getRolePageCopy, resolveRoleCopy, resolveSteps } from '@/lib/content/role-pages';
 import { getSupabaseBrowserClient, getSupabaseSessionSafely } from '@/lib/supabase/client';
+import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
 
 const DRAFT_KEY = 'eserbisyo.draft.document-request';
 
@@ -237,17 +238,7 @@ export default function ResidentDocumentRequestsPage() {
   }, [categories, selectedCategory, typesByCategory, selectedOptionId]);
 
   // Prevent background scroll when modal is open
-  useEffect(() => {
-    const isAnyModalOpen = proxyModalOpen || confirmSubmitOpen || !!summaryRequestId;
-    if (isAnyModalOpen) {
-      document.documentElement.style.overflow = 'hidden';
-    } else {
-      document.documentElement.style.overflow = '';
-    }
-    return () => {
-      document.documentElement.style.overflow = '';
-    };
-  }, [proxyModalOpen, confirmSubmitOpen, summaryRequestId]);
+  useBodyScrollLock(proxyModalOpen || confirmSubmitOpen || Boolean(summaryRequestId));
 
   const selected = documentTypes.find((item) => item.optionId === selectedOptionId);
   const summaryRequest = myRequests.find((item) => item.id === summaryRequestId) ?? null;

@@ -43,6 +43,7 @@ import { cn } from '@/lib/utils';
 import { PortalShellBase } from '@/components/portal-shell-base';
 import { formatDateTime } from '@/lib/formatters';
 import { DocumentRequestSummaryModal } from './document-request-summary-modal';
+import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
 import { copy, type LocalizedCopy } from '../model/copy';
 import { copyText } from '../model/copy';
 import {
@@ -517,6 +518,8 @@ function ResidentReleaseFeedbackPrompt() {
   }, [activeRequestId, eligibleRequestIds]);
 
   const activeRequest = state.documentRequests.find((item) => item.id === activeRequestId) ?? null;
+  useBodyScrollLock(Boolean(activeRequest));
+
   if (!activeRequest) return null;
 
   const acknowledgeAndClose = async () => {
@@ -808,6 +811,7 @@ export function ResidentShell({
   const searchParams = useSearchParams();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  useBodyScrollLock(isMobileMenuOpen || showLogoutConfirm);
 
   const sidebarItems = useMemo(() => getResidentSidebarItems(), []);
   const mobileSidebarItems = useMemo(() => getResidentMobileSidebarItems(), []);

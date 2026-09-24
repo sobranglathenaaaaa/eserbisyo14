@@ -66,7 +66,6 @@ export async function sendCheckupAppointmentDecisionEmail(input: {
           `<p>Your check-up appointment with Dr. ${doctorName} has been approved.</p>`,
           `<p><strong>Date:</strong> ${appointmentDate}</p>`,
           `<p><strong>Time:</strong> ${appointmentStart} to ${appointmentEnd}</p>`,
-
         ]
       : [
           `<p>Hello ${residentName},</p>`,
@@ -74,8 +73,6 @@ export async function sendCheckupAppointmentDecisionEmail(input: {
           `<p><strong>Date:</strong> ${appointmentDate}</p>`,
           `<p><strong>Time:</strong> ${appointmentStart} to ${appointmentEnd}</p>`,
           note ? `<p><strong>Reason:</strong> ${note}</p>` : '',
-          `<p>You can review your appointments here:</p>`,
-          `<p><a href="${appointmentsLink}">Open My Appointments</a></p>`,
         ];
 
   const textLines =
@@ -85,7 +82,6 @@ export async function sendCheckupAppointmentDecisionEmail(input: {
           `Your appointment with Dr. ${doctorName} has been approved. You can now proceed to the barangay for your check-up.`,
           `Date: ${appointmentDate}`,
           `Time: ${appointmentStart} to ${appointmentEnd}`,
-          `Open My Appointments: ${appointmentsLink}`,
         ]
       : [
           `Hello ${residentName},`,
@@ -93,7 +89,6 @@ export async function sendCheckupAppointmentDecisionEmail(input: {
           `Date: ${appointmentDate}`,
           `Time: ${appointmentStart} to ${appointmentEnd}`,
           note ? `Reason: ${note}` : '',
-          `Open My Appointments: ${appointmentsLink}`,
         ];
 
   const html = htmlLines.filter(Boolean).join('');

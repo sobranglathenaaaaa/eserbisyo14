@@ -193,9 +193,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         <p>Your ${resourceLabel.toLowerCase()} has been ${statusText}.</p>
         <p><strong>Status:</strong> ${statusLabel[body.status]}</p>
         ${body.status === 'declined' && body.reason?.trim() ? `<p><strong>Reason:</strong> ${body.reason.trim()}</p>` : ''}
-        <p><a href="${portalUrl}">View your reservations</a></p>
       `;
-      const text = `Hello ${residentProfile.full_name ?? 'Resident'},\nYour ${resourceLabel.toLowerCase()} has been ${statusText}.\nStatus: ${statusLabel[body.status]}${reasonText}\nView your reservations: ${portalUrl}`;
+      const text = `Hello ${residentProfile.full_name ?? 'Resident'},\nYour ${resourceLabel.toLowerCase()} has been ${statusText}.\nStatus: ${statusLabel[body.status]}${reasonText}`;
 
       await sendResendEmail({
         to: residentProfile.email,

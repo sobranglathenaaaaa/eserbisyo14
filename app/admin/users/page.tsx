@@ -12,6 +12,7 @@ import { formatDateTime, relativeTime } from '@/lib/formatters';
 import { getSupabaseBrowserClient, getSupabaseSessionSafely } from '@/lib/supabase/client';
 import { hardDeleteUser, softDeleteUser, updateUserApproval, updateUserRole } from '../../../lib/frontend-data/store';
 import { useAppState } from '../../../lib/frontend-data/use-app-state';
+import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
 
 type AccountRole = 'admin' | 'resident' | 'staff';
 
@@ -62,6 +63,7 @@ export default function AdminUsersPage() {
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [createFeedback, setCreateFeedback] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
+  useBodyScrollLock(Boolean(isCreateFormOpen || confirmDialog.open || reviewDialog.open));
 
   const filteredUsers = useMemo(() => {
     const query = userSearch.trim().toLowerCase();

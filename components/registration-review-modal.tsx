@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
 
 type DetailItem = {
   label: string;
@@ -69,6 +70,8 @@ export default function RegistrationReviewModal({
   footerNote,
   secondaryMessage,
 }: RegistrationReviewModalProps) {
+  useBodyScrollLock(open);
+
   useEffect(() => {
     if (!open) return;
 

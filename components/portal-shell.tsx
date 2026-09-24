@@ -23,6 +23,7 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '../lib/types/models';
 import { PortalShellBase } from './portal-shell-base';
+import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
 
 interface LocalizedLabel {
   en: string;
@@ -378,6 +379,7 @@ export default function PortalShell({
   const searchParams = useSearchParams();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  useBodyScrollLock(isMobileMenuOpen || showLogoutConfirm);
   const [seenBadgeCounts, setSeenBadgeCounts] = useState<Record<keyof typeof BADGE_STORAGE_KEYS, number>>(() => ({
     userAccess: readSeenBadgeCount(BADGE_STORAGE_KEYS.userAccess),
     staffRegistrationReviews: readSeenBadgeCount(BADGE_STORAGE_KEYS.staffRegistrationReviews),

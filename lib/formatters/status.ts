@@ -4,6 +4,7 @@ const requestStatusLabel: Record<RequestStatus, { en: string; fil: string }> = {
   pending: { en: 'Pending', fil: 'Naghihintay' },
   staff_reviewed: { en: 'Staff reviewed', fil: 'Nasuri ng staff' },
   approved: { en: 'Approved', fil: 'Inaprubahan' },
+  processing: { en: 'Processing', fil: 'Inaasikaso' },
   ready_for_pickup: { en: 'Ready for pickup', fil: 'Handa nang kunin' },
   completed: { en: 'Ready', fil: 'Handa na' },
   declined: { en: 'Declined', fil: 'Hindi aprubado' },

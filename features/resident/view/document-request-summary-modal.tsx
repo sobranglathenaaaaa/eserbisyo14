@@ -7,6 +7,7 @@ import { formatDateTime, getRequestStatusLabel } from '@/lib/formatters';
 import type { DocumentRequest, Locale } from '@/lib/types/models';
 import { copyText } from '@/features/resident/model/copy';
 import { StatusBadge, statusToneFromState } from '@/components/portal-ui';
+import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
 
 export function DocumentRequestSummaryModal({
   open,
@@ -23,7 +24,8 @@ export function DocumentRequestSummaryModal({
   onCancel?: () => Promise<void>;
   isCancelling?: boolean;
 }) {
- 
+  useBodyScrollLock(open && Boolean(requestItem));
+
   if (!open || !requestItem) return null;
 
   const reason = requestItem.adminDecisionReason ?? requestItem.processingDeclineReason;
@@ -38,8 +40,8 @@ export function DocumentRequestSummaryModal({
       : copyText(locale, 'No note for this status.', 'Walang tala para sa status na ito.'));
 
   return (
-    <div className="fixed inset-0 z-[80] grid place-items-center bg-[color:rgba(10,24,18,0.55)] p-4">
-      <Card className="w-full max-w-[700px] rounded-[var(--resident-radius-lg)] border-[color:var(--resident-border-soft)] p-0">
+    <div className="fixed inset-0 z-[80] grid place-items-center bg-[color:rgba(10,24,18,0.55)] p-4 overscroll-contain touch-none">
+      <Card className="w-full max-w-[700px] max-h-[90vh] overflow-y-auto rounded-[var(--resident-radius-lg)] border-[color:var(--resident-border-soft)] p-0 pointer-events-auto">
         <div className="flex items-start justify-between gap-3 border-b border-[color:var(--resident-border-soft)] px-5 py-4">
           <div>
             <p className="text-xs uppercase tracking-[0.1em] text-[color:var(--resident-ink-500)]">

@@ -25,6 +25,7 @@ import {
 } from '@/lib/frontend-data/store';
 import { formatDateTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
+import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
 
 function slotLabel(startAt: string, endAt: string) {
   const start = new Date(startAt);
@@ -152,6 +153,16 @@ export default function StaffAppointmentsPage() {
   }, [state.doctors]);
 
   const [deletedSlotIds, setDeletedSlotIds] = useState<string[]>([]);
+  useBodyScrollLock(
+    Boolean(
+      selectedAppointmentId ||
+        confirmDeleteSlotId ||
+        confirmDeleteAppointmentId ||
+        showAddSlotModal ||
+        showSlotsModal ||
+        showDoctorsModal
+    )
+  );
 
   const slots = useMemo(
     () =>
