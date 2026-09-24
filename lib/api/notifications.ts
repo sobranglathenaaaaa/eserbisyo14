@@ -13,7 +13,9 @@ export type NotificationEventKey =
   | 'queue.status_changed'
   | 'checkup_appointment.status_changed'
   | 'incident.status_changed'
-  | 'announcement.published';
+  | 'announcement.published'
+  | 'reservation.created'
+  | 'reservation.status_changed';
 
 type NotificationEntityType =
   | 'document_request'
@@ -21,7 +23,8 @@ type NotificationEntityType =
   | 'queue_entry'
   | 'checkup_appointment'
   | 'incident_report'
-  | 'announcement';
+  | 'announcement'
+  | 'reservation';
 type NotificationType = 'account' | 'request' | 'report' | 'system';
 
 type NotifyResidentInput = {
@@ -132,6 +135,30 @@ export async function notifyResident(input: NotifyResidentInput) {
       userId: input.userId,
       eventKey: input.eventKey,
       message: error instanceof Error ? error.message : 'Unknown notification error',
+    });
+  }
+}
+
+export async function notifyStaff(input: Omit<NotifyResidentInput, 'userId'>) {
+  const admin = getSupabaseAdminClient();
+  const { data: staffUsers, error: staffError } = await admin
+    .from('profiles')
+    .select('id')
+    .eq('tenant_id', input.tenantId)
+    .eq('role', 'staff');
+
+  if (staffError) {
+    console.error('[notifications] staff_fetch_failed', {
+      tenantId: input.tenantId,
+      message: staffError.message,
+    });
+    return;
+  }
+
+  for (const staffUser of staffUsers ?? []) {
+    await notifyResident({
+      ...input,
+      userId: staffUser.id,
     });
   }
 }

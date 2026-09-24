@@ -12,6 +12,7 @@ export type RequestStatus =
   | 'pending'
   | 'staff_reviewed'
   | 'approved'
+  | 'processing'
   | 'ready_for_pickup'
   | 'completed'
   | 'declined'

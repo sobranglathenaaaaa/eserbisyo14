@@ -4,7 +4,8 @@ import { can } from '@/lib/auth/permissions';
 import { requireAuth } from '@/lib/auth/request-auth';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { writeAuditLog } from '@/lib/api/audit';
-import { notifyResident } from '@/lib/api/notifications';
+import { notifyResident, notifyStaff } from '@/lib/api/notifications';
+import { sendResendEmail } from '@/lib/email/resend';
 
 type RouteContext = { params: Promise<{ reservationId: string }> };
 
@@ -135,18 +136,78 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     completed: 'Completed',
   };
 
+  const residentNotificationPriority = body.status === 'declined' || body.status === 'cancelled' ? 'warning' : 'info';
+  const residentNotificationMessage = `Status changed from ${statusLabel[current]} to ${statusLabel[body.status]}.`;
+
   void notifyResident({
     tenantId: auth.tenantId,
     userId: existing.resident_id,
-    title: `Reservation updated`,
-    message: `Status changed from ${statusLabel[current]} to ${statusLabel[body.status]}.`,
+    title: 'Reservation updated',
+    message: residentNotificationMessage,
     type: 'request',
-    priority: body.status === 'declined' || body.status === 'cancelled' ? 'warning' : 'info',
-    eventKey: 'document.status_changed',
-    entityType: 'document_request',
+    priority: residentNotificationPriority,
+    eventKey: 'reservation.status_changed',
+    entityType: 'reservation',
     entityId: reservationId,
     actionHref: '/resident/reservations',
   });
+
+  if (body.status === 'approved' || body.status === 'declined') {
+    await notifyStaff({
+      tenantId: auth.tenantId,
+      title: `Reservation ${body.status}`,
+      message: `The reservation was ${body.status}.`,
+      type: 'request',
+      priority: body.status === 'declined' ? 'warning' : 'info',
+      eventKey: 'reservation.status_changed',
+      entityType: 'reservation',
+      entityId: reservationId,
+      actionHref: '/staff/reservations',
+    });
+  }
+
+  if (body.status === 'approved' || body.status === 'declined') {
+    const { data: residentProfile, error: profileError } = await admin
+      .from('profiles')
+      .select('full_name,email')
+      .eq('id', existing.resident_id)
+      .eq('tenant_id', auth.tenantId)
+      .maybeSingle();
+
+    if (!profileError && residentProfile?.email) {
+      const resourceLabel = existing.resource === 'equipment' ? 'Equipment reservation' : 'Facility reservation';
+      const subject = body.status === 'approved'
+        ? `Your ${resourceLabel} has been approved`
+        : `Update on your ${resourceLabel}`;
+      const statusText = body.status === 'approved' ? 'approved' : 'declined';
+      const reasonText = body.status === 'declined' && body.reason?.trim() ? `\nReason: ${body.reason.trim()}` : '';
+      const portalUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/resident/reservations`;
+
+      const html = `
+        <p>Hello ${residentProfile.full_name ?? 'Resident'},</p>
+        <p>Your ${resourceLabel.toLowerCase()} has been ${statusText}.</p>
+        <p><strong>Status:</strong> ${statusLabel[body.status]}</p>
+        ${body.status === 'declined' && body.reason?.trim() ? `<p><strong>Reason:</strong> ${body.reason.trim()}</p>` : ''}
+        <p><a href="${portalUrl}">View your reservations</a></p>
+      `;
+      const text = `Hello ${residentProfile.full_name ?? 'Resident'},\nYour ${resourceLabel.toLowerCase()} has been ${statusText}.\nStatus: ${statusLabel[body.status]}${reasonText}\nView your reservations: ${portalUrl}`;
+
+      await sendResendEmail({
+        to: residentProfile.email,
+        subject,
+        html,
+        text,
+      });
+
+      await admin.from('email_logs').insert({
+        tenant_id: auth.tenantId,
+        to_user_id: existing.resident_id,
+        to_email: residentProfile.email,
+        subject,
+        body: text,
+      });
+    }
+  }
 
   return ok(data);
 }

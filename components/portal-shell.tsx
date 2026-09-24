@@ -323,6 +323,7 @@ const BADGE_STORAGE_KEYS = {
   documentRequests: 'eserbisyo-admin-document-requests-seen-count',
   staffProcessRequests: 'eserbisyo-staff-process-requests-seen-count',
   incidentReports: 'eserbisyo-admin-incident-reports-seen-count',
+  staffReservations: 'eserbisyo-staff-reservations-seen-count',
 } as const;
 
 function readSeenBadgeCount(storageKey: string) {
@@ -384,6 +385,7 @@ export default function PortalShell({
     documentRequests: readSeenBadgeCount(BADGE_STORAGE_KEYS.documentRequests),
     staffProcessRequests: readSeenBadgeCount(BADGE_STORAGE_KEYS.staffProcessRequests),
     incidentReports: readSeenBadgeCount(BADGE_STORAGE_KEYS.incidentReports),
+    staffReservations: readSeenBadgeCount(BADGE_STORAGE_KEYS.staffReservations),
   }));
 
   return (
@@ -629,6 +631,10 @@ export default function PortalShell({
                                 if (item.href.includes('/admin/incidents')) {
                                   badgeKey = 'incidentReports';
                                   pendingCount = state.reports.filter((report) => report.status === 'pending').length;
+                                }
+                                if (item.href === '/staff/reservations') {
+                                  badgeKey = 'staffReservations';
+                                  pendingCount = state.reservations.filter((reservation) => reservation.status === 'pending').length;
                                 }
                               } catch (e) {
                                 pendingCount = 0;
