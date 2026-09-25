@@ -611,7 +611,7 @@ function PortalShellContent({
                                     // For staff: show users pending staff review. For admin: show users forwarded by staff.
                                     badgeKey = shellRole === 'staff' ? 'staffRegistrationReviews' : 'userAccess';
                                     pendingCount = shellRole === 'staff'
-                                      ? state.users.filter((u) => !u.isDeleted && u.approvalStatus === 'pending_staff_review').length
+                                      ? state.users.filter((u) => !u.isDeleted && u.isVerified && u.approvalStatus === 'pending_staff_review').length
                                       : state.users.filter((u) => !u.isDeleted && u.approvalStatus === 'staff_forwarded_to_admin').length;
                                   }
                                   if (item.href === '/staff/appointments' && shellRole === 'staff') {
