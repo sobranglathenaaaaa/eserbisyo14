@@ -252,22 +252,58 @@ function sanitizeParsedFields(parsedFields: Record<string, string>): Record<stri
   return parsedFields;
 }
 
+export async function extractTextWithTesseract(
+  file: File,
+  options?: { templateFields?: string[]; templateLabels?: Record<string, string> },
+): Promise<{ extractedText: string; parsedFields: Record<string, string>; model: string }> {
+  try {
+    const { createWorker } = await import('tesseract.js');
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const worker = await createWorker('eng');
+    const ret = await worker.recognize(buffer);
+    await worker.terminate();
+
+    const extractedText = normalizeExtractedText(ret.data.text || '');
+    const templateFields = options?.templateFields ?? [];
+    const templateLabels = options?.templateLabels ?? {};
+
+    const parsedFromText = parseFieldsFromExtractedText(extractedText, templateFields, templateLabels);
+    const parsedFields = sanitizeParsedFields(
+      templateFields.reduce<Record<string, string>>((acc, field) => {
+        acc[field] = parsedFromText[field] || '';
+        return acc;
+      }, {}),
+    );
+
+    return {
+      extractedText: extractedText || 'Tesseract OCR processed image.',
+      parsedFields,
+      model: 'tesseract.js (offline fallback)',
+    };
+  } catch (err) {
+    console.error('Tesseract fallback error:', err);
+    throw new Error('OCR extraction failed with Gemini and Tesseract fallback.');
+  }
+}
+
 export async function extractTextWithGemini(
   file: File,
   options?: { templateFields?: string[]; templateLabels?: Record<string, string> },
 ): Promise<{ extractedText: string; parsedFields: Record<string, string>; model: string }> {
-  const ai = getGeminiClient();
-  const data = Buffer.from(await file.arrayBuffer()).toString('base64');
   const templateFields = options?.templateFields ?? [];
-
   const templateLabels = options?.templateLabels ?? {};
-  const fieldDescriptor = templateFields.map((field) => {
-    const label = templateLabels[field]?.trim();
-    return label ? `"${field}" (label: "${label}")` : `"${field}"`;
-  });
 
-  const extractionPrompt = templateFields.length
-    ? `Extract all readable text from this document image and map values for the required template fields.
+  try {
+    const ai = getGeminiClient();
+    const data = Buffer.from(await file.arrayBuffer()).toString('base64');
+
+    const fieldDescriptor = templateFields.map((field) => {
+      const label = templateLabels[field]?.trim();
+      return label ? `"${field}" (label: "${label}")` : `"${field}"`;
+    });
+
+    const extractionPrompt = templateFields.length
+      ? `Extract all readable text from this document image and map values for the required template fields.
 Return ONLY valid JSON with this shape:
 {
   "extractedText": "string",
@@ -282,60 +318,57 @@ Rules:
   ${fieldDescriptor.join('\n  ')}
 - If a required field is missing, set it to an empty string.
 - Do not include markdown or explanation.`
-    : 'Extract all readable text from this document image. Return only the extracted text with line breaks preserved.';
+      : 'Extract all readable text from this document image. Return only the extracted text with line breaks preserved.';
 
-  const response = await generateContentWithRetry(ai, {
-    model: OCR_MODEL,
-    contents: [
-      {
-        role: 'user',
-        parts: [
-          {
-            text: extractionPrompt,
-          },
-          {
-            inlineData: {
-              mimeType: file.type,
-              data,
-            },
-          },
-        ],
-      },
-    ],
-  });
+    const response = await generateContentWithRetry(ai, {
+      model: OCR_MODEL,
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: extractionPrompt },
+            { inlineData: { mimeType: file.type, data } },
+          ],
+        },
+      ],
+    });
 
-  const rawOutput = response.text ?? '';
-  if (!rawOutput.trim()) {
-    throw new Error('No OCR text was returned by the model.');
-  }
-
-  if (!templateFields.length) {
-    const extractedText = normalizeExtractedText(rawOutput);
-    if (!extractedText) {
-      throw new Error('No OCR text was returned by the model.');
+    const rawOutput = response.text ?? '';
+    if (!rawOutput.trim()) {
+      throw new Error('No OCR text was returned from the model.');
     }
-    return { extractedText, parsedFields: {}, model: OCR_MODEL };
-  }
 
-  const json = parseJsonObject(rawOutput);
-  const extractedText = normalizeExtractedText(
-    typeof json?.extractedText === 'string' ? json.extractedText : rawOutput,
-  );
-  if (!extractedText) {
-    throw new Error('No OCR text was returned by the model.');
-  }
-  const parsedFromJson = normalizeParsedFields(json?.parsedFields, templateFields, templateLabels);
-  const parsedFromText = parseFieldsFromExtractedText(extractedText, templateFields, templateLabels);
-  const parsedFields = sanitizeParsedFields(
-    templateFields.reduce<Record<string, string>>((acc, field) => {
-      acc[field] = parsedFromJson[field] || parsedFromText[field] || '';
-      return acc;
-    }, {}),
-  );
+    if (!templateFields.length) {
+      const extractedText = normalizeExtractedText(rawOutput);
+      if (!extractedText) {
+        throw new Error('No OCR text was returned from the model.');
+      }
+      return { extractedText, parsedFields: {}, model: OCR_MODEL };
+    }
 
-  return {
-    extractedText,
-    parsedFields,
-    model: OCR_MODEL,
-  };
+    const json = parseJsonObject(rawOutput);
+    const extractedText = normalizeExtractedText(
+      typeof json?.extractedText === 'string' ? json.extractedText : rawOutput,
+    );
+    if (!extractedText) {
+      throw new Error('No OCR text was returned from the model.');
+    }
+    const parsedFromJson = normalizeParsedFields(json?.parsedFields, templateFields, templateLabels);
+    const parsedFromText = parseFieldsFromExtractedText(extractedText, templateFields, templateLabels);
+    const parsedFields = sanitizeParsedFields(
+      templateFields.reduce<Record<string, string>>((acc, field) => {
+        acc[field] = parsedFromJson[field] || parsedFromText[field] || '';
+        return acc;
+      }, {}),
+    );
+
+    return {
+      extractedText,
+      parsedFields,
+      model: OCR_MODEL,
+    };
+  } catch (error) {
+    console.warn('[Gemini OCR unavailable/failed. Falling back to Tesseract.js]:', error);
+    return await extractTextWithTesseract(file, options);
+  }
 }

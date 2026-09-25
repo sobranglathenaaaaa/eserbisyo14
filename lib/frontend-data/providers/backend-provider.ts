@@ -603,7 +603,7 @@ async function createState(): Promise<AppState> {
   const supabase = getSupabaseBrowserClient();
   const empty = createEmptyAppState();
 
-  const [
+  let [
     authResult,
     profilesRes,
     docTypesRes,
@@ -701,9 +701,11 @@ async function createState(): Promise<AppState> {
     }
   }
 
-  const reservationsRes = session?.role === 'resident'
-    ? await supabase.from('reservations').select('*').eq('resident_id', session.userId).order('created_at', { ascending: false })
-    : await supabase.from('reservations').select('*').order('created_at', { ascending: false });
+  if (!reservationsRes?.data || reservationsRes.data.length === 0) {
+    reservationsRes = session?.role === 'resident'
+      ? await supabase.from('reservations').select('*').eq('resident_id', session.userId).order('created_at', { ascending: false })
+      : await supabase.from('reservations').select('*').order('created_at', { ascending: false });
+  }
 
   const dbDocumentTypes = (docTypesRes.data as DbDocumentType[] | null) ?? [];
   const dbTypeMap = new Map(dbDocumentTypes.map((item) => [item.id, item]));
