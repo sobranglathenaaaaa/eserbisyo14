@@ -603,58 +603,107 @@ async function createState(): Promise<AppState> {
   const supabase = getSupabaseBrowserClient();
   const empty = createEmptyAppState();
 
-  const [
-    authResult,
-    profilesRes,
-    docTypesRes,
-    requestsRes,
-    requestAttachmentsRes,
-    templatesRes,
-    generatedRes,
-    reportsRes,
-    incidentCategoriesRes,
-    feedbackRes,
-    announcementsRes,
-    censusRes,
-    queueRes,
-    reservationsRes,
-    doctorAvailabilitySlotsRes,
-    checkupAppointmentsRes,
-    medicinesRes,
-    equipmentRes,
-    notificationsRes,
-    emailLogsRes,
-    auditLogsRes,
-    ocrRes,
-    doctorsRes,
-    appMetaRes,
-  ] = await Promise.all([
-    safeAuthGetUser(supabase),
-    supabase.from('profiles').select('*'),
-    supabase.from('document_types').select('*'),
-    supabase.from('document_requests').select('*').order('created_at', { ascending: false }),
-    supabase.from('document_request_attachments').select('*').order('created_at', { ascending: true }),
-    supabase.from('document_templates').select('*').order('updated_at', { ascending: false }),
-    supabase.from('generated_documents').select('*').order('date_issued', { ascending: false }),
-    supabase.from('incident_reports').select('*').order('created_at', { ascending: false }),
-    supabase.from('incident_categories').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: false }),
-    supabase.from('feedback').select('*').order('created_at', { ascending: false }),
-    supabase.from('announcements').select('*').order('created_at', { ascending: false }),
-    supabase.from('census_records').select('*').order('updated_at', { ascending: false }),
-    supabase.from('queue_entries').select('*').order('created_at', { ascending: true }),
-    supabase.from('reservations').select('*').order('created_at', { ascending: false }),
-    supabase.from('doctor_availability_slots').select('*').order('start_at', { ascending: true }),
-    supabase.from('checkup_appointments').select('*').order('created_at', { ascending: false }),
-    supabase.from('medicines').select('*').order('updated_at', { ascending: false }),
-    supabase.from('equipment').select('*').order('name', { ascending: true }),
-    // medicine_requests removed from DB; skip fetching it
-    supabase.from('notifications').select('*').order('created_at', { ascending: false }),
-    supabase.from('email_logs').select('*').order('created_at', { ascending: false }),
-    supabase.from('audit_logs').select('*').order('created_at', { ascending: false }),
-    supabase.from('ocr_jobs').select('*').order('created_at', { ascending: false }),
-    supabase.from('doctors').select('*').order('name', { ascending: true }),
-    supabase.from('app_meta').select('*').order('updated_at', { ascending: false }).limit(1),
-  ]);
+  let profilesRes: any, docTypesRes: any, requestsRes: any, requestAttachmentsRes: any, templatesRes: any, generatedRes: any, reportsRes: any, incidentCategoriesRes: any, feedbackRes: any, announcementsRes: any, censusRes: any, queueRes: any, reservationsRes: any, doctorAvailabilitySlotsRes: any, checkupAppointmentsRes: any, medicinesRes: any, equipmentRes: any, notificationsRes: any, emailLogsRes: any, auditLogsRes: any, ocrRes: any, doctorsRes: any, appMetaRes: any;
+  let authResult: any = { data: { user: null } };
+
+  try {
+    const results = await Promise.all([
+      safeAuthGetUser(supabase),
+      supabase.from('profiles').select('*'),
+      supabase.from('document_types').select('*'),
+      supabase.from('document_requests').select('*').order('created_at', { ascending: false }),
+      supabase.from('document_request_attachments').select('*').order('created_at', { ascending: true }),
+      supabase.from('document_templates').select('*').order('updated_at', { ascending: false }),
+      supabase.from('generated_documents').select('*').order('date_issued', { ascending: false }),
+      supabase.from('incident_reports').select('*').order('created_at', { ascending: false }),
+      supabase.from('incident_categories').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: false }),
+      supabase.from('feedback').select('*').order('created_at', { ascending: false }),
+      supabase.from('announcements').select('*').order('created_at', { ascending: false }),
+      supabase.from('census_records').select('*').order('updated_at', { ascending: false }),
+      supabase.from('queue_entries').select('*').order('created_at', { ascending: true }),
+      supabase.from('reservations').select('*').order('created_at', { ascending: false }),
+      supabase.from('doctor_availability_slots').select('*').order('start_at', { ascending: true }),
+      supabase.from('checkup_appointments').select('*').order('created_at', { ascending: false }),
+      supabase.from('medicines').select('*').order('updated_at', { ascending: false }),
+      supabase.from('equipment').select('*').order('name', { ascending: true }),
+      supabase.from('notifications').select('*').order('created_at', { ascending: false }),
+      supabase.from('email_logs').select('*').order('created_at', { ascending: false }),
+      supabase.from('audit_logs').select('*').order('created_at', { ascending: false }),
+      supabase.from('ocr_jobs').select('*').order('created_at', { ascending: false }),
+      supabase.from('doctors').select('*').order('name', { ascending: true }),
+      supabase.from('app_meta').select('*').order('updated_at', { ascending: false }).limit(1),
+    ]);
+    [
+      authResult, profilesRes, docTypesRes, requestsRes, requestAttachmentsRes, templatesRes, generatedRes,
+      reportsRes, incidentCategoriesRes, feedbackRes, announcementsRes, censusRes, queueRes, reservationsRes,
+      doctorAvailabilitySlotsRes, checkupAppointmentsRes, medicinesRes, equipmentRes, notificationsRes,
+      emailLogsRes, auditLogsRes, ocrRes, doctorsRes, appMetaRes
+    ] = results;
+  } catch (err) {
+    // Offline fallback: fetch from local PostgreSQL endpoint
+    try {
+      const offlineRes = await fetch('/api/dev/offline-state').then(r => r.json());
+      if (offlineRes.ok && offlineRes.data) {
+        const d = offlineRes.data;
+        profilesRes = { data: d.profiles };
+        docTypesRes = { data: d.docTypes };
+        requestsRes = { data: d.requests };
+        requestAttachmentsRes = { data: d.attachments };
+        templatesRes = { data: d.templates };
+        generatedRes = { data: d.generated };
+        reportsRes = { data: d.reports };
+        incidentCategoriesRes = { data: d.incidentCategories };
+        feedbackRes = { data: d.feedback };
+        announcementsRes = { data: d.announcements };
+        censusRes = { data: d.census };
+        queueRes = { data: d.queue };
+        reservationsRes = { data: d.reservations };
+        doctorAvailabilitySlotsRes = { data: d.doctorSlots };
+        checkupAppointmentsRes = { data: d.appointments };
+        medicinesRes = { data: d.medicines };
+        equipmentRes = { data: d.equipment };
+        notificationsRes = { data: d.notifications };
+        emailLogsRes = { data: d.emailLogs };
+        auditLogsRes = { data: d.auditLogs };
+        ocrRes = { data: d.ocrJobs };
+        doctorsRes = { data: d.doctors };
+        appMetaRes = { data: d.appMeta };
+      }
+    } catch (offlineErr) {}
+  }
+
+  // If cloud profiles query failed / returned error, fall back to offline state
+  if ((!profilesRes || profilesRes.error || !profilesRes.data) && typeof window !== 'undefined') {
+    try {
+      const offlineRes = await fetch('/api/dev/offline-state').then(r => r.json());
+      if (offlineRes.ok && offlineRes.data) {
+        const d = offlineRes.data;
+        profilesRes = { data: d.profiles };
+        docTypesRes = { data: d.docTypes };
+        requestsRes = { data: d.requests };
+        requestAttachmentsRes = { data: d.attachments };
+        templatesRes = { data: d.templates };
+        generatedRes = { data: d.generated };
+        reportsRes = { data: d.reports };
+        incidentCategoriesRes = { data: d.incidentCategories };
+        feedbackRes = { data: d.feedback };
+        announcementsRes = { data: d.announcements };
+        censusRes = { data: d.census };
+        queueRes = { data: d.queue };
+        reservationsRes = { data: d.reservations };
+        doctorAvailabilitySlotsRes = { data: d.doctorSlots };
+        checkupAppointmentsRes = { data: d.appointments };
+        medicinesRes = { data: d.medicines };
+        equipmentRes = { data: d.equipment };
+        notificationsRes = { data: d.notifications };
+        emailLogsRes = { data: d.emailLogs };
+        auditLogsRes = { data: d.auditLogs };
+        ocrRes = { data: d.ocrJobs };
+        doctorsRes = { data: d.doctors };
+        appMetaRes = { data: d.appMeta };
+      }
+    } catch (offlineErr) {}
+  }
 
   const profiles = ((profilesRes.data as DbProfile[] | null) ?? []).filter((item) => item?.id);
   const profileMap = new Map(profiles.map((item) => [item.id, item]));
