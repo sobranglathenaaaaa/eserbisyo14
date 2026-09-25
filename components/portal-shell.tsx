@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import {
   AlertTriangle,
   BarChart3,
@@ -360,7 +360,7 @@ function resolveNavIcon(href: string) {
   return LayoutDashboard;
 }
 
-export default function PortalShell({
+function PortalShellContent({
   role,
   allowedRoles,
   title,
@@ -796,5 +796,20 @@ export default function PortalShell({
         );
       }}
     </PortalShellBase>
+  );
+}
+
+export default function PortalShell(props: {
+  role: UserRole;
+  allowedRoles?: UserRole[];
+  title: string | LocalizedProp;
+  description: string | LocalizedProp;
+  children: React.ReactNode;
+  showHero?: boolean;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <PortalShellContent {...props} />
+    </Suspense>
   );
 }

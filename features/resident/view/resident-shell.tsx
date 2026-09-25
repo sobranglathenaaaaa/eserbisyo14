@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, ReactNode, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -796,7 +796,7 @@ function ResidentNotificationBell() {
   );
 }
 
-export function ResidentShell({
+function ResidentShellContent({
   title,
   description,
   children,
@@ -1171,5 +1171,18 @@ export function ResidentShell({
         );
       }}
     </PortalShellBase>
+  );
+}
+
+export function ResidentShell(props: {
+  title: string | LocalizedCopy;
+  description: string | LocalizedCopy;
+  children: React.ReactNode;
+  showHero?: boolean;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <ResidentShellContent {...props} />
+    </Suspense>
   );
 }
