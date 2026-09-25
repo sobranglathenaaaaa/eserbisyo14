@@ -21,6 +21,7 @@ import PortalShell from '../../../components/portal-shell';
 import { useAppState } from '../../../lib/frontend-data/use-app-state';
 import { getSupabaseBrowserClient, getSupabaseSessionSafely } from '@/lib/supabase/client';
 import type { Reservation } from '@/lib/types/models';
+import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
 
 export default function StaffReservationsPage() {
   const { state, locale } = useAppState();
@@ -38,6 +39,7 @@ export default function StaffReservationsPage() {
 
   const pending = useMemo(() => (state.reservations ?? []).filter((item) => item.status === 'pending'), [state.reservations]);
   const selectedReservation = selectedId ? (state.reservations ?? []).find((item) => item.id === selectedId) ?? null : null;
+  useBodyScrollLock(Boolean(selectedReservation));
 
   const statusSelectRef = useRef<HTMLSelectElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);

@@ -35,6 +35,11 @@ export default function StaffNotificationsPage() {
 
   const pageCopy = getRolePageCopy('staff/notifications');
 
+  const notifications = useMemo(
+    () => [...(state.notifications ?? [])].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [state.notifications]
+  );
+
   const resolveTargetLabel = (tid?: string) => {
     if (!tid) return '-';
     const key = String(tid).toLowerCase();
@@ -54,6 +59,32 @@ export default function StaffNotificationsPage() {
           cta={{ label: resolveRoleCopy(locale, pageCopy.guide.cta.label), href: pageCopy.guide.cta.href }}
         />
       ) : null}
+
+      <SectionCard
+        title={locale === 'fil' ? 'Notifications' : 'Notifications'}
+        description={locale === 'fil' ? 'Mga direktang alert para sa iyong staff account.' : 'Direct alerts for your staff account.'}
+      >
+        <div className="grid gap-2">
+          {notifications.length === 0 ? (
+            <p className="text-sm text-[color:var(--portal-ink-600)]">
+              {locale === 'fil' ? 'Wala pang notifications.' : 'No notifications yet.'}
+            </p>
+          ) : (
+            notifications.slice(0, PAGE_SIZE).map((item) => (
+              <div key={item.id} className="rounded-[var(--portal-radius-sm)] border border-[color:var(--portal-border-soft)] bg-[color:var(--portal-surface-1)] p-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <p className="font-semibold text-[color:var(--portal-ink-900)]">{item.title}</p>
+                  <StatusBadge tone={item.read ? 'neutral' : 'info'}>
+                    {item.read ? (locale === 'fil' ? 'Nabasa' : 'Read') : (locale === 'fil' ? 'Bago' : 'New')}
+                  </StatusBadge>
+                </div>
+                <p className="mt-1 text-sm text-[color:var(--portal-ink-700)]">{item.message}</p>
+                <p className="mt-1 text-xs text-[color:var(--portal-ink-500)]">{formatDateTime(item.createdAt, locale)}</p>
+              </div>
+            ))
+          )}
+        </div>
+      </SectionCard>
 
       <SectionCard
         title={locale === 'fil' ? 'System Updates' : 'System Updates'}

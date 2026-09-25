@@ -20,6 +20,7 @@ import type { Announcement } from '@/lib/types/models';
 import PortalShell from '../../../components/portal-shell';
 import { deleteAnnouncement, upsertAnnouncement } from '../../../lib/frontend-data/store';
 import { useAppState } from '../../../lib/frontend-data/use-app-state';
+import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
 
 // Removed schedule draft type; using end datetime instead
 
@@ -87,6 +88,7 @@ export default function AdminAnnouncementsPage() {
   const [audience, setAudience] = useState<'all' | 'resident' | 'staff'>('all');
   const [endAtInput, setEndAtInput] = useState<string>(isoToLocalInput(getDefaultEndAtISO()));
   const [viewing, setViewing] = useState<Announcement | null>(null);
+  useBodyScrollLock(Boolean(viewing));
   const [openActionsForAnnouncementId, setOpenActionsForAnnouncementId] = useState<string | null>(null);
   const [menuCoords, setMenuCoords] = useState<{ left: number; top: number } | null>(null);
   const [menuPlacement, setMenuPlacement] = useState<'above' | 'below'>('above');

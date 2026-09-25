@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { FormEvent, useMemo, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import styles from '../auth.module.css';
 import { resetPassword } from '@/lib/frontend-data/store';
 
@@ -12,6 +13,8 @@ export default function ResetPasswordForm() {
   const hasToken = Boolean(token);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
@@ -61,32 +64,54 @@ export default function ResetPasswordForm() {
       <form className={styles.authForm} onSubmit={onSubmit} noValidate aria-busy={isSubmitting}>
         <div className={styles.formField}>
           <label htmlFor="reset-new-password">New password</label>
-          <input
-            className={styles.input}
-            id="reset-new-password"
-            type="password"
-            autoComplete="new-password"
-            placeholder="Minimum 8 characters"
-            required
-            disabled={isSubmitting || !hasToken}
-            value={newPassword}
-            onChange={(event) => setNewPassword(event.target.value)}
-          />
+          <div className={styles.passwordWrapper}>
+            <input
+              className={`${styles.input} ${styles.inputWithToggle}`}
+              id="reset-new-password"
+              type={showNewPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              placeholder="Minimum 8 characters"
+              required
+              disabled={isSubmitting || !hasToken}
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+            />
+            <button
+              type="button"
+              className={styles.passwordToggleBtn}
+              onClick={() => setShowNewPassword((prev) => !prev)}
+              aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+              tabIndex={-1}
+            >
+              {showNewPassword ? <EyeOff className={styles.eyeIcon} /> : <Eye className={styles.eyeIcon} />}
+            </button>
+          </div>
         </div>
 
         <div className={styles.formField}>
           <label htmlFor="reset-confirm-password">Confirm new password</label>
-          <input
-            className={styles.input}
-            id="reset-confirm-password"
-            type="password"
-            autoComplete="new-password"
-            placeholder="Re-enter new password"
-            required
-            disabled={isSubmitting || !hasToken}
-            value={confirmPassword}
-            onChange={(event) => setConfirmPassword(event.target.value)}
-          />
+          <div className={styles.passwordWrapper}>
+            <input
+              className={`${styles.input} ${styles.inputWithToggle}`}
+              id="reset-confirm-password"
+              type={showConfirmPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              placeholder="Re-enter new password"
+              required
+              disabled={isSubmitting || !hasToken}
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+            />
+            <button
+              type="button"
+              className={styles.passwordToggleBtn}
+              onClick={() => setShowConfirmPassword((prev) => !prev)}
+              aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+              tabIndex={-1}
+            >
+              {showConfirmPassword ? <EyeOff className={styles.eyeIcon} /> : <Eye className={styles.eyeIcon} />}
+            </button>
+          </div>
         </div>
 
         <button className={styles.primaryBtn} type="submit" disabled={isSubmitting || !hasToken}>

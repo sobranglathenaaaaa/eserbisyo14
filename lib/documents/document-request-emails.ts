@@ -95,8 +95,6 @@ function buildStatusEmailContent(input: {
     `<p><strong>Reference:</strong> ${escapeHtml(input.referenceNumber)}<br />`,
     `<strong>Status:</strong> ${escapeHtml(previousLabel)} to ${escapeHtml(nextLabel)}</p>`,
     trimmedNote ? `<p><strong>Note:</strong> ${escapeHtml(trimmedNote)}</p>` : '',
-    // Only include portal link for non-declined status updates
-    input.nextStatus !== 'declined' ? `<p><a href="${escapeHtml(input.portalUrl)}">${portalLinkLabel}</a></p>` : '',
   ].filter(Boolean).join('');
 
   const text = [
@@ -105,7 +103,6 @@ function buildStatusEmailContent(input: {
     `Reference: ${input.referenceNumber}`,
     `Status: ${previousLabel} to ${nextLabel}`,
     trimmedNote ? `Note: ${trimmedNote}` : '',
-    input.nextStatus !== 'declined' ? `${portalLinkLabel}: ${input.portalUrl}` : '',
   ].filter(Boolean).join('\n');
 
   return {

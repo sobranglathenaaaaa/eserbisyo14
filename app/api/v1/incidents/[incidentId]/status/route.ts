@@ -20,14 +20,19 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   if (auth.role !== 'staff' && auth.role !== 'admin') {
     return fail('AUTH_FORBIDDEN', 'Staff/Admin access required', 403);
   }
-  if ((body.status === 'approved' || body.status === 'under_review' || body.status === 'proceed_to_barangay') && auth.role !== 'admin') {
+
+  // Admin approval is restricted to admin-only actions, but staff are expected to
+  // continue handling reports after the admin has approved or moved them forward.
+  if ((body.status === 'approved' || body.status === 'proceed_to_barangay') && auth.role !== 'admin') {
     return fail('AUTH_FORBIDDEN', 'Admin access required to approve incidents', 403);
   }
-  if (body.status === 'resolved' && auth.role !== 'admin') {
-    return fail('AUTH_FORBIDDEN', 'Admin access required to mark incidents as resolved', 403);
+
+  if (body.status === 'under_review' && auth.role !== 'staff' && auth.role !== 'admin') {
+    return fail('AUTH_FORBIDDEN', 'Staff/Admin access required to review incidents', 403);
   }
-  if (body.status === 'declined' && auth.role !== 'admin') {
-    return fail('AUTH_FORBIDDEN', 'Admin access required to decline incidents', 403);
+
+  if ((body.status === 'resolved' || body.status === 'declined') && auth.role !== 'staff' && auth.role !== 'admin') {
+    return fail('AUTH_FORBIDDEN', 'Staff/Admin access required to resolve or decline incidents', 403);
   }
 
   const admin = getSupabaseAdminClient();

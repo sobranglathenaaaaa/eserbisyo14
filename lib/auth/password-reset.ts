@@ -275,15 +275,13 @@ export async function sendPasswordResetMessage(input: {
   const subject = 'Reset your eSerbisyo password';
   const html = [
     `<p>Hello ${input.fullName || 'Resident'},</p>`,
-    '<p>We received a request to reset your eSerbisyo password. You can reset your password using either the OTP code or the link below:</p>',
+    '<p>We received a request to reset your eSerbisyo password. Use the code below to reset your password:</p>',
     '<div style="margin: 20px 0; padding: 15px; background: #f4f6f8; border-radius: 8px; text-align: center;">',
     `<p style="margin: 0 0 8px 0; font-size: 14px; color: #555;">Your password reset code is:</p>`,
     `<p style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: 0.2em; color: #1e293b;">${input.otpCode}</p>`,
     `<p style="margin: 8px 0 0 0; font-size: 12px; color: #64748b;">This code expires in 5 minutes.</p>`,
     '</div>',
-    `<p style="margin-top: 20px;"><a href="${input.resetLink}" style="background-color: #2563eb; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">Reset Password</a></p>`,
-    `<p style="font-size: 12px; color: #64748b;">Or copy and paste this URL into your browser:<br/><a href="${input.resetLink}">${input.resetLink}</a></p>`,
-    '<p style="margin-top: 20px; font-size: 13px; color: #64748b;">This link expires in 15 minutes. If you did not request this, you can safely ignore this email.</p>',
+    '<p style="margin-top: 20px; font-size: 13px; color: #64748b;">If you did not request this, you can safely ignore this email.</p>',
   ].join('');
 
   const text = [
@@ -292,9 +290,6 @@ export async function sendPasswordResetMessage(input: {
     '',
     `Your password reset code is: ${input.otpCode}`,
     'This code expires in 5 minutes.',
-    '',
-    `Reset link: ${input.resetLink}`,
-    'This link expires in 15 minutes.',
     '',
     'If you did not request this, you can safely ignore this email.',
   ].join('\n');

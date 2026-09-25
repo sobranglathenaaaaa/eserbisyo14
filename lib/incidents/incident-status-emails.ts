@@ -79,7 +79,6 @@ function buildStatusEmailContent(input: {
     `<strong>Title:</strong> ${escapeHtml(input.title)}<br />`,
     `<strong>Status:</strong> ${escapeHtml(previousLabel)} to ${escapeHtml(nextLabel)}</p>`,
     trimmedNote ? `<p><strong>Reason:</strong> ${escapeHtml(trimmedNote)}</p>` : '',
-    input.nextStatus === 'under_review' ? `<p><a href="${escapeHtml(input.portalUrl)}">View your report</a></p>` : '',
   ].filter(Boolean).join('');
 
   const text = [
@@ -89,7 +88,6 @@ function buildStatusEmailContent(input: {
     `Title: ${input.title}`,
     `Status: ${previousLabel} to ${nextLabel}`,
     trimmedNote ? `Reason: ${trimmedNote}` : '',
-    input.nextStatus === 'under_review' ? `View your report: ${input.portalUrl}` : '',
   ].filter(Boolean).join('\n');
 
   return {

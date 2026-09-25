@@ -77,6 +77,7 @@ export default function StaffProcessRequestsPage() {
       all: 0,
       pending: 0,
       staff_reviewed: 0,
+      processing: 0,
       ready_for_pickup: 0,
       approved: 0,
       declined: 0,

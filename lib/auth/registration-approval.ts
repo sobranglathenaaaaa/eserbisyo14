@@ -31,7 +31,6 @@ export async function sendRegistrationDecisionMessage(input: {
     ? [
         `<p>Hello ${residentName},</p>`,
         '<p>Your eSerbisyo registration has been approved. You can now log in to your account.</p>',
-        `<p><a href="${loginLink}">Log in to eSerbisyo</a></p>`,
       ]
     : // rejected
       (() => {
@@ -55,7 +54,6 @@ export async function sendRegistrationDecisionMessage(input: {
     ? [
         `Hello ${residentName},`,
         'Your eSerbisyo registration has been approved. You can now log in to your account.',
-        `Log in: ${loginLink}`,
       ]
     : // rejected
       (() => {

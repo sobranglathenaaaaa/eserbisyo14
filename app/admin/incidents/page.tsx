@@ -20,6 +20,8 @@ import { getRolePageCopy, resolveRoleCopy, resolveSteps } from '@/lib/content/ro
 import PortalShell from '../../../components/portal-shell';
 import { updateReportStatus, upsertIncidentCategory } from '../../../lib/frontend-data/store';
 import { useAppState } from '../../../lib/frontend-data/use-app-state';
+import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
+
 export default function AdminIncidentsPage() {
   const { state, locale } = useAppState();
   const currentRole = state.session?.role;
@@ -34,6 +36,7 @@ export default function AdminIncidentsPage() {
   const [renamingCategoryValue, setRenamingCategoryValue] = useState('');
   const [categoryAction, setCategoryAction] = useState<{ id: string; kind: 'adding' | 'renaming' | 'archiving' | 'restoring' } | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+  useBodyScrollLock(reviewOpen);
   const [reviewNote, setReviewNote] = useState('');
   const [declineReason, setDeclineReason] = useState('');
   const [processingStatus, setProcessingStatus] = useState<'none' | 'approved' | 'declined' | 'resolved'>('none');

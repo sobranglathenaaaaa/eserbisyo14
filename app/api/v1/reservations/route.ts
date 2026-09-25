@@ -4,7 +4,6 @@ import { assertCan } from '@/lib/auth/permissions';
 import { requireAuth } from '@/lib/auth/request-auth';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { writeAuditLog } from '@/lib/api/audit';
-import { notifyResident } from '@/lib/api/notifications';
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request);
@@ -149,19 +148,6 @@ export async function POST(request: NextRequest) {
     actorRole: auth.role,
     action: 'reservations.create',
     targetId: data.id,
-  });
-
-  void notifyResident({
-    tenantId: auth.tenantId,
-    userId: auth.userId,
-    title: 'Reservation submitted',
-    message: 'Your reservation was submitted and is waiting for staff review.',
-    type: 'request',
-    priority: 'info',
-    eventKey: 'reservation.submitted',
-    entityType: 'reservation',
-    entityId: data.id,
-    actionHref: '/resident/reservations',
   });
 
   return ok(data, { status: 201 });

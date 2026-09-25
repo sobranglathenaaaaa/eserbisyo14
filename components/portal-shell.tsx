@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import {
   AlertTriangle,
   BarChart3,
@@ -23,6 +23,7 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '../lib/types/models';
 import { PortalShellBase } from './portal-shell-base';
+import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
 
 interface LocalizedLabel {
   en: string;
@@ -329,6 +330,7 @@ const BADGE_STORAGE_KEYS = {
   documentRequests: 'eserbisyo-admin-document-requests-seen-count',
   staffProcessRequests: 'eserbisyo-staff-process-requests-seen-count',
   incidentReports: 'eserbisyo-admin-incident-reports-seen-count',
+  staffReservations: 'eserbisyo-staff-reservations-seen-count',
 } as const;
 
 function readSeenBadgeCount(storageKey: string) {
@@ -364,7 +366,7 @@ function resolveNavIcon(href: string) {
   return LayoutDashboard;
 }
 
-export default function PortalShell({
+function PortalShellContent({
   role,
   allowedRoles,
   title,
@@ -383,6 +385,7 @@ export default function PortalShell({
   const searchParams = useSearchParams();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  useBodyScrollLock(isMobileMenuOpen || showLogoutConfirm);
   const [seenBadgeCounts, setSeenBadgeCounts] = useState<Record<keyof typeof BADGE_STORAGE_KEYS, number>>(() => ({
     userAccess: readSeenBadgeCount(BADGE_STORAGE_KEYS.userAccess),
     staffRegistrationReviews: readSeenBadgeCount(BADGE_STORAGE_KEYS.staffRegistrationReviews),
@@ -391,6 +394,7 @@ export default function PortalShell({
     documentRequests: readSeenBadgeCount(BADGE_STORAGE_KEYS.documentRequests),
     staffProcessRequests: readSeenBadgeCount(BADGE_STORAGE_KEYS.staffProcessRequests),
     incidentReports: readSeenBadgeCount(BADGE_STORAGE_KEYS.incidentReports),
+    staffReservations: readSeenBadgeCount(BADGE_STORAGE_KEYS.staffReservations),
   }));
 
   return (
@@ -629,7 +633,7 @@ export default function PortalShell({
                                     // For staff: show users pending staff review. For admin: show users forwarded by staff.
                                     badgeKey = shellRole === 'staff' ? 'staffRegistrationReviews' : 'userAccess';
                                     pendingCount = shellRole === 'staff'
-                                      ? state.users.filter((u) => !u.isDeleted && u.approvalStatus === 'pending_staff_review').length
+                                      ? state.users.filter((u) => !u.isDeleted && u.isVerified && u.approvalStatus === 'pending_staff_review').length
                                       : state.users.filter((u) => !u.isDeleted && u.approvalStatus === 'staff_forwarded_to_admin').length;
                                   }
                                   if (item.href === '/staff/appointments' && shellRole === 'staff') {
@@ -655,6 +659,10 @@ export default function PortalShell({
                                 if (item.href.includes('/admin/incidents')) {
                                   badgeKey = 'incidentReports';
                                   pendingCount = state.reports.filter((report) => report.status === 'pending').length;
+                                }
+                                if (item.href === '/staff/reservations') {
+                                  badgeKey = 'staffReservations';
+                                  pendingCount = state.reservations.filter((reservation) => reservation.status === 'pending').length;
                                 }
                               } catch (e) {
                                 pendingCount = 0;
@@ -814,5 +822,20 @@ export default function PortalShell({
         );
       }}
     </PortalShellBase>
+  );
+}
+
+export default function PortalShell(props: {
+  role: UserRole;
+  allowedRoles?: UserRole[];
+  title: string | LocalizedProp;
+  description: string | LocalizedProp;
+  children: React.ReactNode;
+  showHero?: boolean;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <PortalShellContent {...props} />
+    </Suspense>
   );
 }

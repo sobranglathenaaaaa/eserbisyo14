@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     .order('created_at', { ascending: false });
 
   if (registrationQueue === 'staff') {
-    query = query.eq('role', 'resident').eq('is_deleted', false).eq('approval_status', 'pending_staff_review');
+    query = query.eq('role', 'resident').eq('is_deleted', false).eq('is_verified', true).eq('approval_status', 'pending_staff_review');
   } else if (registrationQueue === 'admin') {
     if (!isAdmin) {
       return fail('AUTH_FORBIDDEN', 'Admin access required', 403);

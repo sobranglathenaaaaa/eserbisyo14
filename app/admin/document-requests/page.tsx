@@ -19,8 +19,7 @@ import { getRolePageCopy, resolveRoleCopy, resolveSteps } from '@/lib/content/ro
 import PortalShell from '../../../components/portal-shell';
 import { adminReviewRequest } from '../../../lib/frontend-data/store';
 import { useAppState } from '../../../lib/frontend-data/use-app-state';
-
-
+import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
 
 export default function AdminDocumentRequestsPage() {
   const { state, locale } = useAppState();
@@ -28,13 +27,14 @@ export default function AdminDocumentRequestsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'approved' | 'declined' | 'cancelled' | 'pending' | 'staff_reviewed'>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const selectedRequest = selectedId ? (state.documentRequests ?? []).find((item) => item.id === selectedId) ?? null : null;
+  useBodyScrollLock(Boolean(selectedRequest));
   const [search, setSearch] = useState('');
   const pageCopy = getRolePageCopy('admin/document-requests');
 
   const approved = useMemo(() => state.documentRequests.filter((item) => item.status === 'approved'), [state.documentRequests]);
   const pending = useMemo(() => state.documentRequests.filter((item) => item.status === 'pending'), [state.documentRequests]);
   const staffReviewed = useMemo(() => state.documentRequests.filter((item) => item.status === 'staff_reviewed'), [state.documentRequests]);
-  const selectedRequest = selectedId ? state.documentRequests.find((item) => item.id === selectedId) ?? null : null;
 
   
 

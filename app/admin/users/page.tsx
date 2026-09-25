@@ -5,6 +5,7 @@ import PortalShell from '../../../components/portal-shell';
 import { EmptyState, FormFeedback, PageGuide, StatusBadge } from '@/components/portal-ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Select } from '@/components/ui/select';
 import RegistrationReviewModal from '@/components/registration-review-modal';
 import { getRolePageCopy, resolveRoleCopy, resolveSteps } from '@/lib/content/role-pages';
@@ -12,6 +13,7 @@ import { formatDateTime, relativeTime } from '@/lib/formatters';
 import { getSupabaseBrowserClient, getSupabaseSessionSafely } from '@/lib/supabase/client';
 import { hardDeleteUser, softDeleteUser, updateUserApproval, updateUserRole } from '../../../lib/frontend-data/store';
 import { useAppState } from '../../../lib/frontend-data/use-app-state';
+import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
 
 type AccountRole = 'admin' | 'resident' | 'staff';
 
@@ -62,6 +64,7 @@ export default function AdminUsersPage() {
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [createFeedback, setCreateFeedback] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
+  useBodyScrollLock(Boolean(isCreateFormOpen || confirmDialog.open || reviewDialog.open));
 
   const filteredUsers = useMemo(() => {
     const query = userSearch.trim().toLowerCase();
@@ -863,8 +866,7 @@ export default function AdminUsersPage() {
 
               <label className="grid gap-1 text-sm md:col-span-2">
                 <span>{locale === 'fil' ? 'Pansamantalang password' : 'Temporary password'}</span>
-                <Input
-                  type="password"
+                <PasswordInput
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   minLength={8}

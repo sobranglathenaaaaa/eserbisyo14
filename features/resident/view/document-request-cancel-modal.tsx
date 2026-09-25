@@ -7,6 +7,7 @@ import { formatDateTime, getRequestStatusLabel } from '@/lib/formatters';
 import type { DocumentRequest, Locale } from '@/lib/types/models';
 import { copyText } from '@/features/resident/model/copy';
 import { StatusBadge, statusToneFromState } from '@/components/portal-ui';
+import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
 
 export function DocumentRequestCancelModal({
   open,
@@ -23,6 +24,8 @@ export function DocumentRequestCancelModal({
   onConfirm: () => Promise<void>;
   isLoading: boolean;
 }) {
+  useBodyScrollLock(open && Boolean(requestItem));
+
   if (!open || !requestItem) return null;
 
   const handleConfirm = async () => {
@@ -30,7 +33,7 @@ export function DocumentRequestCancelModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[85] grid place-items-center bg-[color:rgba(10,24,18,0.55)] p-4">
+    <div className="fixed inset-0 z-[85] grid place-items-center bg-[color:rgba(10,24,18,0.55)] p-4 overscroll-contain touch-none">
       <Card className="w-full max-w-[560px] rounded-[var(--resident-radius-lg)] border-[color:var(--resident-border-soft)] p-0">
         <div className="flex items-start justify-between gap-3 border-b border-[color:var(--resident-border-soft)] px-5 py-4">
           <div>
