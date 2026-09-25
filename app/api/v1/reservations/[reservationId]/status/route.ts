@@ -3,11 +3,13 @@ import { fail, ok } from '@/lib/api/contracts';
 import { requireAuth } from '@/lib/auth/request-auth';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { writeAuditLog } from '@/lib/api/audit';
-import { notifyResident } from '@/lib/api/notifications';
+import { notifyResident, notifyStaff } from '@/lib/api/notifications';
+import { sendResendEmail } from '@/lib/email/resend';
+import { getEmailVerificationEnv } from '@/lib/supabase/env';
 
 type RouteContext = { params: Promise<{ reservationId: string }> };
 
-type AllowedStatus = 'pending' | 'approved' | 'declined' | 'cancelled' | 'ready_for_pickup' | 'returned' | 'completed';
+type AllowedStatus = 'pending' | 'approved' | 'declined' | 'cancelled' | 'ready_for_pickup' | 'received' | 'returned' | 'completed';
 
 function escapeHtml(value: string) {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -43,7 +45,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     approved: equipmentReservation ? ['cancelled', 'ready_for_pickup'] : ['cancelled', 'completed'],
     declined: [],
     cancelled: [],
-    ready_for_pickup: equipmentReservation ? ['returned'] : [],
+    ready_for_pickup: equipmentReservation ? ['received'] : [],
+    received: equipmentReservation ? ['returned'] : [],
     returned: [],
     completed: [],
   };
@@ -79,7 +82,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         .eq('tenant_id', auth.tenantId)
         .eq('resource', 'equipment')
         .ilike('item_name', itemName)
-        .in('status', ['pending', 'approved', 'ready_for_pickup']);
+        .in('status', ['pending', 'approved', 'ready_for_pickup', 'received']);
 
       let reserved = 0;
       for (const r of (existingRes as any[]) || []) {
@@ -99,7 +102,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         .select('id,start_at,end_at,status')
         .eq('tenant_id', auth.tenantId)
         .eq('resource', resource)
-        .in('status', ['pending', 'approved', 'ready_for_pickup']);
+        .in('status', ['pending', 'approved', 'ready_for_pickup', 'received']);
 
       for (const r of (existingFac as any[]) || []) {
         if (r.id === existing.id) continue;
@@ -130,7 +133,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   });
 
   let emailError: string | undefined;
-  if (body.status === 'approved' || body.status === 'declined') {
+  if (body.status === 'approved' || body.status === 'ready_for_pickup' || body.status === 'received' || body.status === 'declined') {
     try {
       const { data: resident } = await admin
         .from('profiles')
@@ -147,19 +150,33 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       const endLabel = new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(existing.end_at));
       const reason = body.status === 'declined' ? body.reason?.trim() ?? '' : '';
       const approved = body.status === 'approved';
+      const readyForPickup = body.status === 'ready_for_pickup';
+      const received = body.status === 'received';
       const approvedMessage = equipmentReservation
         ? 'Your equipment reservation has been approved. Please wait for a notification when it is ready for pickup.'
         : 'Your facility reservation has been approved for the scheduled date and time.';
-      const subject = approved ? 'Reservation approved' : 'Reservation declined';
+      const readyMessage = `Your reserved equipment is ready for pickup. Please proceed to the barangay hall to collect it on your reserved date and time: ${startLabel}.`;
+      const receivedMessage = `Staff confirmed that you received your reserved equipment (${reservationName}). Please return it by ${endLabel}.`;
+      const subject = approved
+        ? 'Reservation approved'
+        : readyForPickup
+          ? 'Reserved equipment ready for pickup'
+          : received
+            ? 'Equipment received confirmation'
+            : 'Reservation declined';
       const message = approved
         ? approvedMessage
-        : `Your reservation was declined. Reason: ${reason}`;
+        : readyForPickup
+          ? readyMessage
+          : received
+            ? receivedMessage
+            : `Your reservation was declined. Reason: ${reason}`;
       const details = `${reservationName} · ${startLabel} to ${endLabel}`;
       await sendResendEmail({
         to: resident.email,
         subject,
-        html: `<p>Hello ${escapeHtml(resident.full_name ?? 'Resident')},</p><p>${escapeHtml(message)}</p><p>${escapeHtml(details)}</p>${approved && equipmentReservation ? `<p>We will notify you when your equipment is ready for pickup.</p>` : ''}`,
-        text: `Hello ${resident.full_name ?? 'Resident'},\n\n${message}\n\n${details}\n\n${approved ? `Check your reservation updates: ${env.appBaseUrl}/resident/reservations` : ''}`,
+        html: `<p>Hello ${escapeHtml(resident.full_name ?? 'Resident')},</p><p>${escapeHtml(message)}</p><p>${escapeHtml(details)}</p>`,
+        text: `Hello ${resident.full_name ?? 'Resident'},\n\n${message}\n\n${details}\n\n${approved || readyForPickup || received ? `Check your reservation updates: ${env.appBaseUrl}/resident/reservations` : ''}`,
       });
       await admin.from('email_logs').insert({
         tenant_id: auth.tenantId,
@@ -180,6 +197,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     declined: 'Declined',
     cancelled: 'Cancelled',
     ready_for_pickup: 'Ready for Pickup',
+    received: 'Received',
     returned: 'Returned',
     completed: 'Completed',
   };
@@ -191,14 +209,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     message: `Status changed from ${statusLabel[current]} to ${statusLabel[body.status]}.`,
     type: 'request',
     priority: body.status === 'declined' || body.status === 'cancelled' ? 'warning' : 'info',
-    eventKey: 'document.status_changed',
-    entityType: 'document_request',
+    eventKey: 'reservation.status_changed',
+    entityType: 'reservation',
     entityId: reservationId,
     actionHref: '/resident/reservations',
   });
 
   if (body.status === 'approved' || body.status === 'declined') {
-    await notifyStaff({
+    void notifyStaff({
       tenantId: auth.tenantId,
       title: `Reservation ${body.status}`,
       message: `The reservation was ${body.status}.`,
@@ -208,49 +226,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       entityType: 'reservation',
       entityId: reservationId,
       actionHref: '/staff/reservations',
+    }).catch((error) => {
+      console.error('[reservations.status] staff_notification_failed', {
+        reservationId,
+        message: error instanceof Error ? error.message : 'Unknown notification error',
+      });
     });
-  }
-
-  if (body.status === 'approved' || body.status === 'declined') {
-    const { data: residentProfile, error: profileError } = await admin
-      .from('profiles')
-      .select('full_name,email')
-      .eq('id', existing.resident_id)
-      .eq('tenant_id', auth.tenantId)
-      .maybeSingle();
-
-    if (!profileError && residentProfile?.email) {
-      const resourceLabel = existing.resource === 'equipment' ? 'Equipment reservation' : 'Facility reservation';
-      const subject = body.status === 'approved'
-        ? `Your ${resourceLabel} has been approved`
-        : `Update on your ${resourceLabel}`;
-      const statusText = body.status === 'approved' ? 'approved' : 'declined';
-      const reasonText = body.status === 'declined' && body.reason?.trim() ? `\nReason: ${body.reason.trim()}` : '';
-      const portalUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/resident/reservations`;
-
-      const html = `
-        <p>Hello ${residentProfile.full_name ?? 'Resident'},</p>
-        <p>Your ${resourceLabel.toLowerCase()} has been ${statusText}.</p>
-        <p><strong>Status:</strong> ${statusLabel[body.status]}</p>
-        ${body.status === 'declined' && body.reason?.trim() ? `<p><strong>Reason:</strong> ${body.reason.trim()}</p>` : ''}
-      `;
-      const text = `Hello ${residentProfile.full_name ?? 'Resident'},\nYour ${resourceLabel.toLowerCase()} has been ${statusText}.\nStatus: ${statusLabel[body.status]}${reasonText}`;
-
-      await sendResendEmail({
-        to: residentProfile.email,
-        subject,
-        html,
-        text,
-      });
-
-      await admin.from('email_logs').insert({
-        tenant_id: auth.tenantId,
-        to_user_id: existing.resident_id,
-        to_email: residentProfile.email,
-        subject,
-        body: text,
-      });
-    }
   }
 
   return ok({ ...data, emailError });

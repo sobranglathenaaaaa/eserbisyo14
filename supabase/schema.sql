@@ -14,7 +14,7 @@ begin
     create type report_status as enum ('pending', 'approved', 'under_review', 'proceed_to_barangay', 'resolved', 'declined');
   end if;
   if not exists (select 1 from pg_type where typname = 'reservation_status') then
-    create type reservation_status as enum ('pending', 'approved', 'declined', 'cancelled', 'ready_for_pickup', 'returned', 'completed');
+    create type reservation_status as enum ('pending', 'approved', 'declined', 'cancelled', 'ready_for_pickup', 'received', 'returned', 'completed');
   end if;
   if not exists (select 1 from pg_type where typname = 'queue_status') then
     create type queue_status as enum ('waiting', 'serving', 'completed', 'cancelled');

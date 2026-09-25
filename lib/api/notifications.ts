@@ -12,6 +12,8 @@ export type NotificationEventKey =
   | 'medicine.status_changed'
   | 'queue.status_changed'
   | 'checkup_appointment.status_changed'
+  | 'reservation.status_changed'
+  | 'reservation.return_reminder'
   | 'incident.status_changed'
   | 'announcement.published';
 
@@ -20,6 +22,7 @@ type NotificationEntityType =
   | 'medicine_request'
   | 'queue_entry'
   | 'checkup_appointment'
+  | 'reservation'
   | 'incident_report'
   | 'announcement';
 type NotificationType = 'account' | 'request' | 'report' | 'system';

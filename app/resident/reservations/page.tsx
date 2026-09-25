@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatDateTime } from '@/lib/formatters';
 import { useAppState } from '@/lib/frontend-data/use-app-state';
 import { copyText } from '@/features/resident/model/copy';
@@ -37,7 +39,7 @@ interface AvailabilitySlot {
   quantity_requested?: number;
   start_at: string;
   end_at: string;
-  status: 'pending' | 'approved';
+  status: 'pending' | 'approved' | 'ready_for_pickup' | 'received';
 }
 
 function formatDateIso(date: Date): string {
@@ -49,6 +51,7 @@ function formatDateIso(date: Date): string {
 
 export default function ResidentReservationsPage() {
   const { state, locale } = useAppState();
+  const user = state.users.find((item) => item.id === state.session?.userId);
   const [selectedResource, setSelectedResource] = useState<ResourceType | ''>('');
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [selectedEquipmentId, setSelectedEquipmentId] = useState('');
@@ -59,6 +62,12 @@ export default function ResidentReservationsPage() {
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'error' | 'info'; text: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [reservationStatusFilter, setReservationStatusFilter] = useState<'all' | Reservation['status'] | 'finished'>('all');
+  const [reservationsPage, setReservationsPage] = useState(1);
+  const [cancelReservationId, setCancelReservationId] = useState<string | null>(null);
+  const [isCancellingReservation, setIsCancellingReservation] = useState(false);
 
   const reservations = useMemo(
     () => (state.reservations || []).filter((reservation) => reservation.residentId === user?.id),
@@ -67,9 +76,21 @@ export default function ResidentReservationsPage() {
   const visibleReservations = useMemo(() => {
     const matching = reservationStatusFilter === 'all'
       ? reservations
-      : reservations.filter((reservation) => reservation.status === reservationStatusFilter);
+      : reservationStatusFilter === 'finished'
+        ? reservations.filter((reservation) => reservation.status === 'returned' || reservation.status === 'completed')
+        : reservations.filter((reservation) => reservation.status === reservationStatusFilter);
     return [...matching].sort((a, b) => Date.parse(b.updatedAt || b.createdAt) - Date.parse(a.updatedAt || a.createdAt));
   }, [reservations, reservationStatusFilter]);
+  const reservationsPerPage = 10;
+  const reservationsPageCount = Math.max(1, Math.ceil(visibleReservations.length / reservationsPerPage));
+  const paginatedReservations = useMemo(
+    () => visibleReservations.slice((reservationsPage - 1) * reservationsPerPage, reservationsPage * reservationsPerPage),
+    [visibleReservations, reservationsPage]
+  );
+
+  useEffect(() => {
+    setReservationsPage((page) => Math.min(page, reservationsPageCount));
+  }, [reservationsPageCount]);
 
   const loadEquipmentAndAvailability = async () => {
     setIsLoading(true);
@@ -84,9 +105,20 @@ export default function ResidentReservationsPage() {
         fetch('/api/v1/reservations/availability', { headers }),
       ]);
 
-      const equipData = (await equipRes.json().catch(() => null)) as { equipment?: Equipment[] } | null;
-      if (equipData?.equipment) {
-        setEquipment(equipData.equipment.filter((e) => !e.isDeleted));
+      const equipData = (await equipRes.json().catch(() => null)) as {
+        success?: boolean;
+        data?: { equipment?: Array<{ id: string; name: string; quantity: number; is_deleted?: boolean }> };
+      } | null;
+      if (equipData?.success && equipData.data?.equipment) {
+        setEquipment(equipData.data.equipment
+          .filter((item) => !item.is_deleted)
+          .map((item) => ({
+            id: item.id,
+            name: item.name,
+            quantity: Number(item.quantity ?? 0),
+            isDeleted: Boolean(item.is_deleted),
+            updatedAt: '',
+          })));
       }
 
       const availData = (await availRes.json().catch(() => null)) as {
@@ -169,6 +201,10 @@ export default function ResidentReservationsPage() {
   }, [availability, selectedResource, selectedEquipmentItem]);
 
   const todayIso = useMemo(() => formatDateIso(new Date()), []);
+  const weekHeaders = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat(locale === 'fil' ? 'fil-PH' : 'en-US', { weekday: 'short' });
+    return Array.from({ length: 7 }, (_, index) => formatter.format(new Date(2024, 0, 7 + index)));
+  }, [locale]);
 
   // Calendar Grid Generator
   const calendarDays = useMemo(() => {
@@ -357,7 +393,7 @@ export default function ResidentReservationsPage() {
     }
 
     const hasApprovedOverlap = filteredAvailability.some((slot) => {
-      if (slot.status !== 'approved') return false;
+      if (!['approved', 'ready_for_pickup', 'received'].includes(slot.status)) return false;
       const slotStart = new Date(slot.start_at).getTime();
       const slotEnd = new Date(slot.end_at).getTime();
       return slotStart < endMs && slotEnd > startMs;
@@ -523,14 +559,12 @@ export default function ResidentReservationsPage() {
       declined: { en: 'Declined', fil: 'Declined' },
       cancelled: { en: 'Cancelled', fil: 'Cancelled' },
       ready_for_pickup: { en: 'Ready for Pickup', fil: 'Handa nang kunin' },
+      received: { en: 'Received', fil: 'Natanggap' },
       returned: { en: 'Returned', fil: 'Naibalik' },
       completed: { en: 'Completed', fil: 'Nakumpleto' },
     };
     return labels[status]?.[locale] || status;
   };
-
-  const activeReservations = reservations.filter((r) => r.status === 'pending' || r.status === 'approved');
-  const completedReservations = reservations.filter((r) => r.status === 'declined' || r.status === 'cancelled');
 
   return (
     <ResidentShell
@@ -936,135 +970,6 @@ export default function ResidentReservationsPage() {
         </form>
       </ResidentSection>
 
-      {/* Resident's Active & Past Reservations */}
-      <ResidentSection title={copyText(locale, 'Your Reservations', 'Iyong mga Reservation')}>
-        {reservations.length === 0 ? (
-          <ResidentEmpty
-            title={copyText(locale, 'No reservations yet', 'Wala pang mga reservation')}
-            description={copyText(
-              locale,
-              'Submit a reservation above to request facility, vehicle, or equipment use.',
-              'Mag-submit ng reservation sa itaas para sa paggamit ng pasilidad, sasakyan, o kagamitan.'
-            )}
-          />
-        ) : (
-          <div className="space-y-6">
-            {/* Active Requests */}
-            {activeReservations.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="font-bold text-sm text-[color:#123726] flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  {copyText(locale, 'Active Requests', 'Mga Aktibong Request')} ({activeReservations.length})
-                </h4>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {activeReservations.map((item) => (
-                    <div
-                      key={item.id}
-                      className="p-4 rounded-xl bg-white border border-[color:rgba(18,55,38,0.14)] shadow-sm space-y-3 flex flex-col justify-between"
-                    >
-                      <div className="space-y-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <span className="font-bold text-[color:#123726] text-base block">
-                              {getResourceLabel(item.resource)}
-                            </span>
-                            {item.itemName && (
-                              <span className="text-xs font-semibold text-emerald-800 block">
-                                {item.itemName}{' '}
-                                {item.quantityRequested && item.quantityRequested > 1 ? `(Qty: ${item.quantityRequested})` : ''}
-                              </span>
-                            )}
-                          </div>
-                          <StatusBadge tone={statusToneFromState(item.status)}>
-                            {getStatusLabel(item.status)}
-                          </StatusBadge>
-                        </div>
-
-                        <div className="text-xs text-[color:#49695a] space-y-1 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                          <div>
-                            <strong className="text-gray-700">{copyText(locale, 'Start:', 'Simula:')}</strong>{' '}
-                            {formatDateTime(item.startAt, locale)}
-                          </div>
-                          <div>
-                            <strong className="text-gray-700">{copyText(locale, 'End:', 'Pagtatapos:')}</strong>{' '}
-                            {formatDateTime(item.endAt, locale)}
-                          </div>
-                          {item.purpose && (
-                            <div className="pt-1 text-gray-800 border-t border-gray-200 mt-1">
-                              <strong>{copyText(locale, 'Purpose:', 'Layunin:')}</strong> {item.purpose}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {item.status === 'pending' && (
-                        <div className="pt-2 border-t border-gray-100 flex justify-end">
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => void handleCancelReservation(item.id)}
-                            className="text-xs h-8 px-3"
-                          >
-                            {copyText(locale, 'Cancel Request', 'Kanselahin ang Request')}
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Past History */}
-            {completedReservations.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="font-bold text-sm text-[color:#123726] flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-gray-400" />
-                  {copyText(locale, 'Past / Cancelled History', 'Nakalipas o Nakansel na History')} ({completedReservations.length})
-                </h4>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {completedReservations.map((item) => (
-                    <div
-                      key={item.id}
-                      className="p-4 rounded-xl bg-gray-50/70 border border-gray-200 space-y-2 opacity-85"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <span className="font-bold text-gray-800 text-sm block">
-                            {getResourceLabel(item.resource)}
-                          </span>
-                          {item.itemName && (
-                            <span className="text-xs text-gray-600 block">
-                              {item.itemName}{' '}
-                              {item.quantityRequested && item.quantityRequested > 1 ? `(Qty: ${item.quantityRequested})` : ''}
-                            </span>
-                          )}
-                        </div>
-                        <StatusBadge tone={statusToneFromState(item.status)}>
-                          {getStatusLabel(item.status)}
-                        </StatusBadge>
-                      </div>
-
-                      <div className="text-xs text-gray-600 space-y-0.5">
-                        <div>
-                          {formatDateTime(item.startAt, locale)} — {formatDateTime(item.endAt, locale)}
-                        </div>
-                        {item.reason && (
-                          <div className="text-red-700 text-[11px] font-medium pt-1">
-                            Reason: {item.reason}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </ResidentSection>
-
       <ResidentSection
         title={copyText(locale, 'My Reservations', 'Mga Reservation Ko')}
         description={copyText(locale, 'Track your facility and equipment reservations by status.', 'Subaybayan ang status ng mga reservation mo sa pasilidad at equipment.')}
@@ -1073,15 +978,18 @@ export default function ResidentReservationsPage() {
             <span className="sr-only">{copyText(locale, 'Sort reservations by status', 'I-filter ang reservation ayon sa status')}</span>
             <Select
               value={reservationStatusFilter}
-              onChange={(event) => setReservationStatusFilter(event.target.value as 'all' | Reservation['status'])}
+              onChange={(event) => {
+                setReservationStatusFilter(event.target.value as 'all' | Reservation['status'] | 'finished');
+                setReservationsPage(1);
+              }}
               aria-label={copyText(locale, 'Filter reservations by status', 'I-filter ang reservation ayon sa status')}
             >
               <option value="all">{copyText(locale, 'All reservations', 'Lahat ng reservation')}</option>
               <option value="pending">{copyText(locale, 'Pending', 'Naghihintay')}</option>
               <option value="approved">{copyText(locale, 'Approved', 'Aprubado')}</option>
               <option value="ready_for_pickup">{copyText(locale, 'Ready for Pickup', 'Handa nang kunin')}</option>
-              <option value="returned">{copyText(locale, 'Returned', 'Naibalik')}</option>
-              <option value="completed">{copyText(locale, 'Completed', 'Nakumpleto')}</option>
+              <option value="received">{copyText(locale, 'Received', 'Natanggap')}</option>
+              <option value="finished">{copyText(locale, 'Returned / Completed', 'Naibalik / Nakumpleto')}</option>
               <option value="declined">{copyText(locale, 'Declined', 'Tinanggihan')}</option>
               <option value="cancelled">{copyText(locale, 'Cancelled', 'Nakansela')}</option>
             </Select>
@@ -1107,11 +1015,15 @@ export default function ResidentReservationsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {visibleReservations.map((reservation) => (
+                {paginatedReservations.map((reservation) => (
                   <TableRow key={reservation.id} className="hover:bg-transparent">
                     <TableCell className="text-center">
                       <p className="font-medium">{getResourceLabel(reservation.resource)}</p>
-                      {reservation.itemName ? <p className="text-xs text-[color:#456453]">{reservation.itemName}{reservation.quantityRequested ? ` × ${reservation.quantityRequested}` : ''}</p> : null}
+                      {reservation.resource === 'equipment' && reservation.itemName ? (
+                        <p className="text-xs text-[color:#456453]">
+                          {reservation.itemName}{reservation.quantityRequested ? ` × ${reservation.quantityRequested}` : ''}
+                        </p>
+                      ) : null}
                     </TableCell>
                     <TableCell className="text-center text-sm">
                       <p>{formatDateTime(reservation.startAt, locale)}</p>
@@ -1141,6 +1053,32 @@ export default function ResidentReservationsPage() {
                 ))}
               </TableBody>
             </Table>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-[color:#456453]">
+                {copyText(locale, 'Showing', 'Ipinapakita')} {(reservationsPage - 1) * reservationsPerPage + 1}–{Math.min(reservationsPage * reservationsPerPage, visibleReservations.length)} {copyText(locale, 'of', 'sa')} {visibleReservations.length}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={reservationsPage <= 1}
+                  onClick={() => setReservationsPage((page) => Math.max(1, page - 1))}
+                >
+                  {copyText(locale, 'Previous', 'Nakaraan')}
+                </Button>
+                <span className="min-w-16 text-center text-sm font-medium text-[color:#123726]">
+                  {reservationsPage} / {reservationsPageCount}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={reservationsPage >= reservationsPageCount}
+                  onClick={() => setReservationsPage((page) => Math.min(reservationsPageCount, page + 1))}
+                >
+                  {copyText(locale, 'Next', 'Susunod')}
+                </Button>
+              </div>
+            </div>
           </div>
         )}
       </ResidentSection>

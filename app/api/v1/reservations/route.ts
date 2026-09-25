@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       .eq('tenant_id', auth.tenantId)
       .eq('resource', 'equipment')
       .ilike('item_name', body.itemName)
-      .in('status', ['pending', 'approved', 'ready_for_pickup']);
+      .in('status', ['pending', 'approved', 'ready_for_pickup', 'received']);
 
     let reserved = 0;
     const newStart = new Date(startAtIso).getTime();
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       .select('id,start_at,end_at,status')
       .eq('tenant_id', auth.tenantId)
       .eq('resource', resource)
-      .in('status', ['pending', 'approved', 'ready_for_pickup']);
+      .in('status', ['pending', 'approved', 'ready_for_pickup', 'received']);
 
     const newStart = new Date(startAtIso).getTime();
     const newEnd = new Date(endAtIso).getTime();
