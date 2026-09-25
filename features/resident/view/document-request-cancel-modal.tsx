@@ -103,7 +103,7 @@ export function DocumentRequestCancelModal({
             className="h-11 px-6 bg-[color:#dc3545] hover:bg-[color:#c82333] focus-visible:ring-[color:#dc3545]"
           >
             {isLoading
-              ? copyText(locale, 'Cancelling...', 'Kinakansela...')
+              ? copyText(locale, 'Cancelling', 'Kinakansela')
               : copyText(locale, 'Confirm Cancellation', 'Kumpirmahin ang Pagkansela')}
           </Button>
         </div>

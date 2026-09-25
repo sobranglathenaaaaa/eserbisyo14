@@ -2,7 +2,7 @@ import type { LocalizedCopy } from './copy';
 
 export type ResidentNavPriority = 'primary' | 'secondary';
 export type ResidentNavSurface = 'sidebar' | 'quick_action' | 'more';
-export type ResidentNavGroup = 'start' | 'services' | 'tracking' | 'community' | 'account';
+export type ResidentNavGroup = 'start' | 'services' | 'tracking' | 'account';
 
 export interface ResidentNavItem {
   href: string;
@@ -69,19 +69,19 @@ export const residentNavigation: ResidentNavItem[] = [
     href: '/resident/blotter-reporting',
     label: { en: 'Report an Incident', fil: 'Mag-ulat ng Insidente' },
     hint: { en: 'Send a report', fil: 'Magpadala ng ulat' },
-    priority: 'secondary',
-    surface: 'quick_action',
-    mobileVisible: false,
-    group: 'community',
+    priority: 'primary',
+    surface: 'sidebar',
+    mobileVisible: true,
+    group: 'services',
   },
   {
     href: '/resident/request-feedback',
     label: { en: 'Give Feedback', fil: 'Magbigay ng Feedback' },
     hint: { en: 'Rate the service', fil: 'I-rate ang serbisyo' },
-    priority: 'secondary',
-    surface: 'quick_action',
-    mobileVisible: false,
-    group: 'community',
+    priority: 'primary',
+    surface: 'sidebar',
+    mobileVisible: true,
+    group: 'tracking',
   },
   {
     href: '/resident/my-profile',
@@ -105,10 +105,10 @@ export const residentNavigation: ResidentNavItem[] = [
     href: '/resident/request-history',
     label: { en: 'Request History', fil: 'Nakaraang Kahilingan' },
     hint: { en: 'Your request history', fil: 'Kasaysayan ng kahilingan' },
-    priority: 'secondary',
-    surface: 'more',
-    mobileVisible: false,
-    group: 'tracking',
+    priority: 'primary',
+    surface: 'sidebar',
+    mobileVisible: true,
+    group: 'start',
   },
   {
     href: '/resident/legal',
@@ -124,8 +124,7 @@ export const residentNavigation: ResidentNavItem[] = [
 export const residentSidebarSections: ResidentNavSection[] = [
   { id: 'start', label: { en: 'Start', fil: 'Simula' } },
   { id: 'services', label: { en: 'Services', fil: 'Serbisyo' } },
-  { id: 'tracking', label: { en: 'Updates', fil: 'Mga Update' } },
-  { id: 'community', label: { en: 'Community', fil: 'Komunidad' } },
+  { id: 'tracking', label: { en: 'Updates & Feedback', fil: 'Mga Abiso at Feedback' } },
   { id: 'account', label: { en: 'Account', fil: 'Account' } },
 ];
 

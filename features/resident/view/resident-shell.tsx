@@ -43,6 +43,7 @@ import { cn } from '@/lib/utils';
 import { PortalShellBase } from '@/components/portal-shell-base';
 import { formatDateTime } from '@/lib/formatters';
 import { DocumentRequestSummaryModal } from './document-request-summary-modal';
+import { ReservationSummaryModal } from './reservation-summary-modal';
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
 import { copy, type LocalizedCopy } from '../model/copy';
 import { copyText } from '../model/copy';
@@ -654,31 +655,28 @@ function ResidentNotificationBell() {
   const { state, user, locale } = useAppState();
   const [isOpen, setIsOpen] = useState(false);
   const [summaryRequestId, setSummaryRequestId] = useState<string | null>(null);
+  const [summaryReservationId, setSummaryReservationId] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
 
   const notifications = useMemo(() => {
-    const emailNotificationEvents = new Set([
-      'document.approved',
-      'document.declined',
-      'document.ready_for_pickup',
-      'document.completed',
-      'reservation.approved',
-      'reservation.declined',
-    ]);
-
     return getResidentNotifications(state, user?.id)
-      .filter((item) => emailNotificationEvents.has(item.eventKey))
       .slice()
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }, [state, user?.id]);
-  const latestNotifications = notifications.slice(0, 8);
+  const latestNotifications = notifications.slice(0, 10);
   const unreadCount = notifications.filter((item) => !item.read).length;
-  const unreadLabel = unreadCount > 99 ? '99+' : String(unreadCount);
+  const unreadLabel = unreadCount > 9 ? '9+' : String(unreadCount);
   const summaryRequest = state.documentRequests.find((item) => item.id === summaryRequestId) ?? null;
+  const summaryReservation = state.reservations.find((item) => item.id === summaryReservationId && item.residentId === user?.id) ?? null;
 
   const onNotificationItemClick = async (notificationId: string, entityType?: string, entityId?: string) => {
     await markNotificationRead(notificationId);
+    if (entityType === 'reservation' && entityId) {
+      setIsOpen(false);
+      setSummaryReservationId(entityId);
+      return;
+    }
     if (entityType === 'document_request' && entityId) {
       setSummaryRequestId(entityId);
       setIsOpen(false);
@@ -827,6 +825,12 @@ function ResidentNotificationBell() {
         requestItem={summaryRequest}
         locale={locale}
         onClose={() => setSummaryRequestId(null)}
+      />
+      <ReservationSummaryModal
+        open={Boolean(summaryReservation)}
+        reservation={summaryReservation}
+        locale={locale}
+        onClose={() => setSummaryReservationId(null)}
       />
     </div>
   );

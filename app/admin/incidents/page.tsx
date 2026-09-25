@@ -485,8 +485,8 @@ export default function AdminIncidentsPage() {
                   >
                     {processingStatus === 'approved'
                       ? locale === 'fil'
-                        ? 'Ina-approve...'
-                        : 'Approving...'
+                        ? 'Ina-approv'
+                        : 'Approving'
                       : locale === 'fil'
                         ? 'Aprubahan'
                         : 'Approve'}
@@ -499,8 +499,8 @@ export default function AdminIncidentsPage() {
                   >
                     {processingStatus === 'declined'
                       ? locale === 'fil'
-                        ? 'Tinatanggihan...'
-                        : 'Declining...'
+                        ? 'Tinatanggihan'
+                        : 'Declining'
                       : locale === 'fil'
                         ? 'I-decline'
                         : 'Decline'}

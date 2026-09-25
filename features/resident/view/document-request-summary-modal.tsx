@@ -111,7 +111,7 @@ export function DocumentRequestSummaryModal({
                 className="bg-[linear-gradient(180deg,#9f1239_0%,#7f112b_100%)] px-4 py-2 text-white shadow-[0_10px_24px_rgba(159,18,57,0.24)] hover:bg-[linear-gradient(180deg,#b91c3f_0%,#881337_100%)] disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {isCancelling
-                  ? copyText(locale, 'Cancelling...', 'Kinakansela...')
+                  ? copyText(locale, 'Cancelling', 'Kinakansela')
                   : copyText(locale, 'Cancel Request', 'Kanselahin ang Kahilingan')}
               </Button>
             </>

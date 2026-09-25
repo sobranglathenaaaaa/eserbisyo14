@@ -232,7 +232,13 @@ function ResidentRequestHistoryPageContent() {
       category: 'reservations',
       id: item.id,
       sortAt: item.updatedAt || item.createdAt,
-      heading: `${item.resource}${item.itemName ? ` - ${item.itemName}` : ''}`,
+      heading: item.resource === 'covered_court'
+        ? 'Covered Court'
+        : item.resource === 'barangay_hall'
+          ? 'Multi Purpose Hall'
+          : item.resource === 'service_vehicle'
+            ? 'Service Vehicle'
+            : item.itemName || 'Equipment',
       summary: `${formatDateTime(item.startAt, locale)} - ${formatDateTime(item.endAt, locale)}${item.purpose ? ` · ${item.purpose}` : ''}`,
       status: item.status,
     }));

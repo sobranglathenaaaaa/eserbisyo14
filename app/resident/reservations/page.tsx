@@ -7,17 +7,16 @@ import {
   Calendar as CalendarIcon,
   Info,
 } from 'lucide-react';
-import { FormFeedback, StatusBadge, statusToneFromState } from '@/components/portal-ui';
+import { FormFeedback } from '@/components/portal-ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatDateTime } from '@/lib/formatters';
 import { useAppState } from '@/lib/frontend-data/use-app-state';
 import { copyText } from '@/features/resident/model/copy';
-import { ResidentEmpty, ResidentSection } from '@/features/resident/view/resident-primitives';
+import { ResidentSection } from '@/features/resident/view/resident-primitives';
 import { ResidentShell } from '@/features/resident/view/resident-shell';
 import { getSupabaseBrowserClient, getSupabaseSessionSafely } from '@/lib/supabase/client';
 import type { Equipment, Reservation } from '@/lib/types/models';
@@ -64,8 +63,6 @@ export default function ResidentReservationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
-  const [reservationStatusFilter, setReservationStatusFilter] = useState<'all' | Reservation['status'] | 'finished'>('all');
-  const [reservationsPage, setReservationsPage] = useState(1);
   const [cancelReservationId, setCancelReservationId] = useState<string | null>(null);
   const [isCancellingReservation, setIsCancellingReservation] = useState(false);
 
@@ -74,29 +71,6 @@ export default function ResidentReservationsPage() {
     const timeout = window.setTimeout(() => setFeedback(null), 5000);
     return () => window.clearTimeout(timeout);
   }, [feedback]);
-
-  const reservations = useMemo(
-    () => (state.reservations || []).filter((reservation) => reservation.residentId === user?.id),
-    [state.reservations, user?.id]
-  );
-  const visibleReservations = useMemo(() => {
-    const matching = reservationStatusFilter === 'all'
-      ? reservations
-      : reservationStatusFilter === 'finished'
-        ? reservations.filter((reservation) => reservation.status === 'returned' || reservation.status === 'completed')
-        : reservations.filter((reservation) => reservation.status === reservationStatusFilter);
-    return [...matching].sort((a, b) => Date.parse(b.updatedAt || b.createdAt) - Date.parse(a.updatedAt || a.createdAt));
-  }, [reservations, reservationStatusFilter]);
-  const reservationsPerPage = 10;
-  const reservationsPageCount = Math.max(1, Math.ceil(visibleReservations.length / reservationsPerPage));
-  const paginatedReservations = useMemo(
-    () => visibleReservations.slice((reservationsPage - 1) * reservationsPerPage, reservationsPage * reservationsPerPage),
-    [visibleReservations, reservationsPage]
-  );
-
-  useEffect(() => {
-    setReservationsPage((page) => Math.min(page, reservationsPageCount));
-  }, [reservationsPageCount]);
 
   const loadEquipmentAndAvailability = async () => {
     setIsLoading(true);
@@ -558,20 +532,6 @@ export default function ResidentReservationsPage() {
     }
   };
 
-  const getStatusLabel = (status: string): string => {
-    const labels: Record<string, Record<'en' | 'fil', string>> = {
-      pending: { en: 'Pending Review', fil: 'Naghihintay ng Review' },
-      approved: { en: 'Approved', fil: 'Approved' },
-      declined: { en: 'Declined', fil: 'Declined' },
-      cancelled: { en: 'Cancelled', fil: 'Cancelled' },
-      ready_for_pickup: { en: 'Ready for Pickup', fil: 'Handa nang kunin' },
-      received: { en: 'Received', fil: 'Natanggap' },
-      returned: { en: 'Returned', fil: 'Naibalik' },
-      completed: { en: 'Completed', fil: 'Nakumpleto' },
-    };
-    return labels[status]?.[locale] || status;
-  };
-
   return (
     <ResidentShell
       title={copyText(locale, 'Facility & Resource Reservations', 'Reservations ng Pasilidad at Kagamitan')}
@@ -968,7 +928,7 @@ export default function ResidentReservationsPage() {
                 className="h-11 min-w-[220px] px-6 text-base font-bold shadow-md"
               >
                 {isSubmitting
-                  ? copyText(locale, 'Submitting...', 'Ipinapadala...')
+                  ? copyText(locale, 'Submitting', 'Ipinapadala')
                   : copyText(locale, 'Submit Reservation', 'Ipadala ang Reservation')}
               </Button>
             </div>
@@ -976,118 +936,6 @@ export default function ResidentReservationsPage() {
         </form>
       </ResidentSection>
 
-      <ResidentSection
-        title={copyText(locale, 'My Reservations', 'Mga Reservation Ko')}
-        description={copyText(locale, 'Track your facility and equipment reservations by status.', 'Subaybayan ang status ng mga reservation mo sa pasilidad at equipment.')}
-        actions={(
-          <label className="grid w-full gap-1 text-sm sm:w-[220px]">
-            <span className="sr-only">{copyText(locale, 'Sort reservations by status', 'I-filter ang reservation ayon sa status')}</span>
-            <Select
-              value={reservationStatusFilter}
-              onChange={(event) => {
-                setReservationStatusFilter(event.target.value as 'all' | Reservation['status'] | 'finished');
-                setReservationsPage(1);
-              }}
-              aria-label={copyText(locale, 'Filter reservations by status', 'I-filter ang reservation ayon sa status')}
-            >
-              <option value="all">{copyText(locale, 'All reservations', 'Lahat ng reservation')}</option>
-              <option value="pending">{copyText(locale, 'Pending', 'Naghihintay')}</option>
-              <option value="approved">{copyText(locale, 'Approved', 'Aprubado')}</option>
-              <option value="ready_for_pickup">{copyText(locale, 'Ready for Pickup', 'Handa nang kunin')}</option>
-              <option value="received">{copyText(locale, 'Received', 'Natanggap')}</option>
-              <option value="finished">{copyText(locale, 'Returned / Completed', 'Naibalik / Nakumpleto')}</option>
-              <option value="declined">{copyText(locale, 'Declined', 'Tinanggihan')}</option>
-              <option value="cancelled">{copyText(locale, 'Cancelled', 'Nakansela')}</option>
-            </Select>
-          </label>
-        )}
-        className="bg-white"
-      >
-        {!visibleReservations.length ? (
-          <ResidentEmpty
-            title={copyText(locale, 'No reservations found', 'Walang reservation na nakita')}
-            description={copyText(locale, 'Your submitted reservations will appear here.', 'Lalabas dito ang mga naisumite mong reservation.')}
-          />
-        ) : (
-          <div className="overflow-x-auto">
-            <Table className="min-w-[760px]">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-center">{copyText(locale, 'Resource', 'Resource')}</TableHead>
-                  <TableHead className="text-center">{copyText(locale, 'Date & Time', 'Petsa at Oras')}</TableHead>
-                  <TableHead className="text-center">{copyText(locale, 'Purpose', 'Layunin')}</TableHead>
-                  <TableHead className="text-center">{copyText(locale, 'Status', 'Status')}</TableHead>
-                  <TableHead className="text-center">{copyText(locale, 'Action', 'Aksyon')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedReservations.map((reservation) => (
-                  <TableRow key={reservation.id}>
-                    <TableCell className="text-center">
-                      <p className="font-medium">{getResourceLabel(reservation.resource)}</p>
-                      {reservation.resource === 'equipment' && reservation.itemName ? (
-                        <p className="text-xs text-[color:#456453]">
-                          {reservation.itemName}{reservation.quantityRequested ? ` × ${reservation.quantityRequested}` : ''}
-                        </p>
-                      ) : null}
-                    </TableCell>
-                    <TableCell className="text-center text-sm">
-                      <p>{formatDateTime(reservation.startAt, locale)}</p>
-                      <p className="text-xs text-[color:#456453]">{copyText(locale, 'to', 'hanggang')} {formatDateTime(reservation.endAt, locale)}</p>
-                    </TableCell>
-                    <TableCell className="max-w-[220px] truncate text-center" title={reservation.purpose || ''}>{reservation.purpose || '—'}</TableCell>
-                    <TableCell className="text-center">
-                      <StatusBadge tone={statusToneFromState(reservation.status)}>{getStatusLabel(reservation.status)}</StatusBadge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {reservation.status === 'pending' ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className="text-[color:var(--portal-ink-700)] hover:text-[color:var(--portal-ink-900)]"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setCancelReservationId(reservation.id);
-                          }}
-                        >
-                          {copyText(locale, 'Cancel Request', 'Kanselahin ang Request')}
-                        </Button>
-                      ) : '—'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-[color:#456453]">
-                {copyText(locale, 'Showing', 'Ipinapakita')} {(reservationsPage - 1) * reservationsPerPage + 1}–{Math.min(reservationsPage * reservationsPerPage, visibleReservations.length)} {copyText(locale, 'of', 'sa')} {visibleReservations.length}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={reservationsPage <= 1}
-                  onClick={() => setReservationsPage((page) => Math.max(1, page - 1))}
-                >
-                  {copyText(locale, 'Previous', 'Nakaraan')}
-                </Button>
-                <span className="min-w-16 text-center text-sm font-medium text-[color:#123726]">
-                  {reservationsPage} / {reservationsPageCount}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={reservationsPage >= reservationsPageCount}
-                  onClick={() => setReservationsPage((page) => Math.min(reservationsPageCount, page + 1))}
-                >
-                  {copyText(locale, 'Next', 'Susunod')}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-      </ResidentSection>
       <Dialog
         open={cancelReservationId !== null}
         onOpenChange={(open) => {
@@ -1114,7 +962,7 @@ export default function ResidentReservationsPage() {
                 if (cancelReservationId) void handleCancelReservation(cancelReservationId);
               }}
             >
-              {isCancellingReservation ? copyText(locale, 'Cancelling...', 'Kinakansela...') : copyText(locale, 'Yes', 'Oo')}
+              {isCancellingReservation ? copyText(locale, 'Cancelling', 'Kinakansela') : copyText(locale, 'Yes', 'Oo')}
             </Button>
           </DialogFooter>
         </DialogContent>

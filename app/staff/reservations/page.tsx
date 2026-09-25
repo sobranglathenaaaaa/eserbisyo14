@@ -444,7 +444,7 @@ export default function StaffReservationsPage() {
                     onClick={() => void approveReservation()}
                   >
                     {processingStatus === 'approved'
-                      ? locale === 'fil' ? 'Inaaprubahan...' : 'Approving...'
+                      ? locale === 'fil' ? 'Inaaprubahan' : 'Approving'
                       : locale === 'fil' ? 'Aprubahan' : 'Approve'}
                   </Button>
                   <Button
@@ -454,7 +454,7 @@ export default function StaffReservationsPage() {
                     onClick={() => void declineReservation()}
                   >
                     {processingStatus === 'declined'
-                      ? locale === 'fil' ? 'Tinatanggihan...' : 'Declining...'
+                      ? locale === 'fil' ? 'Tinatanggihan' : 'Declining'
                       : locale === 'fil' ? 'I-decline' : 'Decline'}
                   </Button>
                 </>
