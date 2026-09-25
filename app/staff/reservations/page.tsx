@@ -287,7 +287,7 @@ export default function StaffReservationsPage() {
                   pageItems.map((item) => (
                     <TableRow
                       key={item.id}
-                      className={`${selectedReservation?.id === item.id ? 'bg-[color:var(--portal-surface-3)]' : ''} hover:bg-transparent`}
+                      className={selectedReservation?.id === item.id ? 'bg-[color:var(--portal-surface-3)]' : ''}
                     >
                       <TableCell className="py-2 pr-2 text-center align-middle">
                         {item.resource === 'equipment' && item.itemName ? item.itemName : getResourceLabel(item.resource)}

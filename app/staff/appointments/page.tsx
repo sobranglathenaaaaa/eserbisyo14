@@ -771,7 +771,7 @@ export default function StaffAppointmentsPage() {
                       return (
                         <tr
                           key={appointment.id}
-                          className="border-b border-[color:var(--portal-border-soft)] hover:bg-[color:var(--portal-surface-2)]"
+                          className="border-b border-[color:var(--portal-border-soft)]"
                         >
                           <td className="px-3 py-2 text-center text-sm font-medium text-[color:var(--portal-ink-900)]">
                             {appointment.residentName}
@@ -964,7 +964,7 @@ export default function StaffAppointmentsPage() {
                         return (
                           <tr
                             key={slot.id}
-                            className="border-b border-[color:var(--portal-border-soft)] hover:bg-[color:var(--portal-surface-2)]"
+                            className="border-b border-[color:var(--portal-border-soft)]"
                           >
                             <td className="px-3 py-2 text-center text-sm text-[color:var(--portal-ink-900)]">
                               Dr. {slot.doctorName}

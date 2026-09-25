@@ -258,13 +258,31 @@ function ResidentFloatingAssistant() {
         aria-expanded={isFeedbackOpen}
         aria-label={locale === 'fil' ? 'Buksan ang feedback form' : 'Open feedback form'}
         className={cn(
-          'fixed bottom-40 right-4 z-[55] h-11 shadow-[var(--resident-shadow-3)] transition-[width,padding] md:bottom-20',
-          isFeedbackOpen ? 'w-auto rounded-full px-4' : 'w-11 rounded-full px-0'
+          'group fixed bottom-40 right-4 z-[55] h-11 overflow-hidden whitespace-nowrap rounded-full shadow-[var(--resident-shadow-3)] transition-[width,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none md:bottom-20',
+          isFeedbackOpen
+            ? 'w-auto px-4'
+            : 'w-11 px-0 hover:w-[124px] hover:px-4 focus-visible:w-[124px] focus-visible:px-4'
         )}
         variant="secondary"
       >
-        <Star size={16} className={isFeedbackOpen ? 'mr-2' : ''} />
-        {isFeedbackOpen ? copyText(locale, 'Feedback', 'Feedback') : null}
+        <Star
+          size={16}
+          className={cn(
+            'shrink-0 transition-[margin] duration-200 motion-reduce:transition-none',
+            isFeedbackOpen ? 'mr-2' : 'group-hover:mr-2 group-focus-visible:mr-2'
+          )}
+        />
+        <span
+          aria-hidden="true"
+          className={cn(
+            'w-0 overflow-hidden transition-opacity duration-200 motion-reduce:transition-none',
+            isFeedbackOpen
+              ? 'w-auto opacity-100'
+              : 'opacity-0 group-hover:w-auto group-hover:opacity-100 group-focus-visible:w-auto group-focus-visible:opacity-100'
+          )}
+        >
+          {copyText(locale, 'Feedback', 'Feedback')}
+        </span>
       </Button>
 
       <Button
@@ -273,13 +291,31 @@ function ResidentFloatingAssistant() {
         aria-expanded={isAssistantOpen}
         aria-label={locale === 'fil' ? 'Buksan ang eSerbisyo Chatbot' : 'Open eSerbisyo Chatbot'}
         className={cn(
-          'fixed bottom-24 right-4 z-[55] h-12 shadow-[var(--resident-shadow-3)] transition-[width,padding] md:bottom-5',
-          isAssistantOpen ? 'w-auto rounded-full px-4' : 'w-12 rounded-full px-0'
+          'group fixed bottom-24 right-4 z-[55] h-12 overflow-hidden whitespace-nowrap rounded-full shadow-[var(--resident-shadow-3)] transition-[width,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none md:bottom-5',
+          isAssistantOpen
+            ? 'w-auto px-4'
+            : 'w-12 px-0 hover:w-[184px] hover:px-4 focus-visible:w-[184px] focus-visible:px-4'
         )}
         variant="resident"
       >
-        <MessageCircle size={16} className={isAssistantOpen ? 'mr-2' : ''} />
-        {isAssistantOpen ? (locale === 'fil' ? 'eSerbisyo Chatbot' : 'eSerbisyo Chatbot') : null}
+        <MessageCircle
+          size={16}
+          className={cn(
+            'shrink-0 transition-[margin] duration-200 motion-reduce:transition-none',
+            isAssistantOpen ? 'mr-2' : 'group-hover:mr-2 group-focus-visible:mr-2'
+          )}
+        />
+        <span
+          aria-hidden="true"
+          className={cn(
+            'w-0 overflow-hidden transition-opacity duration-200 motion-reduce:transition-none',
+            isAssistantOpen
+              ? 'w-auto opacity-100'
+              : 'opacity-0 group-hover:w-auto group-hover:opacity-100 group-focus-visible:w-auto group-focus-visible:opacity-100'
+          )}
+        >
+          eSerbisyo Chatbot
+        </span>
       </Button>
 
       {isFeedbackOpen ? (

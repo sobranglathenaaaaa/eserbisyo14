@@ -92,16 +92,6 @@ export default function AdminDocumentRequestsPage() {
     setReason('');
   };
 
-  // Prevent background scrolling when the review modal is open
-  useEffect(() => {
-    if (!selectedRequest) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, [selectedRequest]);
-
   // Close modal when clicking outside or pressing Escape
   useEffect(() => {
     if (!selectedRequest) return;

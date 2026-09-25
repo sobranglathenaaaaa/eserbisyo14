@@ -320,7 +320,7 @@ export default function StaffProcessRequestsPage() {
                       {paginatedRequests.map((request, index) => (
                         <tr
                           key={request.id}
-                          className={`border-b border-[color:var(--portal-border-soft)] hover:bg-[color:var(--portal-surface-1)] transition-colors ${
+                          className={`border-b border-[color:var(--portal-border-soft)] ${
                             index % 2 === 0 ? 'bg-white' : 'bg-[color:var(--portal-surface-1)]'
                           }`}
                         >

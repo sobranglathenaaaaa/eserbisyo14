@@ -482,7 +482,7 @@ export default function StaffBDRRMCReportPage() {
                 </thead>
                 <tbody>
                   {pastReports.map((r) => (
-                    <tr key={r.id} className="border-b border-[color:var(--portal-border-soft)] hover:bg-[color:var(--portal-surface-1)]">
+                    <tr key={r.id} className="border-b border-[color:var(--portal-border-soft)]">
                       <td className="px-4 py-3 text-[color:var(--portal-ink-900)]">
                         <div className="font-semibold">{r.title}</div>
                         <div className="text-[10px] text-[color:var(--portal-ink-500)] font-mono">{r.id}</div>

@@ -1778,7 +1778,3 @@ textarea {
 .panel > h3 {
   margin-top: 0;
 }
-
-.table tbody tr:hover {
-  background: rgba(47, 162, 127, 0.05);
-}

@@ -1022,7 +1022,7 @@ export default function ResidentReservationsPage() {
               </TableHeader>
               <TableBody>
                 {paginatedReservations.map((reservation) => (
-                  <TableRow key={reservation.id} className="hover:bg-transparent">
+                  <TableRow key={reservation.id}>
                     <TableCell className="text-center">
                       <p className="font-medium">{getResourceLabel(reservation.resource)}</p>
                       {reservation.resource === 'equipment' && reservation.itemName ? (
