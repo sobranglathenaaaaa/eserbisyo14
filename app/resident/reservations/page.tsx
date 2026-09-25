@@ -69,6 +69,12 @@ export default function ResidentReservationsPage() {
   const [cancelReservationId, setCancelReservationId] = useState<string | null>(null);
   const [isCancellingReservation, setIsCancellingReservation] = useState(false);
 
+  useEffect(() => {
+    if (!feedback) return;
+    const timeout = window.setTimeout(() => setFeedback(null), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [feedback]);
+
   const reservations = useMemo(
     () => (state.reservations || []).filter((reservation) => reservation.residentId === user?.id),
     [state.reservations, user?.id]

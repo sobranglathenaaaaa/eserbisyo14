@@ -46,6 +46,12 @@ export default function StaffReservationsPage() {
   const overlayRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    if (!actionFeedback) return;
+    const timeout = window.setTimeout(() => setActionFeedback(null), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [actionFeedback]);
+
+  useEffect(() => {
     let active = true;
     const checkReturnReminders = async () => {
       try {
