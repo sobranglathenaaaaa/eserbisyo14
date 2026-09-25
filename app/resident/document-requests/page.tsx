@@ -520,7 +520,7 @@ export default function ResidentDocumentRequestsPage() {
               className="min-w-[220px] px-6 text-base"
             >
               {isSubmitting
-                ? copyText(locale, 'Submitting...', 'Ipinapadala...')
+                ? copyText(locale, 'Submitting', 'Ipinapadala')
                 : copyText(locale, 'Submit Request', 'Ipadala ang Kahilingan')}
             </Button>
           </div>
@@ -810,7 +810,7 @@ export default function ResidentDocumentRequestsPage() {
               </Button>
               <Button type="button" disabled={isSubmitting} onClick={() => void submitConfirmedRequest()}
                 className="w-full border border-[color:#14543a] bg-[linear-gradient(180deg,#1d7a53_0%,#155f40_100%)] text-white shadow-[0_10px_24px_rgba(21,95,64,0.28)] hover:bg-[linear-gradient(180deg,#176745_0%,#114f36_100%)] md:w-auto">
-                {isSubmitting ? copyText(locale, 'Submitting...', 'Ipinapadala...') : copyText(locale, 'Confirm and submit', 'Kumpirmahin at ipadala')}
+                {isSubmitting ? copyText(locale, 'Submitting', 'Ipinapadala') : copyText(locale, 'Confirm and submit', 'Kumpirmahin at ipadala')}
               </Button>
             </div>
           </Card>

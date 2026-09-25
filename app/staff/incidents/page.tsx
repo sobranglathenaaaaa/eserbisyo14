@@ -183,7 +183,7 @@ export default function StaffIncidentsPage() {
 										return (
 											<tr
 												key={item.id}
-												className={`cursor-pointer border-b border-[color:var(--portal-border-soft)] transition-colors hover:bg-[color:var(--portal-surface-2)] ${isSelected ? 'bg-[color:var(--portal-surface-3)]' : 'bg-white'}`}
+								className={`cursor-pointer border-b border-[color:var(--portal-border-soft)] ${isSelected ? 'bg-[color:var(--portal-surface-3)]' : 'bg-white'}`}
 												onClick={() => setSelectedId(item.id)}
 											>
 												<td className="px-4 py-4 align-middle text-xs font-medium uppercase tracking-[0.08em] text-[color:var(--portal-ink-700)]">

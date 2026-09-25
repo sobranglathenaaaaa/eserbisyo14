@@ -126,7 +126,7 @@ export interface DataProvider {
     }
   ): Promise<StaffDocumentCompletionResult | void>;
 
-  addFeedback(payload: { requestId: string; rating: number; comment?: string }): Promise<void>;
+  addFeedback(payload: { requestId?: string; rating: number; comment?: string }): Promise<void>;
   submitReport(payload: {
     category: string;
     title: string;

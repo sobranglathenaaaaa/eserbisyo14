@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     .from('reservations')
     .select('id, resource, item_name, quantity_requested, start_at, end_at, status')
     .eq('tenant_id', auth.tenantId)
-    .in('status', ['pending', 'approved'])
+    .in('status', ['pending', 'approved', 'ready_for_pickup', 'received'])
     .order('start_at', { ascending: true })
     .limit(500);
 

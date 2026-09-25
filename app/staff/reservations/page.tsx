@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { X, Funnel } from 'lucide-react';
-import { EmptyState, FieldLabel, PageGuide, SectionCard, StatusBadge, statusToneFromState } from '@/components/portal-ui';
+import { EmptyState, FieldLabel, FormFeedback, PageGuide, SectionCard, StatusBadge, statusToneFromState } from '@/components/portal-ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -26,8 +26,10 @@ import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
 export default function StaffReservationsPage() {
   const { state, locale } = useAppState();
   const [reason, setReason] = useState('');
+  const [processingStatus, setProcessingStatus] = useState<Reservation['status'] | null>(null);
+  const [actionFeedback, setActionFeedback] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'declined'>('pending');
+  const [statusFilter, setStatusFilter] = useState<'all' | Reservation['status'] | 'finished'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState('');
   const pageCopy = getRolePageCopy('staff/reservations') ?? {
@@ -37,23 +39,49 @@ export default function StaffReservationsPage() {
   const PAGE_SIZE = 10;
 
   const pending = useMemo(() => (state.reservations ?? []).filter((item) => item.status === 'pending'), [state.reservations]);
-  const approved = useMemo(() => (state.reservations ?? []).filter((item) => item.status === 'approved'), [state.reservations]);
-  const declined = useMemo(() => (state.reservations ?? []).filter((item) => item.status === 'declined'), [state.reservations]);
   const selectedReservation = selectedId ? (state.reservations ?? []).find((item) => item.id === selectedId) ?? null : null;
   useBodyScrollLock(Boolean(selectedReservation));
 
   const statusSelectRef = useRef<HTMLSelectElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    if (!actionFeedback) return;
+    const timeout = window.setTimeout(() => setActionFeedback(null), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [actionFeedback]);
+
+  useEffect(() => {
+    let active = true;
+    const checkReturnReminders = async () => {
+      try {
+        const supabase = getSupabaseBrowserClient();
+        const session = await getSupabaseSessionSafely(supabase);
+        const token = session.data.session?.access_token;
+        if (!active || !token) return;
+        await fetch('/api/v1/reservations/reminders', {
+          method: 'POST',
+          headers: { authorization: `Bearer ${token}` },
+        });
+      } catch (error) {
+        console.error('Unable to check equipment return reminders:', error);
+      }
+    };
+    void checkReturnReminders();
+    const interval = window.setInterval(() => void checkReturnReminders(), 5 * 60 * 1000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, []);
+
   const filteredReservations = useMemo(() => {
     const reservations = state.reservations ?? [];
     const base = statusFilter === 'all'
       ? reservations
-      : statusFilter === 'pending'
-        ? pending
-        : statusFilter === 'approved'
-          ? approved
-          : declined;
+      : statusFilter === 'finished'
+        ? reservations.filter((item) => item.status === 'returned' || item.status === 'completed')
+        : reservations.filter((item) => item.status === statusFilter);
 
     const q = search.trim().toLowerCase();
     if (!q) return base;
@@ -65,7 +93,7 @@ export default function StaffReservationsPage() {
         (item.purpose || '').toLowerCase().includes(q)
       );
     });
-  }, [state.reservations, statusFilter, search, pending, approved, declined]);
+  }, [state.reservations, statusFilter, search]);
 
   const totalPages = Math.max(1, Math.ceil((filteredReservations.length ?? 0) / PAGE_SIZE));
   useEffect(() => {
@@ -94,15 +122,6 @@ export default function StaffReservationsPage() {
 
   useEffect(() => {
     if (!selectedReservation) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, [selectedReservation]);
-
-  useEffect(() => {
-    if (!selectedReservation) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeReview();
     };
@@ -110,8 +129,9 @@ export default function StaffReservationsPage() {
     return () => window.removeEventListener('keydown', onKey);
   }, [selectedReservation]);
 
-  const approveReservation = async () => {
-    if (!selectedReservation) return;
+  const updateReservationStatus = async (status: Reservation['status'], decisionReason?: string) => {
+    if (!selectedReservation || processingStatus) return;
+    setProcessingStatus(status);
     try {
       const supabase = getSupabaseBrowserClient();
       const session = await getSupabaseSessionSafely(supabase);
@@ -123,40 +143,34 @@ export default function StaffReservationsPage() {
           'Content-Type': 'application/json',
           ...(token ? { authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ status: 'approved', reason: reason.trim() || undefined }),
+        body: JSON.stringify({ status, reason: decisionReason }),
       });
 
+      const result = await response.json().catch(() => null);
       if (response.ok) {
+        window.dispatchEvent(new Event('eserbisyo-state-updated'));
         closeReview();
+        setActionFeedback(result?.data?.emailError
+          ? { tone: 'error', text: `${locale === 'fil' ? 'Na-update ang reservation pero hindi naipadala ang email' : 'Reservation updated, but the email could not be sent'}: ${result.data.emailError}` }
+          : { tone: 'success', text: locale === 'fil' ? 'Matagumpay na na-update ang reservation.' : 'Reservation updated successfully.' });
+      } else {
+        const message = result?.error?.message ?? response.statusText;
+        setActionFeedback({ tone: 'error', text: message });
+        console.error('Unable to update reservation status:', message);
       }
     } catch (error) {
-      console.error('Error approving reservation:', error);
+      console.error('Error updating reservation status:', error);
+      setActionFeedback({
+        tone: 'error',
+        text: locale === 'fil' ? 'Hindi na-update ang reservation.' : 'Unable to update reservation.',
+      });
+    } finally {
+      setProcessingStatus(null);
     }
   };
 
-  const declineReservation = async () => {
-    if (!selectedReservation) return;
-    try {
-      const supabase = getSupabaseBrowserClient();
-      const session = await getSupabaseSessionSafely(supabase);
-      const token = session.data.session?.access_token;
-
-      const response = await fetch(`/api/v1/reservations/${selectedReservation.id}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ status: 'declined', reason: reason.trim() }),
-      });
-
-      if (response.ok) {
-        closeReview();
-      }
-    } catch (error) {
-      console.error('Error declining reservation:', error);
-    }
-  };
+  const approveReservation = () => updateReservationStatus('approved');
+  const declineReservation = () => updateReservationStatus('declined', reason.trim());
 
   const getResourceLabel = (resource: string): string => {
     const labels: Record<string, string> = {
@@ -174,6 +188,10 @@ export default function StaffReservationsPage() {
       approved: { en: 'Approved', fil: 'Aprubado' },
       declined: { en: 'Declined', fil: 'Tinanggihan' },
       cancelled: { en: 'Cancelled', fil: 'Kanselado' },
+      ready_for_pickup: { en: 'Ready for Pickup', fil: 'Handa nang kunin' },
+      received: { en: 'Received', fil: 'Natanggap' },
+      returned: { en: 'Returned', fil: 'Naibalik' },
+      completed: { en: 'Completed', fil: 'Nakumpleto' },
     };
     return labels[status]?.[locale] || status;
   };
@@ -188,6 +206,8 @@ export default function StaffReservationsPage() {
           cta={{ label: resolveRoleCopy(locale, pageCopy.guide.cta.label), href: pageCopy.guide.cta.href }}
         />
       ) : null}
+
+      {actionFeedback ? <FormFeedback tone={actionFeedback.tone} text={actionFeedback.text} /> : null}
 
       <SectionCard
         title={locale === 'fil' ? 'Mga Reservations' : 'Reservations'}
@@ -221,7 +241,11 @@ export default function StaffReservationsPage() {
                       <option value="all">{locale === 'fil' ? 'Lahat' : 'All'}</option>
                       <option value="pending">{locale === 'fil' ? 'Naghihintay' : 'Pending'}</option>
                       <option value="approved">{locale === 'fil' ? 'Aprubado' : 'Approved'}</option>
+                      <option value="ready_for_pickup">{locale === 'fil' ? 'Handa nang kunin' : 'Ready for Pickup'}</option>
+                      <option value="received">{locale === 'fil' ? 'Natanggap' : 'Received'}</option>
+                      <option value="finished">{locale === 'fil' ? 'Naibalik / Nakumpleto' : 'Returned / Completed'}</option>
                       <option value="declined">{locale === 'fil' ? 'Tinanggihan' : 'Declined'}</option>
+                      <option value="cancelled">{locale === 'fil' ? 'Nakansela' : 'Cancelled'}</option>
                     </Select>
                   </div>
                   <button
@@ -261,8 +285,13 @@ export default function StaffReservationsPage() {
                   </TableRow>
                 ) : (
                   pageItems.map((item) => (
-                    <TableRow key={item.id} className={selectedReservation?.id === item.id ? 'bg-[color:var(--portal-surface-3)]' : ''}>
-                      <TableCell className="py-2 pr-2 text-center align-middle">{getResourceLabel(item.resource)} {item.itemName ? `(${item.itemName})` : ''}</TableCell>
+                    <TableRow
+                      key={item.id}
+                      className={selectedReservation?.id === item.id ? 'bg-[color:var(--portal-surface-3)]' : ''}
+                    >
+                      <TableCell className="py-2 pr-2 text-center align-middle">
+                        {item.resource === 'equipment' && item.itemName ? item.itemName : getResourceLabel(item.resource)}
+                      </TableCell>
                       <TableCell className="py-2 pr-2 text-center align-middle text-sm">{item.residentName}</TableCell>
                       <TableCell className="py-2 pr-2 text-center align-middle text-sm">
                         {item.startAt && item.endAt ? (
@@ -279,7 +308,12 @@ export default function StaffReservationsPage() {
                       </TableCell>
                       <TableCell className="py-2 pr-2 text-center align-middle">
                         <div className="flex justify-center">
-                          <Button variant="ghost" type="button" onClick={() => openReview(item.id)}>
+                          <Button
+                            variant="ghost"
+                            type="button"
+                            className="rounded-full border border-[color:var(--portal-border-soft)] bg-[color:var(--portal-surface-1)] px-5 hover:bg-[color:var(--portal-surface-3)]"
+                            onClick={() => openReview(item.id)}
+                          >
                             {locale === 'fil' ? 'Suriin' : 'Review'}
                           </Button>
                         </div>
@@ -360,7 +394,7 @@ export default function StaffReservationsPage() {
                   <p>
                     <strong>{locale === 'fil' ? 'Resource' : 'Resource'}:</strong> {getResourceLabel(selectedReservation.resource)}
                   </p>
-                  {selectedReservation.itemName && (
+                  {selectedReservation.resource === 'equipment' && selectedReservation.itemName && (
                     <p>
                       <strong>{locale === 'fil' ? 'Item' : 'Item'}:</strong> {selectedReservation.itemName}
                       {selectedReservation.quantityRequested && ` (Qty: ${selectedReservation.quantityRequested})`}
@@ -382,42 +416,77 @@ export default function StaffReservationsPage() {
                 </div>
               </div>
 
-              <FieldLabel
-                label={locale === 'fil' ? 'Dahilan (required kapag decline)' : 'Reason (required for decline)'}
-                hint={locale === 'fil' ? 'Hindi mae-enable ang decline kung walang dahilan.' : 'Decline is disabled until a reason is entered.'}
-              >
-                <Textarea
-                  value={reason}
-                  onChange={(event) => setReason(event.target.value)}
-                  placeholder={locale === 'fil' ? 'Halimbawa: occupied schedule' : 'Example: occupied schedule'}
-                  className="min-h-[80px]"
-                />
-              </FieldLabel>
+              {selectedReservation.status === 'pending' ? (
+                <FieldLabel
+                  label={locale === 'fil' ? 'Dahilan (required kapag decline)' : 'Reason (required for decline)'}
+                  hint={locale === 'fil' ? 'Hindi mae-enable ang decline kung walang dahilan.' : 'Decline is disabled until a reason is entered.'}
+                >
+                  <Textarea
+                    value={reason}
+                    onChange={(event) => setReason(event.target.value)}
+                    placeholder={locale === 'fil' ? 'Halimbawa: occupied schedule' : 'Example: occupied schedule'}
+                    className="min-h-[80px]"
+                  />
+                </FieldLabel>
+              ) : null}
             </div>
 
             <div className="flex flex-wrap justify-end gap-2 border-t border-[color:var(--portal-border-soft)] px-5 py-4">
-              <Button variant="ghost" type="button" onClick={closeReview}>
+              <Button variant="ghost" type="button" disabled={processingStatus !== null} onClick={closeReview}>
                 {locale === 'fil' ? 'Kanselahin' : 'Cancel'}
               </Button>
               {selectedReservation.status === 'pending' && (
                 <>
                   <Button
                     type="button"
+                    disabled={processingStatus !== null}
                     className="w-full md:w-auto border border-[color:#14543a] bg-[linear-gradient(180deg,#1d7a53_0%,#155f40_100%)] px-6 text-white shadow-[0_10px_24px_rgba(21,95,64,0.32)] hover:bg-[linear-gradient(180deg,#176745_0%,#114f36_100%)]"
                     onClick={() => void approveReservation()}
                   >
-                    {locale === 'fil' ? 'Aprubahan' : 'Approve'}
+                    {processingStatus === 'approved'
+                      ? locale === 'fil' ? 'Inaaprubahan' : 'Approving'
+                      : locale === 'fil' ? 'Aprubahan' : 'Approve'}
                   </Button>
                   <Button
                     type="button"
-                    disabled={!reason.trim()}
+                    disabled={!reason.trim() || processingStatus !== null}
                     className="bg-[linear-gradient(180deg,#9f1239_0%,#7f112b_100%)] text-white px-4 py-2 shadow-[0_10px_24px_rgba(159,18,57,0.24)] hover:bg-[linear-gradient(180deg,#b91c3f_0%,#881337_100%)] disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => void declineReservation()}
                   >
-                    {locale === 'fil' ? 'I-decline' : 'Decline'}
+                    {processingStatus === 'declined'
+                      ? locale === 'fil' ? 'Tinatanggihan' : 'Declining'
+                      : locale === 'fil' ? 'I-decline' : 'Decline'}
                   </Button>
                 </>
               )}
+              {selectedReservation.status === 'approved' && selectedReservation.resource === 'equipment' ? (
+                <Button type="button" variant="resident" disabled={processingStatus !== null} onClick={() => void updateReservationStatus('ready_for_pickup')}>
+                  {processingStatus === 'ready_for_pickup'
+                    ? locale === 'fil' ? 'Minamarkahang handa na...' : 'Marking ready...'
+                    : locale === 'fil' ? 'Markahan bilang Ready for Pickup' : 'Mark Ready for Pickup'}
+                </Button>
+              ) : null}
+              {selectedReservation.status === 'approved' && selectedReservation.resource !== 'equipment' ? (
+                <Button type="button" variant="resident" disabled={processingStatus !== null} onClick={() => void updateReservationStatus('completed')}>
+                  {processingStatus === 'completed'
+                    ? locale === 'fil' ? 'Kinukumpleto...' : 'Completing...'
+                    : locale === 'fil' ? 'Markahan bilang Nakumpleto' : 'Mark as Completed'}
+                </Button>
+              ) : null}
+              {selectedReservation.status === 'ready_for_pickup' && selectedReservation.resource === 'equipment' ? (
+                <Button type="button" variant="resident" disabled={processingStatus !== null} onClick={() => void updateReservationStatus('received')}>
+                  {processingStatus === 'received'
+                    ? locale === 'fil' ? 'Minamarkahang natanggap...' : 'Marking received...'
+                    : locale === 'fil' ? 'Markahan bilang Natanggap' : 'Mark as Received'}
+                </Button>
+              ) : null}
+              {selectedReservation.status === 'received' && selectedReservation.resource === 'equipment' ? (
+                <Button type="button" variant="resident" disabled={processingStatus !== null} onClick={() => void updateReservationStatus('returned')}>
+                  {processingStatus === 'returned'
+                    ? locale === 'fil' ? 'Minamarkahang naibalik...' : 'Marking returned...'
+                    : locale === 'fil' ? 'Markahan bilang Naibalik' : 'Mark as Returned'}
+                </Button>
+              ) : null}
             </div>
           </section>
         </div>

@@ -116,15 +116,6 @@ export default function AdminIncidentsPage() {
 
   useEffect(() => {
     if (!reviewOpen) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, [reviewOpen]);
-
-  useEffect(() => {
-    if (!reviewOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeReviewModal();
     };
@@ -485,8 +476,8 @@ export default function AdminIncidentsPage() {
                   >
                     {processingStatus === 'approved'
                       ? locale === 'fil'
-                        ? 'Ina-approve...'
-                        : 'Approving...'
+                        ? 'Ina-approv'
+                        : 'Approving'
                       : locale === 'fil'
                         ? 'Aprubahan'
                         : 'Approve'}
@@ -499,8 +490,8 @@ export default function AdminIncidentsPage() {
                   >
                     {processingStatus === 'declined'
                       ? locale === 'fil'
-                        ? 'Tinatanggihan...'
-                        : 'Declining...'
+                        ? 'Tinatanggihan'
+                        : 'Declining'
                       : locale === 'fil'
                         ? 'I-decline'
                         : 'Decline'}

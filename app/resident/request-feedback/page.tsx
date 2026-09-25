@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { PageGuide } from '@/components/portal-ui';
+import { FormFeedback, PageGuide } from '@/components/portal-ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -21,6 +21,8 @@ export default function ResidentFeedbackPage() {
   const [requestId, setRequestId] = useState('');
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const pageCopy = getRolePageCopy('resident/request-feedback');
 
   const completedRequests = useMemo(() => getResidentCompletedRequests(state, user?.id), [state, user?.id]);
@@ -32,16 +34,38 @@ export default function ResidentFeedbackPage() {
   }, [completedRequests]);
 
   const myFeedback = useMemo(() => getResidentFeedback(state, user?.id), [state, user?.id]);
-  const requestIndex = useMemo(() => {
-    return new Map(state.documentRequests.map((request) => [request.id, request]));
-  }, [state.documentRequests]);
+  const requestIndex = useMemo(
+    () => new Map(state.documentRequests.map((request) => [request.id, request])),
+    [state.documentRequests]
+  );
+
+  useEffect(() => {
+    if (!feedback) return;
+    const timeout = window.setTimeout(() => setFeedback(null), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [feedback]);
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!requestId) return;
+    if (!requestId || isSubmitting) return;
 
-    await addFeedback({ requestId, rating, comment });
-    setComment('');
+    setIsSubmitting(true);
+    setFeedback(null);
+    try {
+      await addFeedback({ requestId, rating, comment });
+      setComment('');
+      setFeedback({
+        tone: 'success',
+        text: copyText(locale, 'Feedback submitted successfully.', 'Matagumpay na naipadala ang feedback.'),
+      });
+    } catch {
+      setFeedback({
+        tone: 'error',
+        text: copyText(locale, 'Unable to submit feedback. Please try again.', 'Hindi naipadala ang feedback. Pakisubukan muli.'),
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -82,9 +106,17 @@ export default function ResidentFeedbackPage() {
             <Textarea value={comment} onChange={(event) => setComment(event.target.value)} className="min-h-[100px]" />
           </label>
 
+          {feedback ? (
+            <div className="md:col-span-2">
+              <FormFeedback tone={feedback.tone} text={feedback.text} />
+            </div>
+          ) : null}
+
           <div className="md:col-span-2 flex justify-end">
-            <Button type="submit" variant="residentOutline">
-              {copyText(locale, 'Submit Feedback', 'Ipadala ang Puna')}
+            <Button type="submit" variant="resident" disabled={isSubmitting}>
+              {isSubmitting
+                ? copyText(locale, 'Submitting', 'Ipinapadala')
+                : copyText(locale, 'Submit Feedback', 'Ipadala ang Puna')}
             </Button>
           </div>
         </form>
@@ -105,18 +137,21 @@ export default function ResidentFeedbackPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {myFeedback.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>
-                    {requestIndex.get(item.requestId)?.referenceNumber ?? item.requestId}
-                    {' - '}
-                    {requestIndex.get(item.requestId)?.typeLabel ?? copyText(locale, 'Document Request', 'Document Request')}
-                  </TableCell>
-                  <TableCell>{item.rating}</TableCell>
-                  <TableCell>{item.comment ?? '-'}</TableCell>
-                  <TableCell>{formatDateTime(item.createdAt, locale)}</TableCell>
-                </TableRow>
-              ))}
+              {myFeedback.map((item) => {
+                const request = item.requestId ? requestIndex.get(item.requestId) : undefined;
+                return (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      {request
+                        ? `${request.referenceNumber} - ${request.typeLabel}`
+                        : copyText(locale, 'Assistant Feedback', 'Feedback sa Assistant')}
+                    </TableCell>
+                    <TableCell>{item.rating}</TableCell>
+                    <TableCell>{item.comment ?? '-'}</TableCell>
+                    <TableCell>{formatDateTime(item.createdAt, locale)}</TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </ResidentScrollTable>

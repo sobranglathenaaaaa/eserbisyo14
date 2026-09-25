@@ -154,7 +154,7 @@ export const staffUpdateRequest = (
 export const adminAssignToStaff = (requestId: string, assigneeUserId: string) =>
   provider.adminAssignToStaff(requestId, assigneeUserId);
 
-export const addFeedback = (payload: { requestId: string; rating: number; comment?: string }) => provider.addFeedback(payload);
+export const addFeedback = (payload: { requestId?: string; rating: number; comment?: string }) => provider.addFeedback(payload);
 
 export const submitReport = (payload: {
   category: string;

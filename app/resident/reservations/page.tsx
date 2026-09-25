@@ -7,15 +7,16 @@ import {
   Calendar as CalendarIcon,
   Info,
 } from 'lucide-react';
-import { FormFeedback, StatusBadge, statusToneFromState } from '@/components/portal-ui';
+import { FormFeedback } from '@/components/portal-ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { formatDateTime } from '@/lib/formatters/dates';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { formatDateTime } from '@/lib/formatters';
 import { useAppState } from '@/lib/frontend-data/use-app-state';
 import { copyText } from '@/features/resident/model/copy';
-import { ResidentEmpty, ResidentSection } from '@/features/resident/view/resident-primitives';
+import { ResidentSection } from '@/features/resident/view/resident-primitives';
 import { ResidentShell } from '@/features/resident/view/resident-shell';
 import { getSupabaseBrowserClient, getSupabaseSessionSafely } from '@/lib/supabase/client';
 import type { Equipment, Reservation } from '@/lib/types/models';
@@ -37,7 +38,7 @@ interface AvailabilitySlot {
   quantity_requested?: number;
   start_at: string;
   end_at: string;
-  status: 'pending' | 'approved';
+  status: 'pending' | 'approved' | 'ready_for_pickup' | 'received';
 }
 
 function formatDateIso(date: Date): string {
@@ -49,6 +50,7 @@ function formatDateIso(date: Date): string {
 
 export default function ResidentReservationsPage() {
   const { state, locale } = useAppState();
+  const user = state.users.find((item) => item.id === state.session?.userId);
   const [selectedResource, setSelectedResource] = useState<ResourceType | ''>('');
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [selectedEquipmentId, setSelectedEquipmentId] = useState('');
@@ -58,13 +60,17 @@ export default function ResidentReservationsPage() {
   const [purpose, setPurpose] = useState('');
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'error' | 'info'; text: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [_isLoading, setIsLoading] = useState(true);
-
-  // Availability calendar state
+  const [isLoading, setIsLoading] = useState(true);
   const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
-  const [calendarMonth, setCalendarMonth] = useState<Date>(() => new Date());
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [cancelReservationId, setCancelReservationId] = useState<string | null>(null);
+  const [isCancellingReservation, setIsCancellingReservation] = useState(false);
 
-  const reservations = useMemo(() => state.reservations || [], [state.reservations]);
+  useEffect(() => {
+    if (!feedback) return;
+    const timeout = window.setTimeout(() => setFeedback(null), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [feedback]);
 
   const loadEquipmentAndAvailability = async () => {
     setIsLoading(true);
@@ -79,9 +85,20 @@ export default function ResidentReservationsPage() {
         fetch('/api/v1/reservations/availability', { headers }),
       ]);
 
-      const equipData = (await equipRes.json().catch(() => null)) as { equipment?: Equipment[] } | null;
-      if (equipData?.equipment) {
-        setEquipment(equipData.equipment.filter((e) => !e.isDeleted));
+      const equipData = (await equipRes.json().catch(() => null)) as {
+        success?: boolean;
+        data?: { equipment?: Array<{ id: string; name: string; quantity: number; is_deleted?: boolean }> };
+      } | null;
+      if (equipData?.success && equipData.data?.equipment) {
+        setEquipment(equipData.data.equipment
+          .filter((item) => !item.is_deleted)
+          .map((item) => ({
+            id: item.id,
+            name: item.name,
+            quantity: Number(item.quantity ?? 0),
+            isDeleted: Boolean(item.is_deleted),
+            updatedAt: '',
+          })));
       }
 
       const availData = (await availRes.json().catch(() => null)) as {
@@ -164,6 +181,10 @@ export default function ResidentReservationsPage() {
   }, [availability, selectedResource, selectedEquipmentItem]);
 
   const todayIso = useMemo(() => formatDateIso(new Date()), []);
+  const weekHeaders = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat(locale === 'fil' ? 'fil-PH' : 'en-US', { weekday: 'short' });
+    return Array.from({ length: 7 }, (_, index) => formatter.format(new Date(2024, 0, 7 + index)));
+  }, [locale]);
 
   // Calendar Grid Generator
   const calendarDays = useMemo(() => {
@@ -352,7 +373,7 @@ export default function ResidentReservationsPage() {
     }
 
     const hasApprovedOverlap = filteredAvailability.some((slot) => {
-      if (slot.status !== 'approved') return false;
+      if (!['approved', 'ready_for_pickup', 'received'].includes(slot.status)) return false;
       const slotStart = new Date(slot.start_at).getTime();
       const slotEnd = new Date(slot.end_at).getTime();
       return slotStart < endMs && slotEnd > startMs;
@@ -470,18 +491,19 @@ export default function ResidentReservationsPage() {
   };
 
   const handleCancelReservation = async (reservationId: string) => {
-    if (!window.confirm(copyText(locale, 'Cancel this reservation?', 'Kanselahin ang reservation?'))) {
-      return;
-    }
-
+    setIsCancellingReservation(true);
     try {
       const supabase = getSupabaseBrowserClient();
       const session = await getSupabaseSessionSafely(supabase);
       const token = session.data.session?.access_token;
 
-      const response = await fetch(`/api/v1/reservations/${reservationId}`, {
-        method: 'DELETE',
-        headers: token ? { authorization: `Bearer ${token}` } : {},
+      const response = await fetch(`/api/v1/reservations/${reservationId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ status: 'cancelled' }),
       });
 
       if (!response.ok) {
@@ -491,6 +513,9 @@ export default function ResidentReservationsPage() {
         });
         return;
       }
+
+      setCancelReservationId(null);
+      window.dispatchEvent(new Event('eserbisyo-state-updated'));
 
       setFeedback({
         tone: 'success',
@@ -502,23 +527,10 @@ export default function ResidentReservationsPage() {
         tone: 'error',
         text: copyText(locale, 'Error cancelling reservation', 'Error sa pagkansela'),
       });
+    } finally {
+      setIsCancellingReservation(false);
     }
   };
-
-  const getStatusLabel = (status: string): string => {
-    const labels: Record<string, Record<'en' | 'fil', string>> = {
-      pending: { en: 'Pending Review', fil: 'Naghihintay ng Review' },
-      approved: { en: 'Approved', fil: 'Approved' },
-      declined: { en: 'Declined', fil: 'Declined' },
-      cancelled: { en: 'Cancelled', fil: 'Cancelled' },
-    };
-    return labels[status]?.[locale] || status;
-  };
-
-  const activeReservations = reservations.filter((r) => r.status === 'pending' || r.status === 'approved');
-  const completedReservations = reservations.filter((r) => r.status === 'declined' || r.status === 'cancelled');
-
-  const weekHeaders = locale === 'fil' ? ['Ling', 'Lun', 'Mar', 'Miy', 'Huw', 'Biy', 'Sab'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
     <ResidentShell
@@ -916,7 +928,7 @@ export default function ResidentReservationsPage() {
                 className="h-11 min-w-[220px] px-6 text-base font-bold shadow-md"
               >
                 {isSubmitting
-                  ? copyText(locale, 'Submitting...', 'Ipinapadala...')
+                  ? copyText(locale, 'Submitting', 'Ipinapadala')
                   : copyText(locale, 'Submit Reservation', 'Ipadala ang Reservation')}
               </Button>
             </div>
@@ -924,134 +936,37 @@ export default function ResidentReservationsPage() {
         </form>
       </ResidentSection>
 
-      {/* Resident's Active & Past Reservations */}
-      <ResidentSection title={copyText(locale, 'Your Reservations', 'Iyong mga Reservation')}>
-        {reservations.length === 0 ? (
-          <ResidentEmpty
-            title={copyText(locale, 'No reservations yet', 'Wala pang mga reservation')}
-            description={copyText(
-              locale,
-              'Submit a reservation above to request facility, vehicle, or equipment use.',
-              'Mag-submit ng reservation sa itaas para sa paggamit ng pasilidad, sasakyan, o kagamitan.'
-            )}
-          />
-        ) : (
-          <div className="space-y-6">
-            {/* Active Requests */}
-            {activeReservations.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="font-bold text-sm text-[color:#123726] flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  {copyText(locale, 'Active Requests', 'Mga Aktibong Request')} ({activeReservations.length})
-                </h4>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {activeReservations.map((item) => (
-                    <div
-                      key={item.id}
-                      className="p-4 rounded-xl bg-white border border-[color:rgba(18,55,38,0.14)] shadow-sm space-y-3 flex flex-col justify-between"
-                    >
-                      <div className="space-y-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <span className="font-bold text-[color:#123726] text-base block">
-                              {getResourceLabel(item.resource)}
-                            </span>
-                            {item.itemName && (
-                              <span className="text-xs font-semibold text-emerald-800 block">
-                                {item.itemName}{' '}
-                                {item.quantityRequested && item.quantityRequested > 1 ? `(Qty: ${item.quantityRequested})` : ''}
-                              </span>
-                            )}
-                          </div>
-                          <StatusBadge tone={statusToneFromState(item.status)}>
-                            {getStatusLabel(item.status)}
-                          </StatusBadge>
-                        </div>
-
-                        <div className="text-xs text-[color:#49695a] space-y-1 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                          <div>
-                            <strong className="text-gray-700">{copyText(locale, 'Start:', 'Simula:')}</strong>{' '}
-                            {formatDateTime(item.startAt, locale)}
-                          </div>
-                          <div>
-                            <strong className="text-gray-700">{copyText(locale, 'End:', 'Pagtatapos:')}</strong>{' '}
-                            {formatDateTime(item.endAt, locale)}
-                          </div>
-                          {item.purpose && (
-                            <div className="pt-1 text-gray-800 border-t border-gray-200 mt-1">
-                              <strong>{copyText(locale, 'Purpose:', 'Layunin:')}</strong> {item.purpose}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {item.status === 'pending' && (
-                        <div className="pt-2 border-t border-gray-100 flex justify-end">
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => void handleCancelReservation(item.id)}
-                            className="text-xs h-8 px-3"
-                          >
-                            {copyText(locale, 'Cancel Request', 'Kanselahin ang Request')}
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Past History */}
-            {completedReservations.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="font-bold text-sm text-[color:#123726] flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-gray-400" />
-                  {copyText(locale, 'Past / Cancelled History', 'Nakalipas o Nakansel na History')} ({completedReservations.length})
-                </h4>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {completedReservations.map((item) => (
-                    <div
-                      key={item.id}
-                      className="p-4 rounded-xl bg-gray-50/70 border border-gray-200 space-y-2 opacity-85"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <span className="font-bold text-gray-800 text-sm block">
-                            {getResourceLabel(item.resource)}
-                          </span>
-                          {item.itemName && (
-                            <span className="text-xs text-gray-600 block">
-                              {item.itemName}{' '}
-                              {item.quantityRequested && item.quantityRequested > 1 ? `(Qty: ${item.quantityRequested})` : ''}
-                            </span>
-                          )}
-                        </div>
-                        <StatusBadge tone={statusToneFromState(item.status)}>
-                          {getStatusLabel(item.status)}
-                        </StatusBadge>
-                      </div>
-
-                      <div className="text-xs text-gray-600 space-y-0.5">
-                        <div>
-                          {formatDateTime(item.startAt, locale)} — {formatDateTime(item.endAt, locale)}
-                        </div>
-                        {item.reason && (
-                          <div className="text-red-700 text-[11px] font-medium pt-1">
-                            Reason: {item.reason}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </ResidentSection>
+      <Dialog
+        open={cancelReservationId !== null}
+        onOpenChange={(open) => {
+          if (!open && !isCancellingReservation) setCancelReservationId(null);
+        }}
+      >
+        <DialogContent className="gap-8 p-8 sm:max-w-md">
+          <DialogHeader className="items-center space-y-5 text-center">
+            <DialogTitle>{copyText(locale, 'Cancel this reservation?', 'Kanselahin ang reservation?')}</DialogTitle>
+            <DialogDescription className="mx-auto max-w-sm text-center leading-relaxed">
+              {copyText(locale, 'Are you sure you want to cancel this reservation request?', 'Sigurado ka bang gusto mong kanselahin ang reservation request na ito?')}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="items-center justify-center gap-3 sm:flex-row sm:justify-center sm:space-x-0">
+            <Button type="button" variant="ghost" className="min-w-32" disabled={isCancellingReservation} onClick={() => setCancelReservationId(null)}>
+              {copyText(locale, 'No', 'Hindi')}
+            </Button>
+            <Button
+              type="button"
+              variant="resident"
+              className="min-w-32"
+              disabled={isCancellingReservation}
+              onClick={() => {
+                if (cancelReservationId) void handleCancelReservation(cancelReservationId);
+              }}
+            >
+              {isCancellingReservation ? copyText(locale, 'Cancelling', 'Kinakansela') : copyText(locale, 'Yes', 'Oo')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </ResidentShell>
   );
 }

@@ -15,17 +15,19 @@ export async function POST(request: NextRequest) {
   }
 
   const body = (await request.json().catch(() => null)) as
-    | { rating: number; message?: string; relatedRequestId?: string }
+    | { rating: number; message?: string; relatedRequestId?: string; source?: 'request' | 'assistant' }
     | null;
   if (typeof body?.rating !== 'number' || body.rating < 1 || body.rating > 5) {
     return fail('VALIDATION_ERROR', 'rating must be 1 to 5', 400);
   }
 
   const admin = getSupabaseAdminClient();
-  const fallbackRequestId =
-    body.relatedRequestId ??
-    (await admin.from('document_requests').select('id').eq('resident_id', auth.userId).limit(1).maybeSingle()).data?.id;
-  if (!fallbackRequestId) {
+  const isAssistantFeedback = body.source === 'assistant';
+  const fallbackRequestId = isAssistantFeedback
+    ? null
+    : body.relatedRequestId ??
+      (await admin.from('document_requests').select('id').eq('resident_id', auth.userId).limit(1).maybeSingle()).data?.id;
+  if (!isAssistantFeedback && !fallbackRequestId) {
     return fail('VALIDATION_ERROR', 'relatedRequestId is required', 400);
   }
 

@@ -54,12 +54,6 @@ export default function StaffEquipmentPage() {
     }
   };
 
-  const getStatusTone = (qty: number) => {
-    if (qty <= 0) return 'danger' as const;
-    if (qty <= 5) return 'warning' as const;
-    return 'success' as const;
-  };
-
   const getQuantityDraft = (id: string, currentQuantity: number) => quantityDrafts[id] ?? String(currentQuantity);
 
   const saveQuantity = async (item: (typeof state.equipment)[number]) => {
@@ -208,8 +202,12 @@ export default function StaffEquipmentPage() {
                   </div>
                 </TableCell>
                 <TableCell className="text-center">
-                  <StatusBadge tone={getStatusTone(item.quantity)}>
-                    {item.quantity <= 0 ? (locale === 'fil' ? 'Wala' : 'Out of stock') : locale === 'fil' ? 'Available' : 'Available'}
+                  <StatusBadge tone={item.isDeleted ? 'neutral' : item.quantity <= 0 ? 'danger' : 'success'}>
+                    {item.isDeleted
+                      ? locale === 'fil' ? 'Naka-archive' : 'Archived'
+                      : item.quantity <= 0
+                        ? locale === 'fil' ? 'Wala' : 'Out of stock'
+                        : 'Available'}
                   </StatusBadge>
                 </TableCell>
                 <TableCell className="text-center">

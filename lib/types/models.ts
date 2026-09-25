@@ -156,7 +156,7 @@ export interface IncidentReport {
 
 export interface Feedback {
   id: string;
-  requestId: string;
+  requestId?: string;
   residentId: string;
   rating: number;
   comment?: string;
@@ -272,7 +272,7 @@ export interface Equipment {
   updatedAt: string;
 }
 
-export type ReservationStatus = 'pending' | 'approved' | 'declined' | 'cancelled' | 'ready_for_pickup' | 'returned' | 'completed';
+export type ReservationStatus = 'pending' | 'approved' | 'declined' | 'cancelled' | 'ready_for_pickup' | 'received' | 'returned' | 'completed';
 
 export interface Reservation {
   id: string;

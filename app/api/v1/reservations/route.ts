@@ -4,7 +4,6 @@ import { assertCan } from '@/lib/auth/permissions';
 import { requireAuth } from '@/lib/auth/request-auth';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { writeAuditLog } from '@/lib/api/audit';
-import { notifyStaff } from '@/lib/api/notifications';
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request);
@@ -83,7 +82,7 @@ export async function POST(request: NextRequest) {
       .eq('tenant_id', auth.tenantId)
       .eq('resource', 'equipment')
       .ilike('item_name', body.itemName)
-      .in('status', ['pending', 'approved']);
+      .in('status', ['pending', 'approved', 'ready_for_pickup', 'received']);
 
     let reserved = 0;
     const newStart = new Date(startAtIso).getTime();
@@ -106,7 +105,7 @@ export async function POST(request: NextRequest) {
       .select('id,start_at,end_at,status')
       .eq('tenant_id', auth.tenantId)
       .eq('resource', resource)
-      .in('status', ['pending', 'approved']);
+      .in('status', ['pending', 'approved', 'ready_for_pickup', 'received']);
 
     const newStart = new Date(startAtIso).getTime();
     const newEnd = new Date(endAtIso).getTime();
@@ -149,29 +148,6 @@ export async function POST(request: NextRequest) {
     actorRole: auth.role,
     action: 'reservations.create',
     targetId: data.id,
-  });
-
-  const resourceLabel =
-    body.serviceType === 'equipment'
-      ? 'Equipment request'
-      : body.serviceType === 'barangay_hall'
-        ? 'Facility request'
-        : body.serviceType === 'covered_court'
-          ? 'Facility request'
-          : body.serviceType === 'service_vehicle'
-            ? 'Vehicle request'
-            : 'Reservation request';
-
-  void notifyStaff({
-    tenantId: auth.tenantId,
-    title: 'New reservation request',
-    message: `${resourceLabel} is waiting for staff review.`,
-    type: 'request',
-    priority: 'info',
-    eventKey: 'reservation.created',
-    entityType: 'reservation',
-    entityId: data.id,
-    actionHref: '/staff/reservations',
   });
 
   return ok(data, { status: 201 });

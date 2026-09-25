@@ -64,7 +64,6 @@ export default function AdminDashboardPage() {
     >
       <DashboardSection
         title={locale === 'fil' ? 'Buod' : 'Summary'}
-        description={locale === 'fil' ? 'Mabilis na kalagayan ng serbisyo.' : 'Quick view of service health.'}
       >
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <DashboardSummaryCard label="Total Requests" value={metrics?.totalRequests ?? 0} icon={<FileText size={18} />} />

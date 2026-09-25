@@ -114,11 +114,13 @@ export default function StaffAppointmentsPage() {
   const [busyAppointmentId, setBusyAppointmentId] = useState<string | null>(
     null
   );
+  const [busyAppointmentAction, setBusyAppointmentAction] = useState<
+    'approving' | 'declining' | 'completing' | null
+  >(null);
   const [feedback, setFeedback] = useState<{
     tone: 'success' | 'error' | 'info' | 'neutral';
     text: string;
   } | null>(null);
-  const [staffNote, setStaffNote] = useState('');
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<
     string | null
   >(null);
@@ -130,9 +132,6 @@ export default function StaffAppointmentsPage() {
   const [confirmDeleteSlotId, setConfirmDeleteSlotId] = useState<string | null>(
     null
   );
-  const [confirmDeleteAppointmentId, setConfirmDeleteAppointmentId] = useState<
-    string | null
-  >(null);
   const [showAddSlotModal, setShowAddSlotModal] = useState(false);
   const [showSlotsModal, setShowSlotsModal] = useState(false);
   const [showDoctorsModal, setShowDoctorsModal] = useState(false);
@@ -157,7 +156,6 @@ export default function StaffAppointmentsPage() {
     Boolean(
       selectedAppointmentId ||
         confirmDeleteSlotId ||
-        confirmDeleteAppointmentId ||
         showAddSlotModal ||
         showSlotsModal ||
         showDoctorsModal
@@ -200,8 +198,9 @@ export default function StaffAppointmentsPage() {
   }, [appointments, searchTerm, statusFilter]);
 
   const itemsPerPage = 10;
-  const totalPages = Math.ceil(
-    filteredAppointments.length / itemsPerPage
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredAppointments.length / itemsPerPage)
   );
 
   const paginatedAppointments = useMemo(
@@ -231,6 +230,17 @@ export default function StaffAppointmentsPage() {
   useEffect(() => {
     setAppointmentPage(1);
   }, [searchTerm, statusFilter]);
+
+  useEffect(() => {
+    setAppointmentPage((page) => Math.min(page, totalPages));
+  }, [totalPages]);
+
+  useEffect(() => {
+    if (!feedback) return;
+
+    const timeoutId = window.setTimeout(() => setFeedback(null), 5000);
+    return () => window.clearTimeout(timeoutId);
+  }, [feedback]);
 
   useEffect(() => {
     if (!showSlotsModal) return;
@@ -441,46 +451,6 @@ export default function StaffAppointmentsPage() {
     }
   };
 
-  const onUpdateAppointmentStatus = async (
-    appointmentId: string,
-    status:
-      | 'pending'
-      | 'approved'
-      | 'completed'
-      | 'declined'
-      | 'cancelled'
-  ) => {
-    setBusyAppointmentId(appointmentId);
-
-    try {
-      await updateCheckupAppointmentStatus(
-        appointmentId,
-        status,
-        staffNote.trim() || undefined
-      );
-
-      setStaffNote('');
-
-      setFeedback({
-        tone: 'success',
-        text:
-          locale === 'fil'
-            ? 'Na-update ang appointment status.'
-            : 'Appointment status updated.',
-      });
-    } catch (error) {
-      setFeedback({
-        tone: 'error',
-        text:
-          error instanceof Error
-            ? error.message
-            : 'Unable to update appointment.',
-      });
-    } finally {
-      setBusyAppointmentId(null);
-    }
-  };
-
   const openReviewModal = (appointmentId: string) => {
     setSelectedAppointmentId(appointmentId);
     setReviewDeclineReason('');
@@ -489,13 +459,13 @@ export default function StaffAppointmentsPage() {
   const closeReviewModal = () => {
     setSelectedAppointmentId(null);
     setReviewDeclineReason('');
-    setConfirmDeleteAppointmentId(null);
   };
 
   const approveSelectedAppointment = async () => {
     if (!selectedAppointment) return;
 
     setBusyAppointmentId(selectedAppointment.id);
+    setBusyAppointmentAction('approving');
 
     try {
       await updateCheckupAppointmentStatus(
@@ -523,6 +493,7 @@ export default function StaffAppointmentsPage() {
       });
     } finally {
       setBusyAppointmentId(null);
+      setBusyAppointmentAction(null);
     }
   };
 
@@ -542,6 +513,7 @@ export default function StaffAppointmentsPage() {
     }
 
     setBusyAppointmentId(selectedAppointment.id);
+    setBusyAppointmentAction('declining');
 
     try {
       await updateCheckupAppointmentStatus(
@@ -569,6 +541,31 @@ export default function StaffAppointmentsPage() {
       });
     } finally {
       setBusyAppointmentId(null);
+      setBusyAppointmentAction(null);
+    }
+  };
+
+  const completeSelectedAppointment = async () => {
+    if (!selectedAppointment) return;
+
+    setBusyAppointmentId(selectedAppointment.id);
+    setBusyAppointmentAction('completing');
+
+    try {
+      await updateCheckupAppointmentStatus(selectedAppointment.id, 'completed');
+      setFeedback({
+        tone: 'success',
+        text: locale === 'fil' ? 'Tapos na ang appointment.' : 'Appointment marked as completed.',
+      });
+      closeReviewModal();
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        text: error instanceof Error ? error.message : 'Unable to complete appointment.',
+      });
+    } finally {
+      setBusyAppointmentId(null);
+      setBusyAppointmentAction(null);
     }
   };
 
@@ -602,34 +599,38 @@ export default function StaffAppointmentsPage() {
         </div>
       ) : null}
 
-      <div className="mb-3 flex justify-end gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="border border-[color:var(--portal-border-soft)]"
-          onClick={() => setShowSlotsModal((value) => !value)}
+      <div className="grid gap-6">
+        <SectionCard
+          title={
+            locale === 'fil'
+              ? 'Check-up Appointments'
+              : 'Check-up Appointments'
+          }
+          actions={
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="border border-[color:var(--portal-border-soft)]"
+                onClick={() => setShowSlotsModal((value) => !value)}
+              >
+                {showSlotsModal
+                  ? locale === 'fil' ? 'Itago' : 'Hide'
+                  : locale === 'fil' ? 'Ipakita' : 'Show'}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="border border-[color:var(--portal-border-soft)]"
+                onClick={() => setShowDoctorsModal(true)}
+              >
+                {locale === 'fil' ? 'Imanage ang Doctors' : 'Manage Doctors'}
+              </Button>
+            </div>
+          }
         >
-          {showSlotsModal
-            ? locale === 'fil'
-              ? 'Itago'
-              : 'Hide'
-            : locale === 'fil'
-              ? 'Ipakita'
-              : 'Show'}
-        </Button>
-
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="border border-[color:var(--portal-border-soft)]"
-          onClick={() => setShowDoctorsModal(true)}
-        >
-          {locale === 'fil' ? 'Imanage ang Doctors' : 'Manage Doctors'}
-        </Button>
-      </div>
-
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-[color:var(--portal-ink-500)]">
           {filteredAppointments.length}{' '}
@@ -710,14 +711,6 @@ export default function StaffAppointmentsPage() {
         </div>
       </div>
 
-      <div className="grid gap-6">
-        <SectionCard
-          title={
-            locale === 'fil'
-              ? 'Check-up Appointments'
-              : 'Check-up Appointments'
-          }
-        >
           {!filteredAppointments.length ? (
             <EmptyState
               title={
@@ -734,7 +727,16 @@ export default function StaffAppointmentsPage() {
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full min-w-[960px] table-fixed">
+                  <colgroup>
+                    <col className="w-[19%]" />
+                    <col className="w-[14%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[16%]" />
+                    <col className="w-[19%]" />
+                    <col className="w-[10%]" />
+                    <col className="w-[10%]" />
+                  </colgroup>
                   <thead>
                     <tr className="border-b border-[color:var(--portal-border-soft)]">
                       <th className="px-3 py-2 text-center text-xs font-semibold text-[color:var(--portal-ink-700)]">
@@ -771,7 +773,7 @@ export default function StaffAppointmentsPage() {
                       return (
                         <tr
                           key={appointment.id}
-                          className="border-b border-[color:var(--portal-border-soft)] hover:bg-[color:var(--portal-surface-2)]"
+                          className="border-b border-[color:var(--portal-border-soft)]"
                         >
                           <td className="px-3 py-2 text-center text-sm font-medium text-[color:var(--portal-ink-900)]">
                             {appointment.residentName}
@@ -809,10 +811,7 @@ export default function StaffAppointmentsPage() {
                           <td className="px-3 py-2 text-center">
                             <Button
                               type="button"
-                              size="sm"
-                              variant={
-                                isPending ? 'default' : 'secondary'
-                              }
+                              variant="ghost"
                               onClick={() =>
                                 openReviewModal(appointment.id)
                               }
@@ -827,57 +826,53 @@ export default function StaffAppointmentsPage() {
                 </table>
               </div>
 
-              {totalPages > 1 && (
-                <div className="mt-4 flex items-center justify-between border-t border-[color:var(--portal-border-soft)] pt-3">
-                  <div className="text-xs text-[color:var(--portal-ink-500)]">
-                    {locale === 'fil'
-                      ? `Ipinapakita ang ${
-                          (appointmentPage - 1) * itemsPerPage + 1
-                        } hanggang ${Math.min(
-                          appointmentPage * itemsPerPage,
-                          filteredAppointments.length
-                        )} ng ${filteredAppointments.length}`
-                      : `Showing ${
-                          (appointmentPage - 1) * itemsPerPage + 1
-                        } to ${Math.min(
-                          appointmentPage * itemsPerPage,
-                          filteredAppointments.length
-                        )} of ${filteredAppointments.length}`}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() =>
-                        setAppointmentPage((p) => Math.max(1, p - 1))
-                      }
-                      disabled={appointmentPage === 1}
-                    >
-                      {locale === 'fil' ? 'Nakaraan' : 'Previous'}
-                    </Button>
-
-                    <div className="text-sm text-[color:var(--portal-ink-600)]">
-                      {`${appointmentPage} / ${totalPages}`}
-                    </div>
-
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() =>
-                        setAppointmentPage((p) =>
-                          Math.min(totalPages, p + 1)
-                        )
-                      }
-                      disabled={appointmentPage === totalPages}
-                    >
-                      {locale === 'fil' ? 'Susunod' : 'Next'}
-                    </Button>
-                  </div>
+              <div className="mt-4 flex items-center justify-between border-t border-[color:var(--portal-border-soft)] pt-3">
+                <div className="text-xs text-[color:var(--portal-ink-500)]">
+                  {locale === 'fil'
+                    ? `Ipinapakita ang ${
+                        (appointmentPage - 1) * itemsPerPage + 1
+                      } hanggang ${Math.min(
+                        appointmentPage * itemsPerPage,
+                        filteredAppointments.length
+                      )} ng ${filteredAppointments.length}`
+                    : `Showing ${
+                        (appointmentPage - 1) * itemsPerPage + 1
+                      } to ${Math.min(
+                        appointmentPage * itemsPerPage,
+                        filteredAppointments.length
+                      )} of ${filteredAppointments.length}`}
                 </div>
-              )}
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() =>
+                      setAppointmentPage((p) => Math.max(1, p - 1))
+                    }
+                    disabled={appointmentPage === 1}
+                  >
+                    {locale === 'fil' ? 'Nakaraan' : 'Previous'}
+                  </Button>
+
+                  <div className="text-sm text-[color:var(--portal-ink-600)]">
+                    {`${appointmentPage} / ${totalPages}`}
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() =>
+                      setAppointmentPage((p) =>
+                        Math.min(totalPages, p + 1)
+                      )
+                    }
+                    disabled={appointmentPage === totalPages}
+                  >
+                    {locale === 'fil' ? 'Susunod' : 'Next'}
+                  </Button>
+                </div>
+              </div>
             </>
           )}
         </SectionCard>
@@ -967,7 +962,7 @@ export default function StaffAppointmentsPage() {
                         return (
                           <tr
                             key={slot.id}
-                            className="border-b border-[color:var(--portal-border-soft)] hover:bg-[color:var(--portal-surface-2)]"
+                            className="border-b border-[color:var(--portal-border-soft)]"
                           >
                             <td className="px-3 py-2 text-center text-sm text-[color:var(--portal-ink-900)]">
                               Dr. {slot.doctorName}
@@ -1221,106 +1216,64 @@ export default function StaffAppointmentsPage() {
               ) : null}
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[color:var(--portal-border-soft)] px-5 py-4">
-              <div>
-                {confirmDeleteAppointmentId ===
-                selectedAppointment.id ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-red-600">
-                      {locale === 'fil' ? 'Sigurado?' : 'Confirm?'}
-                    </span>
-
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      disabled={
-                        busyAppointmentId ===
-                        selectedAppointment.id
-                      }
-                      onClick={() =>
-                        void onUpdateAppointmentStatus(
-                          selectedAppointment.id,
-                          'cancelled'
-                        )
-                      }
-                    >
-                      {locale === 'fil'
-                        ? 'Oo, Kanselahin'
-                        : 'Yes, Cancel'}
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        setConfirmDeleteAppointmentId(null)
-                      }
-                    >
-                      {locale === 'fil' ? 'Huwag' : 'No'}
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-red-600 hover:bg-red-50 hover:text-red-700"
-                    onClick={() =>
-                      setConfirmDeleteAppointmentId(
-                        selectedAppointment.id
-                      )
-                    }
-                  >
-                    {locale === 'fil'
-                      ? 'Kanselahin ang Appointment'
-                      : 'Cancel Appointment'}
-                  </Button>
-                )}
-              </div>
-
+            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[color:var(--portal-border-soft)] px-5 py-4">
               <div className="flex gap-2">
                 {selectedAppointment.status === 'pending' ? (
                   <>
                     <Button
                       type="button"
-                      variant="destructive"
                       size="sm"
-                      disabled={
-                        busyAppointmentId ===
-                        selectedAppointment.id
-                      }
+                      className="border-0 bg-[linear-gradient(180deg,#dc4b4b_0%,#b83232_100%)] text-white shadow-[0_8px_20px_rgba(184,50,50,0.25)] hover:bg-[linear-gradient(180deg,#c93e3e_0%,#9f2929_100%)] disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={busyAppointmentId === selectedAppointment.id || !reviewDeclineReason.trim()}
                       onClick={() =>
                         void declineSelectedAppointment()
                       }
                     >
-                      {locale === 'fil'
-                        ? 'Tanggihan'
-                        : 'Decline'}
+                      {busyAppointmentId === selectedAppointment.id && busyAppointmentAction === 'declining'
+                        ? locale === 'fil' ? 'Tumatanggi...' : 'Declining...'
+                        : locale === 'fil' ? 'Tanggihan' : 'Decline'}
                     </Button>
 
                     <Button
                       type="button"
                       size="sm"
-                      disabled={
-                        busyAppointmentId ===
-                        selectedAppointment.id
-                      }
+                      className="border-0 bg-[linear-gradient(180deg,#23875f_0%,#176b49_100%)] text-white shadow-[0_8px_20px_rgba(23,107,73,0.22)] hover:bg-[linear-gradient(180deg,#1d7955_0%,#125d3e_100%)] disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={busyAppointmentId === selectedAppointment.id}
                       onClick={() =>
                         void approveSelectedAppointment()
                       }
                     >
-                      {locale === 'fil'
-                        ? 'Aprubahan'
-                        : 'Approve'}
+                      {busyAppointmentId === selectedAppointment.id && busyAppointmentAction === 'approving'
+                        ? locale === 'fil' ? 'Inaaprubahan...' : 'Approving...'
+                        : locale === 'fil' ? 'Aprubahan' : 'Approve'}
+                    </Button>
+                  </>
+                ) : selectedAppointment.status === 'approved' ? (
+                  <>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={closeReviewModal}
+                      disabled={busyAppointmentId === selectedAppointment.id}
+                    >
+                      {locale === 'fil' ? 'Isara' : 'Close'}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="border-0 bg-[linear-gradient(180deg,#23875f_0%,#176b49_100%)] text-white shadow-[0_8px_20px_rgba(23,107,73,0.22)] hover:bg-[linear-gradient(180deg,#1d7955_0%,#125d3e_100%)] disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={busyAppointmentId === selectedAppointment.id}
+                      onClick={() => void completeSelectedAppointment()}
+                    >
+                      {busyAppointmentId === selectedAppointment.id && busyAppointmentAction === 'completing'
+                        ? locale === 'fil' ? 'Kinukumpleto...' : 'Completing...'
+                        : locale === 'fil' ? 'Markahang Tapos' : 'Mark as Completed'}
                     </Button>
                   </>
                 ) : (
                   <Button
                     type="button"
-                    variant="secondary"
-                    size="sm"
+                    variant="ghost"
                     onClick={closeReviewModal}
                   >
                     {locale === 'fil' ? 'Isara' : 'Close'}

@@ -43,6 +43,7 @@ import { cn } from '@/lib/utils';
 import { PortalShellBase } from '@/components/portal-shell-base';
 import { formatDateTime } from '@/lib/formatters';
 import { DocumentRequestSummaryModal } from './document-request-summary-modal';
+import { ReservationSummaryModal } from './reservation-summary-modal';
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
 import { copy, type LocalizedCopy } from '../model/copy';
 import { copyText } from '../model/copy';
@@ -93,6 +94,7 @@ function ResidentFloatingAssistant() {
   const [assistantRating, setAssistantRating] = useState(0);
   const [assistantFeedback, setAssistantFeedback] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState('');
+  const [isSendingAssistantFeedback, setIsSendingAssistantFeedback] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [temporarySessionMessages, setTemporarySessionMessages] = useState<ChatMessage[]>([]);
   const [assistantSessionStartedAt, setAssistantSessionStartedAt] = useState<string | null>(null);
@@ -102,6 +104,13 @@ function ResidentFloatingAssistant() {
   const router = useRouter();
 
   const chat = useMemo(() => getResidentChatSession(state, user?.id), [state, user?.id]);
+
+  useEffect(() => {
+    if (!feedbackStatus) return;
+    const timeout = window.setTimeout(() => setFeedbackStatus(''), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [feedbackStatus]);
+
   const visibleMessages = useMemo(() => {
     const persisted = chat?.messages ?? [];
     const merged = [...persisted, ...temporarySessionMessages].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
@@ -222,8 +231,9 @@ function ResidentFloatingAssistant() {
     await sendQuestion(text.trim());
   };
 
-  const onSubmitAssistantFeedback = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmitAssistantFeedback = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isSendingAssistantFeedback) return;
     if (assistantRating < 1) {
       setFeedbackStatus(copyText(locale, 'Please choose a rating first.', 'Pumili muna ng rating.'));
       return;
@@ -233,21 +243,17 @@ function ResidentFloatingAssistant() {
       return;
     }
 
-    if (typeof window !== 'undefined') {
-      const key = 'eserbisyo.assistant-feedback.v1';
-      const raw = window.localStorage.getItem(key);
-      const records = raw ? (JSON.parse(raw) as Array<{ rating: number; comment: string; createdAt: string }>) : [];
-      records.unshift({
-        rating: assistantRating,
-        comment: assistantFeedback.trim(),
-        createdAt: new Date().toISOString(),
-      });
-      window.localStorage.setItem(key, JSON.stringify(records));
+    setIsSendingAssistantFeedback(true);
+    try {
+      await addFeedback({ rating: assistantRating, comment: assistantFeedback.trim() });
+      setFeedbackStatus(copyText(locale, 'Feedback sent. Thank you!', 'Naipadala na ang feedback. Salamat!'));
+      setAssistantFeedback('');
+      setAssistantRating(0);
+    } catch {
+      setFeedbackStatus(copyText(locale, 'Unable to send feedback. Please try again.', 'Hindi naipadala ang feedback. Pakisubukan muli.'));
+    } finally {
+      setIsSendingAssistantFeedback(false);
     }
-
-    setFeedbackStatus(copyText(locale, 'Feedback sent. Thank you!', 'Naipadala na ang feedback. Salamat!'));
-    setAssistantFeedback('');
-    setAssistantRating(0);
   };
 
   return (
@@ -258,13 +264,31 @@ function ResidentFloatingAssistant() {
         aria-expanded={isFeedbackOpen}
         aria-label={locale === 'fil' ? 'Buksan ang feedback form' : 'Open feedback form'}
         className={cn(
-          'fixed bottom-40 right-4 z-[55] h-11 shadow-[var(--resident-shadow-3)] transition-[width,padding] md:bottom-20',
-          isFeedbackOpen ? 'w-auto rounded-full px-4' : 'w-11 rounded-full px-0'
+          'group fixed bottom-40 right-4 z-[55] h-11 overflow-hidden whitespace-nowrap rounded-full shadow-[var(--resident-shadow-3)] transition-[width,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none md:bottom-20',
+          isFeedbackOpen
+            ? 'w-auto px-4'
+            : 'w-11 px-0 hover:w-[124px] hover:px-4 focus-visible:w-[124px] focus-visible:px-4'
         )}
         variant="secondary"
       >
-        <Star size={16} className={isFeedbackOpen ? 'mr-2' : ''} />
-        {isFeedbackOpen ? copyText(locale, 'Feedback', 'Feedback') : null}
+        <Star
+          size={16}
+          className={cn(
+            'shrink-0 transition-[margin] duration-200 motion-reduce:transition-none',
+            isFeedbackOpen ? 'mr-2' : 'group-hover:mr-2 group-focus-visible:mr-2'
+          )}
+        />
+        <span
+          aria-hidden="true"
+          className={cn(
+            'w-0 overflow-hidden transition-opacity duration-200 motion-reduce:transition-none',
+            isFeedbackOpen
+              ? 'w-auto opacity-100'
+              : 'opacity-0 group-hover:w-auto group-hover:opacity-100 group-focus-visible:w-auto group-focus-visible:opacity-100'
+          )}
+        >
+          {copyText(locale, 'Feedback', 'Feedback')}
+        </span>
       </Button>
 
       <Button
@@ -273,13 +297,31 @@ function ResidentFloatingAssistant() {
         aria-expanded={isAssistantOpen}
         aria-label={locale === 'fil' ? 'Buksan ang eSerbisyo Chatbot' : 'Open eSerbisyo Chatbot'}
         className={cn(
-          'fixed bottom-24 right-4 z-[55] h-12 shadow-[var(--resident-shadow-3)] transition-[width,padding] md:bottom-5',
-          isAssistantOpen ? 'w-auto rounded-full px-4' : 'w-12 rounded-full px-0'
+          'group fixed bottom-24 right-4 z-[55] h-12 overflow-hidden whitespace-nowrap rounded-full shadow-[var(--resident-shadow-3)] transition-[width,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none md:bottom-5',
+          isAssistantOpen
+            ? 'w-auto px-4'
+            : 'w-12 px-0 hover:w-[184px] hover:px-4 focus-visible:w-[184px] focus-visible:px-4'
         )}
         variant="resident"
       >
-        <MessageCircle size={16} className={isAssistantOpen ? 'mr-2' : ''} />
-        {isAssistantOpen ? (locale === 'fil' ? 'eSerbisyo Chatbot' : 'eSerbisyo Chatbot') : null}
+        <MessageCircle
+          size={16}
+          className={cn(
+            'shrink-0 transition-[margin] duration-200 motion-reduce:transition-none',
+            isAssistantOpen ? 'mr-2' : 'group-hover:mr-2 group-focus-visible:mr-2'
+          )}
+        />
+        <span
+          aria-hidden="true"
+          className={cn(
+            'w-0 overflow-hidden transition-opacity duration-200 motion-reduce:transition-none',
+            isAssistantOpen
+              ? 'w-auto opacity-100'
+              : 'opacity-0 group-hover:w-auto group-hover:opacity-100 group-focus-visible:w-auto group-focus-visible:opacity-100'
+          )}
+        >
+          eSerbisyo Chatbot
+        </span>
       </Button>
 
       {isFeedbackOpen ? (
@@ -335,8 +377,10 @@ function ResidentFloatingAssistant() {
               placeholder={copyText(locale, 'Tell us how the assistant can improve...', 'Sabihin kung paano pa mapapabuti ang assistant...')}
             />
             <div className="flex items-center justify-end gap-2">
-              <Button type="submit" size="sm" className="h-8 px-3" variant="residentOutline" disabled={isSending}>
-                {copyText(locale, 'Send feedback', 'Ipadala ang feedback')}
+              <Button type="submit" size="sm" className="h-8 px-3" variant="residentOutline" disabled={isSendingAssistantFeedback}>
+                {isSendingAssistantFeedback
+                  ? copyText(locale, 'Sending', 'Ipinapadala')
+                  : copyText(locale, 'Send feedback', 'Ipadala ang feedback')}
               </Button>
               {feedbackStatus ? <p className="text-xs text-[color:var(--resident-ink-700)]">{feedbackStatus}</p> : null}
             </div>
@@ -618,31 +662,28 @@ function ResidentNotificationBell() {
   const { state, user, locale } = useAppState();
   const [isOpen, setIsOpen] = useState(false);
   const [summaryRequestId, setSummaryRequestId] = useState<string | null>(null);
+  const [summaryReservationId, setSummaryReservationId] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
 
   const notifications = useMemo(() => {
-    const emailNotificationEvents = new Set([
-      'document.approved',
-      'document.declined',
-      'document.ready_for_pickup',
-      'document.completed',
-      'reservation.approved',
-      'reservation.declined',
-    ]);
-
     return getResidentNotifications(state, user?.id)
-      .filter((item) => emailNotificationEvents.has(item.eventKey))
       .slice()
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }, [state, user?.id]);
-  const latestNotifications = notifications.slice(0, 8);
+  const latestNotifications = notifications.slice(0, 10);
   const unreadCount = notifications.filter((item) => !item.read).length;
-  const unreadLabel = unreadCount > 99 ? '99+' : String(unreadCount);
+  const unreadLabel = unreadCount > 9 ? '9+' : String(unreadCount);
   const summaryRequest = state.documentRequests.find((item) => item.id === summaryRequestId) ?? null;
+  const summaryReservation = state.reservations.find((item) => item.id === summaryReservationId && item.residentId === user?.id) ?? null;
 
   const onNotificationItemClick = async (notificationId: string, entityType?: string, entityId?: string) => {
     await markNotificationRead(notificationId);
+    if (entityType === 'reservation' && entityId) {
+      setIsOpen(false);
+      setSummaryReservationId(entityId);
+      return;
+    }
     if (entityType === 'document_request' && entityId) {
       setSummaryRequestId(entityId);
       setIsOpen(false);
@@ -791,6 +832,12 @@ function ResidentNotificationBell() {
         requestItem={summaryRequest}
         locale={locale}
         onClose={() => setSummaryRequestId(null)}
+      />
+      <ReservationSummaryModal
+        open={Boolean(summaryReservation)}
+        reservation={summaryReservation}
+        locale={locale}
+        onClose={() => setSummaryReservationId(null)}
       />
     </div>
   );

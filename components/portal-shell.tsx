@@ -154,7 +154,7 @@ const navConfig: Record<UserRole, NavSection[]> = {
       ],
     },
     {
-      id: 'staff-operations',
+      id: 'staff-work-queue',
       label: { en: 'Work Queue', fil: 'Pila ng Gawain' },
       items: [
         {
@@ -163,19 +163,25 @@ const navConfig: Record<UserRole, NavSection[]> = {
           hint: { en: 'Check new registrants first', fil: 'Suriin muna ang bagong rehistro' },
         },
         {
-          href: '/staff/appointments',
-          label: { en: 'Appointments', fil: 'Appointments' },
-          hint: { en: 'Configure doctor schedules', fil: 'I-configure ang schedule ng doktor' },
-        },
-        {
           href: '/staff/process-requests',
           label: { en: 'Process Requests', fil: 'Iproseso ang Kahilingan' },
           hint: { en: 'Process incoming requests', fil: 'Iproseso ang mga papasok na kahilingan' },
         },
         {
-          href: '/staff/equipment',
-          label: { en: 'Equipment', fil: 'Equipment' },
-          hint: { en: 'Manage chairs, tables, and ladders', fil: 'Pamahalaan ang chairs, tables, at ladders' },
+          href: '/staff/ocr-issuance',
+          label: { en: 'Issuance via OCR', fil: 'Issuance via OCR' },
+          hint: { en: 'Walk-in indigency issuance', fil: 'Walk-in indigency issuance' },
+        },
+      ],
+    },
+    {
+      id: 'staff-services',
+      label: { en: 'Services', fil: 'Mga Serbisyo' },
+      items: [
+        {
+          href: '/staff/appointments',
+          label: { en: 'Appointments', fil: 'Appointments' },
+          hint: { en: 'Configure doctor schedules', fil: 'I-configure ang schedule ng doktor' },
         },
         {
           href: '/staff/reservations',
@@ -183,25 +189,20 @@ const navConfig: Record<UserRole, NavSection[]> = {
           hint: { en: 'Review facility and equipment reservations', fil: 'Suriin ang mga reservation' },
         },
         {
-          href: '/staff/ocr-issuance',
-          label: { en: 'Issuance via OCR', fil: 'Issuance via OCR' },
-          hint: { en: 'Walk-in indigency issuance', fil: 'Walk-in indigency issuance' },
+          href: '/staff/equipment',
+          label: { en: 'Equipment', fil: 'Equipment' },
+          hint: { en: 'Manage chairs, tables, and ladders', fil: 'Pamahalaan ang chairs, tables, at ladders' },
         },
         {
-          href: '/staff/notifications',
-          label: { en: 'System Updates', fil: 'Mga Update' },
-          hint: { en: 'Alerts and reminders', fil: 'Mga alert at paalala' },
-        },
-        {
-          href: '/staff/email-log',
-          label: { en: 'Email Logs', fil: 'Log ng mga email' },
-          hint: { en: 'Outgoing emails', fil: 'Mga ipinadalang email' },
+          href: '/admin/incidents',
+          label: { en: 'Incident Reports', fil: 'Ulat ng Insidente' },
+          hint: { en: 'Review reports', fil: 'Suriin ang ulat' },
         },
       ],
     },
     {
-      id: 'staff-shared-services',
-      label: { en: 'Shared Services', fil: 'Pinag-isang Serbisyo' },
+      id: 'staff-community-monitoring',
+      label: { en: 'Community & Monitoring', fil: 'Komunidad at Monitoring' },
       items: [
         {
           href: '/admin/announcements',
@@ -209,9 +210,9 @@ const navConfig: Record<UserRole, NavSection[]> = {
           hint: { en: 'Post barangay updates', fil: 'Mag-post ng update' },
         },
         {
-          href: '/admin/incidents',
-          label: { en: 'Incident Reports', fil: 'Ulat ng Insidente' },
-          hint: { en: 'Review reports', fil: 'Suriin ang ulat' },
+          href: '/staff/shared-services/bdrrmc-report',
+          label: { en: 'BDRRMC', fil: 'BDRRMC' },
+          hint: { en: 'Create BDRRMC reports', fil: 'Gumawa ng BDRRMC ulat' },
         },
         {
           href: '/admin/reports',
@@ -219,9 +220,14 @@ const navConfig: Record<UserRole, NavSection[]> = {
           hint: { en: 'Service insights', fil: 'Ulat ng serbisyo' },
         },
         {
-          href: '/staff/shared-services/bdrrmc-report',
-          label: { en: 'BDRRMC', fil: 'BDRRMC' },
-          hint: { en: 'Create BDRRMC reports', fil: 'Gumawa ng BDRRMC ulat' },
+          href: '/staff/email-log',
+          label: { en: 'Email Logs', fil: 'Log ng mga email' },
+          hint: { en: 'Outgoing emails', fil: 'Mga ipinadalang email' },
+        },
+        {
+          href: '/staff/notifications',
+          label: { en: 'System Updates', fil: 'Mga Update' },
+          hint: { en: 'Alerts and reminders', fil: 'Mga alert at paalala' },
         },
       ],
     },
@@ -250,8 +256,8 @@ const navConfig: Record<UserRole, NavSection[]> = {
       ],
     },
     {
-      id: 'admin-governance',
-      label: { en: 'People & Updates', fil: 'Tao at Update' },
+      id: 'admin-operations',
+      label: { en: 'Administration', fil: 'Pangangasiwa' },
       items: [
         {
           href: '/admin/users',
@@ -259,9 +265,36 @@ const navConfig: Record<UserRole, NavSection[]> = {
           hint: { en: 'Roles and access', fil: 'Role at access' },
         },
         {
+          href: '/admin/document-requests',
+          label: { en: 'Document Requests', fil: 'Kahilingan sa Dokumento' },
+          hint: { en: 'Approve or not approve', fil: 'Aprubahan o hindi' },
+        },
+        {
           href: '/admin/announcements',
           label: { en: 'Announcements', fil: 'Mga Anunsyo' },
           hint: { en: 'Post barangay updates', fil: 'Mag-post ng update' },
+        },
+        // Reservations are processed by staff; admin does not have a reservations page here.
+        {
+          href: '/admin/incidents',
+          label: { en: 'Incident Reports', fil: 'Ulat ng Insidente' },
+          hint: { en: 'Review reports', fil: 'Suriin ang ulat' },
+        },
+      ],
+    },
+    {
+      id: 'admin-records-monitoring',
+      label: { en: 'History & Monitoring', fil: 'History at Monitoring' },
+      items: [
+        {
+          href: '/admin/request-history',
+          label: { en: 'Request History', fil: 'History ng mga Kahilingan' },
+          hint: { en: 'View resident service history', fil: 'Tingnan ang service history ng mga residente' },
+        },
+        {
+          href: '/admin/reports',
+          label: { en: 'Reports', fil: 'Mga Ulat' },
+          hint: { en: 'Service insights', fil: 'Ulat ng serbisyo' },
         },
         {
           href: '/admin/email-log',
@@ -272,28 +305,6 @@ const navConfig: Record<UserRole, NavSection[]> = {
           href: '/admin/notifications',
           label: { en: 'System Updates', fil: 'Mga Update' },
           hint: { en: 'Alerts and messages', fil: 'Mga alert at mensahe' },
-        },
-      ],
-    },
-    {
-      id: 'admin-services',
-      label: { en: 'Requests', fil: 'Mga Kahilingan' },
-      items: [
-        {
-          href: '/admin/document-requests',
-          label: { en: 'Document Requests', fil: 'Kahilingan sa Dokumento' },
-          hint: { en: 'Approve or not approve', fil: 'Aprubahan o hindi' },
-        },
-        // Reservations are processed by staff; admin does not have a reservations page here.
-        {
-          href: '/admin/incidents',
-          label: { en: 'Incident Reports', fil: 'Ulat ng Insidente' },
-          hint: { en: 'Review reports', fil: 'Suriin ang ulat' },
-        },
-        {
-          href: '/admin/reports',
-          label: { en: 'Reports', fil: 'Mga Ulat' },
-          hint: { en: 'Service insights', fil: 'Ulat ng serbisyo' },
         },
       ],
     },
@@ -321,10 +332,10 @@ const BADGE_STORAGE_KEYS = {
   userAccess: 'eserbisyo-admin-user-access-seen-count',
   staffRegistrationReviews: 'eserbisyo-staff-registration-reviews-seen-count',
   staffAppointments: 'eserbisyo-staff-appointments-seen-count',
+  staffReservations: 'eserbisyo-staff-reservations-seen-count',
   documentRequests: 'eserbisyo-admin-document-requests-seen-count',
   staffProcessRequests: 'eserbisyo-staff-process-requests-seen-count',
   incidentReports: 'eserbisyo-admin-incident-reports-seen-count',
-  staffReservations: 'eserbisyo-staff-reservations-seen-count',
 } as const;
 
 function readSeenBadgeCount(storageKey: string) {
@@ -384,16 +395,17 @@ function PortalShellContent({
     userAccess: readSeenBadgeCount(BADGE_STORAGE_KEYS.userAccess),
     staffRegistrationReviews: readSeenBadgeCount(BADGE_STORAGE_KEYS.staffRegistrationReviews),
     staffAppointments: readSeenBadgeCount(BADGE_STORAGE_KEYS.staffAppointments),
+    staffReservations: readSeenBadgeCount(BADGE_STORAGE_KEYS.staffReservations),
     documentRequests: readSeenBadgeCount(BADGE_STORAGE_KEYS.documentRequests),
     staffProcessRequests: readSeenBadgeCount(BADGE_STORAGE_KEYS.staffProcessRequests),
     incidentReports: readSeenBadgeCount(BADGE_STORAGE_KEYS.incidentReports),
-    staffReservations: readSeenBadgeCount(BADGE_STORAGE_KEYS.staffReservations),
   }));
 
   return (
     <PortalShellBase role={role} allowedRoles={allowedRoles}>
       {({ locale, setLocale, logoutAndRedirect, user, state }) => {
         const shellRole = allowedRoles?.includes(user.role) ? user.role : role;
+        const pendingReservationsCount = state.reservations.filter((reservation) => reservation.status === 'pending').length;
         const navSections = navConfig[shellRole];
         const isNavItemActive = (item: NavItem) => {
           const [itemPath, itemQuery] = item.href.split('?');
@@ -520,9 +532,15 @@ function PortalShellContent({
                               <Link
                                 key={item.href}
                                 href={item.href}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                                className={cn(
-                                  'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors',
+                                onClick={() => {
+                                  setIsMobileMenuOpen(false);
+                                  if (shellRole === 'staff' && item.href === '/staff/reservations' && pendingReservationsCount > 0) {
+                                    setSeenBadgeCounts((current) => ({ ...current, staffReservations: pendingReservationsCount }));
+                                    window.sessionStorage.setItem(BADGE_STORAGE_KEYS.staffReservations, String(pendingReservationsCount));
+                                  }
+                                }}
+                                  className={cn(
+                                  'relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors',
                                   isActive
                                     ? 'bg-[color:var(--portal-accent-soft)] text-[color:var(--portal-ink-900)] font-semibold'
                                     : 'text-[color:var(--portal-ink-700)] hover:bg-[color:var(--portal-surface-3)]'
@@ -530,6 +548,14 @@ function PortalShellContent({
                               >
                                 <Icon size={16} />
                                 <span>{locale === 'fil' ? item.label.fil : item.label.en}</span>
+                                {shellRole === 'staff' && item.href === '/staff/reservations' && pendingReservationsCount > seenBadgeCounts.staffReservations && !isActive ? (
+                                  <span
+                                    className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold text-white"
+                                    aria-label={`${pendingReservationsCount} pending reservations`}
+                                  >
+                                    {pendingReservationsCount > 9 ? '9+' : pendingReservationsCount}
+                                  </span>
+                                ) : null}
                               </Link>
                             );
                           })}
@@ -618,6 +644,10 @@ function PortalShellContent({
                                     badgeKey = 'staffAppointments';
                                     pendingCount = state.checkupAppointments.filter((appointment) => appointment.status === 'pending').length;
                                   }
+                                  if (item.href === '/staff/reservations' && shellRole === 'staff') {
+                                    badgeKey = 'staffReservations';
+                                    pendingCount = pendingReservationsCount;
+                                  }
                                   if (item.href.includes('document-requests') || item.href === '/staff/process-requests') {
                                   badgeKey = item.href === '/staff/process-requests' && shellRole === 'staff'
                                     ? 'staffProcessRequests'
@@ -633,10 +663,6 @@ function PortalShellContent({
                                 if (item.href.includes('/admin/incidents')) {
                                   badgeKey = 'incidentReports';
                                   pendingCount = state.reports.filter((report) => report.status === 'pending').length;
-                                }
-                                if (item.href === '/staff/reservations') {
-                                  badgeKey = 'staffReservations';
-                                  pendingCount = state.reservations.filter((reservation) => reservation.status === 'pending').length;
                                 }
                               } catch (e) {
                                 pendingCount = 0;

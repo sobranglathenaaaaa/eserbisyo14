@@ -603,107 +603,58 @@ async function createState(): Promise<AppState> {
   const supabase = getSupabaseBrowserClient();
   const empty = createEmptyAppState();
 
-  let profilesRes: any, docTypesRes: any, requestsRes: any, requestAttachmentsRes: any, templatesRes: any, generatedRes: any, reportsRes: any, incidentCategoriesRes: any, feedbackRes: any, announcementsRes: any, censusRes: any, queueRes: any, reservationsRes: any, doctorAvailabilitySlotsRes: any, checkupAppointmentsRes: any, medicinesRes: any, equipmentRes: any, notificationsRes: any, emailLogsRes: any, auditLogsRes: any, ocrRes: any, doctorsRes: any, appMetaRes: any;
-  let authResult: any = { data: { user: null } };
-
-  try {
-    const results = await Promise.all([
-      safeAuthGetUser(supabase),
-      supabase.from('profiles').select('*'),
-      supabase.from('document_types').select('*'),
-      supabase.from('document_requests').select('*').order('created_at', { ascending: false }),
-      supabase.from('document_request_attachments').select('*').order('created_at', { ascending: true }),
-      supabase.from('document_templates').select('*').order('updated_at', { ascending: false }),
-      supabase.from('generated_documents').select('*').order('date_issued', { ascending: false }),
-      supabase.from('incident_reports').select('*').order('created_at', { ascending: false }),
-      supabase.from('incident_categories').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: false }),
-      supabase.from('feedback').select('*').order('created_at', { ascending: false }),
-      supabase.from('announcements').select('*').order('created_at', { ascending: false }),
-      supabase.from('census_records').select('*').order('updated_at', { ascending: false }),
-      supabase.from('queue_entries').select('*').order('created_at', { ascending: true }),
-      supabase.from('reservations').select('*').order('created_at', { ascending: false }),
-      supabase.from('doctor_availability_slots').select('*').order('start_at', { ascending: true }),
-      supabase.from('checkup_appointments').select('*').order('created_at', { ascending: false }),
-      supabase.from('medicines').select('*').order('updated_at', { ascending: false }),
-      supabase.from('equipment').select('*').order('name', { ascending: true }),
-      supabase.from('notifications').select('*').order('created_at', { ascending: false }),
-      supabase.from('email_logs').select('*').order('created_at', { ascending: false }),
-      supabase.from('audit_logs').select('*').order('created_at', { ascending: false }),
-      supabase.from('ocr_jobs').select('*').order('created_at', { ascending: false }),
-      supabase.from('doctors').select('*').order('name', { ascending: true }),
-      supabase.from('app_meta').select('*').order('updated_at', { ascending: false }).limit(1),
-    ]);
-    [
-      authResult, profilesRes, docTypesRes, requestsRes, requestAttachmentsRes, templatesRes, generatedRes,
-      reportsRes, incidentCategoriesRes, feedbackRes, announcementsRes, censusRes, queueRes, reservationsRes,
-      doctorAvailabilitySlotsRes, checkupAppointmentsRes, medicinesRes, equipmentRes, notificationsRes,
-      emailLogsRes, auditLogsRes, ocrRes, doctorsRes, appMetaRes
-    ] = results;
-  } catch (err) {
-    // Offline fallback: fetch from local PostgreSQL endpoint
-    try {
-      const offlineRes = await fetch('/api/dev/offline-state').then(r => r.json());
-      if (offlineRes.ok && offlineRes.data) {
-        const d = offlineRes.data;
-        profilesRes = { data: d.profiles };
-        docTypesRes = { data: d.docTypes };
-        requestsRes = { data: d.requests };
-        requestAttachmentsRes = { data: d.attachments };
-        templatesRes = { data: d.templates };
-        generatedRes = { data: d.generated };
-        reportsRes = { data: d.reports };
-        incidentCategoriesRes = { data: d.incidentCategories };
-        feedbackRes = { data: d.feedback };
-        announcementsRes = { data: d.announcements };
-        censusRes = { data: d.census };
-        queueRes = { data: d.queue };
-        reservationsRes = { data: d.reservations };
-        doctorAvailabilitySlotsRes = { data: d.doctorSlots };
-        checkupAppointmentsRes = { data: d.appointments };
-        medicinesRes = { data: d.medicines };
-        equipmentRes = { data: d.equipment };
-        notificationsRes = { data: d.notifications };
-        emailLogsRes = { data: d.emailLogs };
-        auditLogsRes = { data: d.auditLogs };
-        ocrRes = { data: d.ocrJobs };
-        doctorsRes = { data: d.doctors };
-        appMetaRes = { data: d.appMeta };
-      }
-    } catch (offlineErr) {}
-  }
-
-  // If cloud profiles query failed / returned error, fall back to offline state
-  if ((!profilesRes || profilesRes.error || !profilesRes.data) && typeof window !== 'undefined') {
-    try {
-      const offlineRes = await fetch('/api/dev/offline-state').then(r => r.json());
-      if (offlineRes.ok && offlineRes.data) {
-        const d = offlineRes.data;
-        profilesRes = { data: d.profiles };
-        docTypesRes = { data: d.docTypes };
-        requestsRes = { data: d.requests };
-        requestAttachmentsRes = { data: d.attachments };
-        templatesRes = { data: d.templates };
-        generatedRes = { data: d.generated };
-        reportsRes = { data: d.reports };
-        incidentCategoriesRes = { data: d.incidentCategories };
-        feedbackRes = { data: d.feedback };
-        announcementsRes = { data: d.announcements };
-        censusRes = { data: d.census };
-        queueRes = { data: d.queue };
-        reservationsRes = { data: d.reservations };
-        doctorAvailabilitySlotsRes = { data: d.doctorSlots };
-        checkupAppointmentsRes = { data: d.appointments };
-        medicinesRes = { data: d.medicines };
-        equipmentRes = { data: d.equipment };
-        notificationsRes = { data: d.notifications };
-        emailLogsRes = { data: d.emailLogs };
-        auditLogsRes = { data: d.auditLogs };
-        ocrRes = { data: d.ocrJobs };
-        doctorsRes = { data: d.doctors };
-        appMetaRes = { data: d.appMeta };
-      }
-    } catch (offlineErr) {}
-  }
+  const [
+    authResult,
+    profilesRes,
+    docTypesRes,
+    requestsRes,
+    requestAttachmentsRes,
+    templatesRes,
+    generatedRes,
+    reportsRes,
+    incidentCategoriesRes,
+    feedbackRes,
+    announcementsRes,
+    censusRes,
+    queueRes,
+    reservationsRes,
+    doctorAvailabilitySlotsRes,
+    checkupAppointmentsRes,
+    medicinesRes,
+    equipmentRes,
+    notificationsRes,
+    emailLogsRes,
+    auditLogsRes,
+    ocrRes,
+    doctorsRes,
+    appMetaRes,
+  ] = await Promise.all([
+    safeAuthGetUser(supabase),
+    supabase.from('profiles').select('*'),
+    supabase.from('document_types').select('*'),
+    supabase.from('document_requests').select('*').order('created_at', { ascending: false }),
+    supabase.from('document_request_attachments').select('*').order('created_at', { ascending: true }),
+    supabase.from('document_templates').select('*').order('updated_at', { ascending: false }),
+    supabase.from('generated_documents').select('*').order('date_issued', { ascending: false }),
+    supabase.from('incident_reports').select('*').order('created_at', { ascending: false }),
+    supabase.from('incident_categories').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: false }),
+    supabase.from('feedback').select('*').order('created_at', { ascending: false }),
+    supabase.from('announcements').select('*').order('created_at', { ascending: false }),
+    supabase.from('census_records').select('*').order('updated_at', { ascending: false }),
+    supabase.from('queue_entries').select('*').order('created_at', { ascending: true }),
+    supabase.from('reservations').select('*').order('created_at', { ascending: false }),
+    supabase.from('doctor_availability_slots').select('*').order('start_at', { ascending: true }),
+    supabase.from('checkup_appointments').select('*').order('created_at', { ascending: false }),
+    supabase.from('medicines').select('*').order('updated_at', { ascending: false }),
+    supabase.from('equipment').select('*').order('name', { ascending: true }),
+    // medicine_requests removed from DB; skip fetching it
+    supabase.from('notifications').select('*').order('created_at', { ascending: false }),
+    supabase.from('email_logs').select('*').order('created_at', { ascending: false }),
+    supabase.from('audit_logs').select('*').order('created_at', { ascending: false }),
+    supabase.from('ocr_jobs').select('*').order('created_at', { ascending: false }),
+    supabase.from('doctors').select('*').order('name', { ascending: true }),
+    supabase.from('app_meta').select('*').order('updated_at', { ascending: false }).limit(1),
+  ]);
 
   const profiles = ((profilesRes.data as DbProfile[] | null) ?? []).filter((item) => item?.id);
   const profileMap = new Map(profiles.map((item) => [item.id, item]));
@@ -749,6 +700,10 @@ async function createState(): Promise<AppState> {
       });
     }
   }
+
+  const reservationsRes = session?.role === 'resident'
+    ? await supabase.from('reservations').select('*').eq('resident_id', session.userId).order('created_at', { ascending: false })
+    : await supabase.from('reservations').select('*').order('created_at', { ascending: false });
 
   const dbDocumentTypes = (docTypesRes.data as DbDocumentType[] | null) ?? [];
   const dbTypeMap = new Map(dbDocumentTypes.map((item) => [item.id, item]));
@@ -836,6 +791,23 @@ async function createState(): Promise<AppState> {
       createdAt: item.created_at,
       updatedAt: item.updated_at,
     })),
+    reservations: ((reservationsRes.data as any[] | null) ?? []).map((item): Reservation => ({
+      id: item.id,
+      residentId: item.resident_id,
+      residentName: profileMap.get(item.resident_id)?.full_name ?? 'Resident',
+      resource: item.resource,
+      serviceType: item.resource,
+      itemName: item.item_name ?? undefined,
+      quantityRequested: Number(item.quantity_requested ?? 1),
+      purpose: item.purpose ?? '',
+      reason: item.reason ?? undefined,
+      date: formatDate(item.date ?? item.start_at ?? item.created_at),
+      startAt: item.start_at ?? item.date ?? item.created_at,
+      endAt: item.end_at ?? item.start_at ?? item.date ?? item.created_at,
+      status: item.status,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at ?? undefined,
+    })),
     incidentCategories: ((incidentCategoriesRes.data as any[] | null) ?? []).map((item): IncidentCategory => ({
       id: item.id,
       name: item.name,
@@ -846,7 +818,7 @@ async function createState(): Promise<AppState> {
     })),
     feedback: ((feedbackRes.data as any[] | null) ?? []).map((item) => ({
       id: item.id,
-      requestId: item.request_id,
+      requestId: item.request_id ?? undefined,
       residentId: item.resident_id,
       rating: item.rating,
       comment: item.comment ?? undefined,
@@ -909,27 +881,6 @@ async function createState(): Promise<AppState> {
       status: item.status,
       position: item.position,
       createdAt: item.created_at,
-    })),
-    reservations: ((reservationsRes.data as any[] | null) ?? []).map((item): Reservation => ({
-      id: item.id,
-      residentId: item.resident_id,
-      residentName: profileMap.get(item.resident_id)?.full_name ?? 'Resident',
-      resource: item.resource,
-      serviceType: item.resource,
-      itemName: item.item_name ?? undefined,
-      quantityRequested: typeof item.quantity_requested === 'number' ? item.quantity_requested : undefined,
-      purpose: item.purpose ?? undefined,
-      reason: item.reason ?? item.admin_decision_reason ?? undefined,
-      notes: item.notes ?? undefined,
-      date: item.date ?? formatDate(item.start_at ?? item.created_at),
-      startAt: item.start_at ?? item.created_at,
-      endAt: item.end_at ?? item.created_at,
-      status: item.status,
-      createdAt: item.created_at,
-      updatedAt: item.updated_at ?? item.created_at,
-      adminDecisionReason: item.admin_decision_reason ?? undefined,
-      processingDeclineReason: item.processing_decline_reason ?? undefined,
-      processedBy: item.processed_by ?? undefined,
     })),
     doctorAvailabilitySlots: ((doctorAvailabilitySlotsRes.data as any[] | null) ?? []).map(
       (item): DoctorAvailabilitySlot => ({
@@ -1431,13 +1382,15 @@ export const backendProvider: DataProvider = {
     emitStateChanged();
   },
 
-  async addFeedback(payload: { requestId: string; rating: number; comment?: string }) {
+  async addFeedback(payload: { requestId?: string; rating: number; comment?: string }) {
     await apiFetch('/api/v1/feedback', {
       method: 'POST',
       body: JSON.stringify({
         rating: payload.rating,
         message: payload.comment ?? '',
-        relatedRequestId: payload.requestId,
+        ...(payload.requestId
+          ? { relatedRequestId: payload.requestId, source: 'request' }
+          : { source: 'assistant' }),
       }),
     });
     emitStateChanged();
