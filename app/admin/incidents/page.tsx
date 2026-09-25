@@ -116,15 +116,6 @@ export default function AdminIncidentsPage() {
 
   useEffect(() => {
     if (!reviewOpen) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, [reviewOpen]);
-
-  useEffect(() => {
-    if (!reviewOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeReviewModal();
     };

@@ -142,13 +142,14 @@ function getHistoryStatusOptions(locale: 'en' | 'fil', category: HistoryCategory
   ]);
   if (category === 'report-progress') return options([
     ['pending', 'Pending', 'Pending'],
-    ['approved', 'Approved', 'Approved'], ['declined', 'Declined', 'Tinanggihan'],
-    ['proceed_to_barangay', 'Proceed to Barangay', 'Pumunta sa Barangay'], ['resolved', 'Completed', 'Nakumpleto'],
+    ['under_review', 'Under Review', 'Under Review'],
+    ['resolved', 'Resolved', 'Resolved'],
+    ['declined', 'Declined', 'Tinanggihan'],
   ]);
   if (category === 'appointments') return options([
     ['pending', 'Pending', 'Pending'],
-    ['approved', 'Approved', 'Approved'], ['declined', 'Declined', 'Tinanggihan'],
-    ['proceed_to_barangay', 'Proceed to Barangay', 'Pumunta sa Barangay'], ['completed', 'Completed', 'Nakumpleto'],
+    ['approved', 'Approved', 'Approved'],
+    ['declined', 'Declined', 'Tinanggihan'],
   ]);
   return options([
     ['pending', 'Pending', 'Pending'], ['approved', 'Approved', 'Approved'],

@@ -35,8 +35,8 @@ const CATEGORY_LABELS: Record<HistoryCategory, { en: string; fil: string }> = {
 const STATUS_OPTIONS: Partial<Record<Exclude<HistoryCategory, 'all'>, string[]>> = {
   requests: ['pending', 'staff_reviewed', 'approved', 'ready_for_pickup', 'completed', 'declined', 'cancelled'],
   reservations: ['pending', 'approved', 'ready_for_pickup', 'returned', 'completed', 'declined', 'cancelled'],
-  'report-progress': ['pending', 'under_review', 'approved', 'proceed_to_barangay', 'resolved', 'declined'],
-  appointments: ['pending', 'approved', 'proceed_to_barangay', 'completed', 'declined', 'cancelled'],
+  'report-progress': ['pending', 'under_review', 'resolved', 'declined'],
+  appointments: ['pending', 'approved', 'declined'],
 };
 
 function categoryLabel(category: HistoryCategory, locale: 'en' | 'fil') {
