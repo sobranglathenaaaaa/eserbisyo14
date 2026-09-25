@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useState, useEffect } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import styles from '../auth.module.css';
 import LegalModal from '@/components/legal-modal';
 import { registerResident } from '../../../lib/frontend-data/store';
@@ -216,6 +217,8 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
   }, []);
 
   const [form, setForm] = useState<FormState>(initialState);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [frontPreviewUrl, setFrontPreviewUrl] = useState<string | null>(null);
   const [backPreviewUrl, setBackPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string>('');
@@ -748,15 +751,26 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
               <label className={styles.fieldLabel} htmlFor="register-password">
                 Password
               </label>
-              <input
-                className={styles.input}
-                id="register-password"
-                type="password"
-                placeholder="********"
-                required
-                value={form.password}
-                onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
-              />
+              <div className={styles.passwordWrapper}>
+                <input
+                  className={`${styles.input} ${styles.inputWithToggle}`}
+                  id="register-password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="********"
+                  required
+                  value={form.password}
+                  onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
+                />
+                <button
+                  type="button"
+                  className={styles.passwordToggleBtn}
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className={styles.eyeIcon} /> : <Eye className={styles.eyeIcon} />}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -790,15 +804,26 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
               <label className={styles.fieldLabel} htmlFor="confirm-password">
                 Confirm Password
               </label>
-              <input
-                className={styles.input}
-                id="confirm-password"
-                type="password"
-                placeholder="********"
-                required
-                value={form.confirmPassword}
-                onChange={(event) => setForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
-              />
+              <div className={styles.passwordWrapper}>
+                <input
+                  className={`${styles.input} ${styles.inputWithToggle}`}
+                  id="confirm-password"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  placeholder="********"
+                  required
+                  value={form.confirmPassword}
+                  onChange={(event) => setForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
+                />
+                <button
+                  type="button"
+                  className={styles.passwordToggleBtn}
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  tabIndex={-1}
+                >
+                  {showConfirmPassword ? <EyeOff className={styles.eyeIcon} /> : <Eye className={styles.eyeIcon} />}
+                </button>
+              </div>
             </div>
           </div>
 

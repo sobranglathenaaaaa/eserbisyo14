@@ -5,6 +5,7 @@ import PortalShell from '../../../components/portal-shell';
 import { EmptyState, FormFeedback, PageGuide, StatusBadge } from '@/components/portal-ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Select } from '@/components/ui/select';
 import RegistrationReviewModal from '@/components/registration-review-modal';
 import { getRolePageCopy, resolveRoleCopy, resolveSteps } from '@/lib/content/role-pages';
@@ -865,8 +866,7 @@ export default function AdminUsersPage() {
 
               <label className="grid gap-1 text-sm md:col-span-2">
                 <span>{locale === 'fil' ? 'Pansamantalang password' : 'Temporary password'}</span>
-                <Input
-                  type="password"
+                <PasswordInput
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   minLength={8}

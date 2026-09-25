@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useMemo, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import styles from '../auth.module.css';
 import { login, resendVerificationEmail } from '../../../lib/frontend-data/store';
 
@@ -53,6 +54,7 @@ export default function LoginForm({
 }) {
   const [email, setEmail] = useState(prefilledEmail ?? '');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
@@ -211,17 +213,28 @@ export default function LoginForm({
 
         <div className={styles.formField}>
           <label htmlFor="login-password">Password</label>
-          <input
-            className={styles.input}
-            id="login-password"
-            type="password"
-            autoComplete="current-password"
-            placeholder="Enter your password"
-            required
-            disabled={isSubmitting}
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
+          <div className={styles.passwordWrapper}>
+            <input
+              className={`${styles.input} ${styles.inputWithToggle}`}
+              id="login-password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              placeholder="Enter your password"
+              required
+              disabled={isSubmitting}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+            <button
+              type="button"
+              className={styles.passwordToggleBtn}
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff className={styles.eyeIcon} /> : <Eye className={styles.eyeIcon} />}
+            </button>
+          </div>
         </div>
 
         {error ? <p className={styles.legalText}>{error}</p> : null}

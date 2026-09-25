@@ -940,3 +940,42 @@
   opacity: 0.95;
   margin-bottom: clamp(0.6rem, 1.6vw, 1rem);
 }
+
+.passwordWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.inputWithToggle {
+  padding-right: 2.75rem !important;
+}
+
+.passwordToggleBtn {
+  position: absolute;
+  right: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  padding: 0.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #5c7869;
+  cursor: pointer;
+  border-radius: 0.4rem;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.passwordToggleBtn:hover {
+  color: #124731;
+  background-color: rgba(16, 59, 40, 0.08);
+}
+
+.eyeIcon {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+

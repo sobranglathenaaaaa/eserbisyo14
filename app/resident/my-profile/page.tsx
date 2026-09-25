@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { PageGuide } from '@/components/portal-ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Select } from '@/components/ui/select';
 import { changePassword, updateCurrentProfile } from '@/lib/frontend-data/store';
 import { useAppState } from '@/lib/frontend-data/use-app-state';
@@ -230,8 +231,7 @@ export default function ResidentMyProfilePage() {
         <form className="grid gap-3 md:grid-cols-2" onSubmit={onPasswordSubmit}>
           <label className="md:col-span-2 grid gap-2 text-sm">
             <span className="font-medium text-[color:#123726]">{copyText(locale, 'Current password', 'Kasalukuyang password')}</span>
-            <Input
-              type="password"
+            <PasswordInput
               autoComplete="current-password"
               value={currentPassword}
               onChange={(event) => setCurrentPassword(event.target.value)}
@@ -241,8 +241,7 @@ export default function ResidentMyProfilePage() {
 
           <label className="grid gap-2 text-sm">
             <span className="font-medium text-[color:#123726]">{copyText(locale, 'New password', 'Bagong password')}</span>
-            <Input
-              type="password"
+            <PasswordInput
               autoComplete="new-password"
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
@@ -252,8 +251,7 @@ export default function ResidentMyProfilePage() {
 
           <label className="grid gap-2 text-sm">
             <span className="font-medium text-[color:#123726]">{copyText(locale, 'Confirm new password', 'Kumpirmahin ang bagong password')}</span>
-            <Input
-              type="password"
+            <PasswordInput
               autoComplete="new-password"
               value={confirmNewPassword}
               onChange={(event) => setConfirmNewPassword(event.target.value)}
