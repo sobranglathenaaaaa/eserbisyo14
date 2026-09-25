@@ -119,7 +119,7 @@ export default function AdminRequestHistoryPage() {
       id: `feedback-${item.id}`,
       category: 'feedback',
       residentName: state.users.find((resident) => resident.id === item.residentId)?.fullName ?? '—',
-      record: item.requestId,
+      record: item.requestId ?? (locale === 'fil' ? 'Feedback sa Assistant' : 'Assistant Feedback'),
       detail: `${item.rating}/5${item.comment ? ` · ${item.comment}` : ''}`,
       status: 'submitted',
       updatedAt: item.createdAt,

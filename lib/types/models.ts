@@ -156,7 +156,7 @@ export interface IncidentReport {
 
 export interface Feedback {
   id: string;
-  requestId: string;
+  requestId?: string;
   residentId: string;
   rating: number;
   comment?: string;

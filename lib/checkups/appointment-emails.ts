@@ -1,15 +1,20 @@
-import { getEmailVerificationEnv } from '@/lib/supabase/env';
 import { sendResendEmail } from '@/lib/email/resend';
 
 export type CheckupAppointmentDecision = 'approved' | 'declined';
 
-function buildAppointmentsLink(): string {
-  const env = getEmailVerificationEnv();
-  return new URL('/resident/medicines', env.appBaseUrl).toString();
-}
-
 function normalizeDoctorName(value: string): string {
   return value.replace(/^Dr\.\s*/i, '').trim();
+}
+
+function escapeHtml(value: string): string {
+  const entities: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  };
+  return value.replace(/[&<>"']/g, (character) => entities[character] ?? character);
 }
 
 function formatAppointmentDate(value: string): string {
@@ -48,11 +53,13 @@ export async function sendCheckupAppointmentDecisionEmail(input: {
 }): Promise<{ subject: string; body: string }> {
   const residentName = input.fullName || 'Resident';
   const doctorName = normalizeDoctorName(input.doctorName);
-  const appointmentsLink = buildAppointmentsLink();
   const appointmentDate = formatAppointmentDate(input.date);
   const appointmentStart = formatAppointmentTime(input.startAt);
   const appointmentEnd = formatAppointmentTime(input.endAt);
   const note = input.staffNote?.trim() || '';
+  const safeResidentName = escapeHtml(residentName);
+  const safeDoctorName = escapeHtml(doctorName);
+  const safeNote = escapeHtml(note);
 
   const subject =
     input.status === 'approved'
@@ -62,17 +69,17 @@ export async function sendCheckupAppointmentDecisionEmail(input: {
   const htmlLines =
     input.status === 'approved'
       ? [
-          `<p>Hello ${residentName},</p>`,
-          `<p>Your check-up appointment with Dr. ${doctorName} has been approved.</p>`,
+          `<p>Hello ${safeResidentName},</p>`,
+          `<p>Your check-up appointment with Dr. ${safeDoctorName} has been approved. Please proceed to the barangay on your selected appointment date and time.</p>`,
           `<p><strong>Date:</strong> ${appointmentDate}</p>`,
           `<p><strong>Time:</strong> ${appointmentStart} to ${appointmentEnd}</p>`,
         ]
       : [
-          `<p>Hello ${residentName},</p>`,
-          `<p>Your check-up appointment with Dr. ${doctorName} has been declined.</p>`,
+          `<p>Hello ${safeResidentName},</p>`,
+          `<p>Your check-up appointment with Dr. ${safeDoctorName} has been declined.</p>`,
           `<p><strong>Date:</strong> ${appointmentDate}</p>`,
           `<p><strong>Time:</strong> ${appointmentStart} to ${appointmentEnd}</p>`,
-          note ? `<p><strong>Reason:</strong> ${note}</p>` : '',
+          note ? `<p><strong>Reason:</strong> ${safeNote}</p>` : '',
         ];
 
   const textLines =

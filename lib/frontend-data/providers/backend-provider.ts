@@ -816,7 +816,7 @@ async function createState(): Promise<AppState> {
     })),
     feedback: ((feedbackRes.data as any[] | null) ?? []).map((item) => ({
       id: item.id,
-      requestId: item.request_id,
+      requestId: item.request_id ?? undefined,
       residentId: item.resident_id,
       rating: item.rating,
       comment: item.comment ?? undefined,
@@ -1380,13 +1380,15 @@ export const backendProvider: DataProvider = {
     emitStateChanged();
   },
 
-  async addFeedback(payload: { requestId: string; rating: number; comment?: string }) {
+  async addFeedback(payload: { requestId?: string; rating: number; comment?: string }) {
     await apiFetch('/api/v1/feedback', {
       method: 'POST',
       body: JSON.stringify({
         rating: payload.rating,
         message: payload.comment ?? '',
-        relatedRequestId: payload.requestId,
+        ...(payload.requestId
+          ? { relatedRequestId: payload.requestId, source: 'request' }
+          : { source: 'assistant' }),
       }),
     });
     emitStateChanged();

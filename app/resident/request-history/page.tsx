@@ -270,7 +270,7 @@ function ResidentRequestHistoryPageContent() {
       category: 'feedback',
       id: item.id,
       sortAt: item.createdAt,
-      heading: item.requestId,
+      heading: item.requestId ?? copyText(locale, 'Assistant Feedback', 'Feedback sa Assistant'),
       summary: `${item.rating}/5${item.comment ? ` - ${item.comment}` : ''}`,
       status: 'submitted',
     }));

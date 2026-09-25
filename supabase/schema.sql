@@ -199,7 +199,7 @@ create table if not exists public.incident_reports (
 create table if not exists public.feedback (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null default public.current_tenant_id() references public.tenants (id),
-  request_id uuid not null references public.document_requests (id),
+  request_id uuid references public.document_requests (id),
   resident_id uuid not null references public.profiles (id) on delete cascade,
   rating integer not null,
   comment text,

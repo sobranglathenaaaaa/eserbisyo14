@@ -8,7 +8,7 @@ import { sendCheckupAppointmentDecisionEmail } from '@/lib/checkups/appointment-
 
 type RouteContext = { params: Promise<{ appointmentId: string }> };
 type AppointmentStatusPayload = {
-  status?: 'pending' | 'approved' | 'proceed_to_barangay' | 'completed' | 'declined' | 'cancelled';
+  status?: 'approved' | 'completed' | 'declined';
   staffNote?: string;
 };
 
@@ -20,6 +20,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   const { appointmentId } = await context.params;
   const body = (await request.json().catch(() => null)) as AppointmentStatusPayload | null;
   if (!body?.status) return fail('VALIDATION_ERROR', 'status is required', 400);
+  if (!['approved', 'declined', 'completed'].includes(body.status)) {
+    return fail('VALIDATION_ERROR', 'Unsupported appointment status', 400);
+  }
+  if (body.status === 'declined' && !body.staffNote?.trim()) {
+    return fail('VALIDATION_ERROR', 'A decline reason is required', 400);
+  }
 
   const admin = getSupabaseAdminClient();
   const { data: existing } = await admin
@@ -29,6 +35,13 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     .eq('tenant_id', auth.tenantId)
     .maybeSingle();
   if (!existing) return fail('RESOURCE_NOT_FOUND', 'Appointment not found', 404);
+
+  const canTransition =
+    (existing.status === 'pending' && ['approved', 'declined'].includes(body.status)) ||
+    (existing.status === 'approved' && body.status === 'completed');
+  if (!canTransition) {
+    return fail('VALIDATION_ERROR', `Cannot change appointment from ${existing.status} to ${body.status}`, 409);
+  }
 
   const { data, error } = await admin
     .from('checkup_appointments')

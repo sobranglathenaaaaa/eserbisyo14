@@ -94,6 +94,7 @@ function ResidentFloatingAssistant() {
   const [assistantRating, setAssistantRating] = useState(0);
   const [assistantFeedback, setAssistantFeedback] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState('');
+  const [isSendingAssistantFeedback, setIsSendingAssistantFeedback] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [temporarySessionMessages, setTemporarySessionMessages] = useState<ChatMessage[]>([]);
   const [assistantSessionStartedAt, setAssistantSessionStartedAt] = useState<string | null>(null);
@@ -103,6 +104,13 @@ function ResidentFloatingAssistant() {
   const router = useRouter();
 
   const chat = useMemo(() => getResidentChatSession(state, user?.id), [state, user?.id]);
+
+  useEffect(() => {
+    if (!feedbackStatus) return;
+    const timeout = window.setTimeout(() => setFeedbackStatus(''), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [feedbackStatus]);
+
   const visibleMessages = useMemo(() => {
     const persisted = chat?.messages ?? [];
     const merged = [...persisted, ...temporarySessionMessages].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
@@ -223,8 +231,9 @@ function ResidentFloatingAssistant() {
     await sendQuestion(text.trim());
   };
 
-  const onSubmitAssistantFeedback = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmitAssistantFeedback = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isSendingAssistantFeedback) return;
     if (assistantRating < 1) {
       setFeedbackStatus(copyText(locale, 'Please choose a rating first.', 'Pumili muna ng rating.'));
       return;
@@ -234,21 +243,17 @@ function ResidentFloatingAssistant() {
       return;
     }
 
-    if (typeof window !== 'undefined') {
-      const key = 'eserbisyo.assistant-feedback.v1';
-      const raw = window.localStorage.getItem(key);
-      const records = raw ? (JSON.parse(raw) as Array<{ rating: number; comment: string; createdAt: string }>) : [];
-      records.unshift({
-        rating: assistantRating,
-        comment: assistantFeedback.trim(),
-        createdAt: new Date().toISOString(),
-      });
-      window.localStorage.setItem(key, JSON.stringify(records));
+    setIsSendingAssistantFeedback(true);
+    try {
+      await addFeedback({ rating: assistantRating, comment: assistantFeedback.trim() });
+      setFeedbackStatus(copyText(locale, 'Feedback sent. Thank you!', 'Naipadala na ang feedback. Salamat!'));
+      setAssistantFeedback('');
+      setAssistantRating(0);
+    } catch {
+      setFeedbackStatus(copyText(locale, 'Unable to send feedback. Please try again.', 'Hindi naipadala ang feedback. Pakisubukan muli.'));
+    } finally {
+      setIsSendingAssistantFeedback(false);
     }
-
-    setFeedbackStatus(copyText(locale, 'Feedback sent. Thank you!', 'Naipadala na ang feedback. Salamat!'));
-    setAssistantFeedback('');
-    setAssistantRating(0);
   };
 
   return (
@@ -372,8 +377,10 @@ function ResidentFloatingAssistant() {
               placeholder={copyText(locale, 'Tell us how the assistant can improve...', 'Sabihin kung paano pa mapapabuti ang assistant...')}
             />
             <div className="flex items-center justify-end gap-2">
-              <Button type="submit" size="sm" className="h-8 px-3" variant="residentOutline" disabled={isSending}>
-                {copyText(locale, 'Send feedback', 'Ipadala ang feedback')}
+              <Button type="submit" size="sm" className="h-8 px-3" variant="residentOutline" disabled={isSendingAssistantFeedback}>
+                {isSendingAssistantFeedback
+                  ? copyText(locale, 'Sending', 'Ipinapadala')
+                  : copyText(locale, 'Send feedback', 'Ipadala ang feedback')}
               </Button>
               {feedbackStatus ? <p className="text-xs text-[color:var(--resident-ink-700)]">{feedbackStatus}</p> : null}
             </div>
