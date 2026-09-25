@@ -132,15 +132,18 @@ function getHistoryStatusOptions(locale: 'en' | 'fil', category: HistoryCategory
     ['declined', 'Declined', 'Tinanggihan'], ['cancelled', 'Cancelled', 'Nakansela'],
   ]);
   if (category === 'reservations') return options([
+    ['pending', 'Pending', 'Pending'],
     ['approved', 'Approved', 'Approved'], ['declined', 'Declined', 'Tinanggihan'],
     ['ready_for_pickup', 'Ready for Pickup', 'Handa nang kunin'], ['returned', 'Returned', 'Naibalik'],
     ['completed', 'Completed', 'Nakumpleto'],
   ]);
   if (category === 'report-progress') return options([
+    ['pending', 'Pending', 'Pending'],
     ['approved', 'Approved', 'Approved'], ['declined', 'Declined', 'Tinanggihan'],
     ['proceed_to_barangay', 'Proceed to Barangay', 'Pumunta sa Barangay'], ['resolved', 'Completed', 'Nakumpleto'],
   ]);
   if (category === 'appointments') return options([
+    ['pending', 'Pending', 'Pending'],
     ['approved', 'Approved', 'Approved'], ['declined', 'Declined', 'Tinanggihan'],
     ['proceed_to_barangay', 'Proceed to Barangay', 'Pumunta sa Barangay'], ['completed', 'Completed', 'Nakumpleto'],
   ]);
@@ -275,7 +278,10 @@ function ResidentRequestHistoryPageContent() {
   }, [activeCategory, allHistoryItems]);
 
   const filteredCategoryItems = useMemo(
-    () => (statusFilter === 'all' ? categoryItems : categoryItems.filter((item) => item.status === statusFilter)),
+    () =>
+      statusFilter === 'all'
+        ? categoryItems
+        : categoryItems.filter((item) => item.status === statusFilter),
     [categoryItems, statusFilter]
   );
   const totalPages = Math.max(1, Math.ceil(filteredCategoryItems.length / PAGE_SIZE));

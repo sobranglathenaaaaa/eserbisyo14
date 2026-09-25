@@ -426,13 +426,7 @@ export default function StaffProcessRequestsPage() {
                 </div>
               </div>
 
-              {selected.status === 'pending' ? (
-                <div className="rounded-[var(--portal-radius-md)] border border-[color:#f0d7a1] bg-[color:#fff8e8] px-3 py-2 text-sm text-[color:#76551a]">
-                  {locale === 'fil'
-                    ? 'Naghihintay ang request na ito ng approval mula sa admin.'
-                    : "This request is waiting for the admin's approval."}
-                </div>
-              ) : (
+              {selected.status === 'approved' ? (
                 <label className="grid gap-1 text-sm">
                   <span>{locale === 'fil' ? 'Dahilan ng decline' : 'Decline reason'}</span>
                   <Input
@@ -441,7 +435,13 @@ export default function StaffProcessRequestsPage() {
                     placeholder={locale === 'fil' ? 'Required kapag decline' : 'Required when declining'}
                   />
                 </label>
-              )}
+              ) : selected.status === 'pending' ? (
+                <div className="rounded-[var(--portal-radius-md)] border border-[color:#f0d7a1] bg-[color:#fff8e8] px-3 py-2 text-sm text-[color:#76551a]">
+                  {locale === 'fil'
+                    ? 'Naghihintay ang request na ito ng approval mula sa admin.'
+                    : "This request is waiting for the admin's approval."}
+                </div>
+              ) : null}
 
               
 
@@ -501,14 +501,21 @@ export default function StaffProcessRequestsPage() {
                 </div>
               ) : null}
 
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap justify-end gap-2">
                 {selected.status === 'approved' ? (
-                  <Button variant="destructive" type="button" onClick={() => void updateRequest(selected.id, 'declined')}>
+                  <Button
+                    variant="resident"
+                    className="border-0 bg-[linear-gradient(180deg,#dc4b4b_0%,#b83232_100%)] shadow-[0_8px_20px_rgba(184,50,50,0.25)] hover:bg-[linear-gradient(180deg,#c93e3e_0%,#9f2929_100%)]"
+                    type="button"
+                    disabled={!reason.trim()}
+                    onClick={() => void updateRequest(selected.id, 'declined')}
+                  >
                     {locale === 'fil' ? 'I-decline' : 'Decline'}
                   </Button>
                 ) : null}
                 {selected.status === 'approved' ? (
                   <Button
+                    variant="resident"
                     type="button"
                     onClick={() => void updateRequest(selected.id, 'ready_for_pickup')}
                   >
@@ -516,7 +523,7 @@ export default function StaffProcessRequestsPage() {
                   </Button>
                 ) : null}
                 {selected.status === 'ready_for_pickup' ? (
-                  <Button type="button" onClick={() => void updateRequest(selected.id, 'completed')}>
+                  <Button variant="resident" type="button" onClick={() => void updateRequest(selected.id, 'completed')}>
                     {locale === 'fil' ? 'Markahan bilang Nakumpleto/Claimed' : 'Mark as Completed / Claimed'}
                   </Button>
                 ) : null}

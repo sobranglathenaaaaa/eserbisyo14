@@ -16,6 +16,7 @@ import {
   type MedicineRequest,
   type ResidencyClassification,
   type QueueEntry,
+  type Reservation,
   type ReportStatus,
   type UserApprovalStatus,
   type OcrJob,
@@ -698,6 +699,10 @@ async function createState(): Promise<AppState> {
     }
   }
 
+  const reservationsRes = session?.role === 'resident'
+    ? await supabase.from('reservations').select('*').eq('resident_id', session.userId).order('created_at', { ascending: false })
+    : await supabase.from('reservations').select('*').order('created_at', { ascending: false });
+
   const dbDocumentTypes = (docTypesRes.data as DbDocumentType[] | null) ?? [];
   const dbTypeMap = new Map(dbDocumentTypes.map((item) => [item.id, item]));
   const attachmentsByRequest = ((requestAttachmentsRes.data as DbDocumentRequestAttachment[] | null) ?? [])
@@ -857,6 +862,27 @@ async function createState(): Promise<AppState> {
       status: item.status,
       position: item.position,
       createdAt: item.created_at,
+    })),
+    reservations: ((reservationsRes.data as any[] | null) ?? []).map((item): Reservation => ({
+      id: item.id,
+      residentId: item.resident_id,
+      residentName: profileMap.get(item.resident_id)?.full_name ?? 'Resident',
+      resource: item.resource,
+      serviceType: item.service_type ?? undefined,
+      itemName: item.item_name ?? undefined,
+      quantityRequested: item.quantity_requested == null ? undefined : Number(item.quantity_requested),
+      purpose: item.purpose ?? undefined,
+      reason: item.reason ?? undefined,
+      notes: item.notes ?? undefined,
+      date: formatDate(item.date),
+      startAt: item.start_at,
+      endAt: item.end_at,
+      status: item.status,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at ?? undefined,
+      adminDecisionReason: item.admin_decision_reason ?? undefined,
+      processingDeclineReason: item.processing_decline_reason ?? undefined,
+      processedBy: item.processed_by ?? undefined,
     })),
     doctorAvailabilitySlots: ((doctorAvailabilitySlotsRes.data as any[] | null) ?? []).map(
       (item): DoctorAvailabilitySlot => ({

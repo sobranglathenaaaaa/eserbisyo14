@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { X, Funnel } from 'lucide-react';
-import { EmptyState, FieldLabel, PageGuide, SectionCard, StatusBadge, statusToneFromState } from '@/components/portal-ui';
+import { EmptyState, FieldLabel, FormFeedback, PageGuide, SectionCard, StatusBadge, statusToneFromState } from '@/components/portal-ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -25,8 +25,9 @@ import type { Reservation } from '@/lib/types/models';
 export default function StaffReservationsPage() {
   const { state, locale } = useAppState();
   const [reason, setReason] = useState('');
+  const [actionFeedback, setActionFeedback] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'declined'>('pending');
+  const [statusFilter, setStatusFilter] = useState<'all' | Reservation['status']>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState('');
   const pageCopy = getRolePageCopy('staff/reservations') ?? {
@@ -36,22 +37,38 @@ export default function StaffReservationsPage() {
   const PAGE_SIZE = 10;
 
   const pending = useMemo(() => (state.reservations ?? []).filter((item) => item.status === 'pending'), [state.reservations]);
-  const approved = useMemo(() => (state.reservations ?? []).filter((item) => item.status === 'approved'), [state.reservations]);
-  const declined = useMemo(() => (state.reservations ?? []).filter((item) => item.status === 'declined'), [state.reservations]);
   const selectedReservation = selectedId ? (state.reservations ?? []).find((item) => item.id === selectedId) ?? null : null;
 
   const statusSelectRef = useRef<HTMLSelectElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    let active = true;
+    const checkReturnReminders = async () => {
+      try {
+        const supabase = getSupabaseBrowserClient();
+        const session = await getSupabaseSessionSafely(supabase);
+        const token = session.data.session?.access_token;
+        if (!active || !token) return;
+        await fetch('/api/v1/reservations/reminders', {
+          method: 'POST',
+          headers: { authorization: `Bearer ${token}` },
+        });
+      } catch (error) {
+        console.error('Unable to check equipment return reminders:', error);
+      }
+    };
+    void checkReturnReminders();
+    const interval = window.setInterval(() => void checkReturnReminders(), 5 * 60 * 1000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, []);
+
   const filteredReservations = useMemo(() => {
     const reservations = state.reservations ?? [];
-    const base = statusFilter === 'all'
-      ? reservations
-      : statusFilter === 'pending'
-        ? pending
-        : statusFilter === 'approved'
-          ? approved
-          : declined;
+    const base = statusFilter === 'all' ? reservations : reservations.filter((item) => item.status === statusFilter);
 
     const q = search.trim().toLowerCase();
     if (!q) return base;
@@ -63,7 +80,7 @@ export default function StaffReservationsPage() {
         (item.purpose || '').toLowerCase().includes(q)
       );
     });
-  }, [state.reservations, statusFilter, search, pending, approved, declined]);
+  }, [state.reservations, statusFilter, search]);
 
   const totalPages = Math.max(1, Math.ceil((filteredReservations.length ?? 0) / PAGE_SIZE));
   useEffect(() => {
@@ -108,7 +125,7 @@ export default function StaffReservationsPage() {
     return () => window.removeEventListener('keydown', onKey);
   }, [selectedReservation]);
 
-  const approveReservation = async () => {
+  const updateReservationStatus = async (status: Reservation['status'], decisionReason?: string) => {
     if (!selectedReservation) return;
     try {
       const supabase = getSupabaseBrowserClient();
@@ -121,40 +138,27 @@ export default function StaffReservationsPage() {
           'Content-Type': 'application/json',
           ...(token ? { authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ status: 'approved', reason: reason.trim() || undefined }),
+        body: JSON.stringify({ status, reason: decisionReason }),
       });
 
+      const result = await response.json().catch(() => null);
       if (response.ok) {
         closeReview();
+        setActionFeedback(result?.data?.emailError
+          ? { tone: 'error', text: `${locale === 'fil' ? 'Na-update ang reservation pero hindi naipadala ang email' : 'Reservation updated, but the email could not be sent'}: ${result.data.emailError}` }
+          : { tone: 'success', text: locale === 'fil' ? 'Matagumpay na na-update ang reservation.' : 'Reservation updated successfully.' });
+      } else {
+        const message = result?.error?.message ?? response.statusText;
+        setActionFeedback({ tone: 'error', text: message });
+        console.error('Unable to update reservation status:', message);
       }
     } catch (error) {
-      console.error('Error approving reservation:', error);
+      console.error('Error updating reservation status:', error);
     }
   };
 
-  const declineReservation = async () => {
-    if (!selectedReservation) return;
-    try {
-      const supabase = getSupabaseBrowserClient();
-      const session = await getSupabaseSessionSafely(supabase);
-      const token = session.data.session?.access_token;
-
-      const response = await fetch(`/api/v1/reservations/${selectedReservation.id}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ status: 'declined', reason: reason.trim() }),
-      });
-
-      if (response.ok) {
-        closeReview();
-      }
-    } catch (error) {
-      console.error('Error declining reservation:', error);
-    }
-  };
+  const approveReservation = () => updateReservationStatus('approved');
+  const declineReservation = () => updateReservationStatus('declined', reason.trim());
 
   const getResourceLabel = (resource: string): string => {
     const labels: Record<string, string> = {
@@ -172,6 +176,9 @@ export default function StaffReservationsPage() {
       approved: { en: 'Approved', fil: 'Aprubado' },
       declined: { en: 'Declined', fil: 'Tinanggihan' },
       cancelled: { en: 'Cancelled', fil: 'Kanselado' },
+      ready_for_pickup: { en: 'Ready for Pickup', fil: 'Handa nang kunin' },
+      returned: { en: 'Returned', fil: 'Naibalik' },
+      completed: { en: 'Completed', fil: 'Nakumpleto' },
     };
     return labels[status]?.[locale] || status;
   };
@@ -186,6 +193,8 @@ export default function StaffReservationsPage() {
           cta={{ label: resolveRoleCopy(locale, pageCopy.guide.cta.label), href: pageCopy.guide.cta.href }}
         />
       ) : null}
+
+      {actionFeedback ? <FormFeedback tone={actionFeedback.tone} text={actionFeedback.text} /> : null}
 
       <SectionCard
         title={locale === 'fil' ? 'Mga Reservations' : 'Reservations'}
@@ -219,7 +228,11 @@ export default function StaffReservationsPage() {
                       <option value="all">{locale === 'fil' ? 'Lahat' : 'All'}</option>
                       <option value="pending">{locale === 'fil' ? 'Naghihintay' : 'Pending'}</option>
                       <option value="approved">{locale === 'fil' ? 'Aprubado' : 'Approved'}</option>
+                      <option value="ready_for_pickup">{locale === 'fil' ? 'Handa nang kunin' : 'Ready for Pickup'}</option>
+                      <option value="returned">{locale === 'fil' ? 'Naibalik' : 'Returned'}</option>
+                      <option value="completed">{locale === 'fil' ? 'Nakumpleto' : 'Completed'}</option>
                       <option value="declined">{locale === 'fil' ? 'Tinanggihan' : 'Declined'}</option>
+                      <option value="cancelled">{locale === 'fil' ? 'Nakansela' : 'Cancelled'}</option>
                     </Select>
                   </div>
                   <button
@@ -380,17 +393,19 @@ export default function StaffReservationsPage() {
                 </div>
               </div>
 
-              <FieldLabel
-                label={locale === 'fil' ? 'Dahilan (required kapag decline)' : 'Reason (required for decline)'}
-                hint={locale === 'fil' ? 'Hindi mae-enable ang decline kung walang dahilan.' : 'Decline is disabled until a reason is entered.'}
-              >
-                <Textarea
-                  value={reason}
-                  onChange={(event) => setReason(event.target.value)}
-                  placeholder={locale === 'fil' ? 'Halimbawa: occupied schedule' : 'Example: occupied schedule'}
-                  className="min-h-[80px]"
-                />
-              </FieldLabel>
+              {selectedReservation.status === 'pending' ? (
+                <FieldLabel
+                  label={locale === 'fil' ? 'Dahilan (required kapag decline)' : 'Reason (required for decline)'}
+                  hint={locale === 'fil' ? 'Hindi mae-enable ang decline kung walang dahilan.' : 'Decline is disabled until a reason is entered.'}
+                >
+                  <Textarea
+                    value={reason}
+                    onChange={(event) => setReason(event.target.value)}
+                    placeholder={locale === 'fil' ? 'Halimbawa: occupied schedule' : 'Example: occupied schedule'}
+                    className="min-h-[80px]"
+                  />
+                </FieldLabel>
+              ) : null}
             </div>
 
             <div className="flex flex-wrap justify-end gap-2 border-t border-[color:var(--portal-border-soft)] px-5 py-4">
@@ -416,6 +431,21 @@ export default function StaffReservationsPage() {
                   </Button>
                 </>
               )}
+              {selectedReservation.status === 'approved' && selectedReservation.resource === 'equipment' ? (
+                <Button type="button" variant="resident" onClick={() => void updateReservationStatus('ready_for_pickup')}>
+                  {locale === 'fil' ? 'Markahan bilang Ready for Pickup' : 'Mark Ready for Pickup'}
+                </Button>
+              ) : null}
+              {selectedReservation.status === 'approved' && selectedReservation.resource !== 'equipment' ? (
+                <Button type="button" variant="resident" onClick={() => void updateReservationStatus('completed')}>
+                  {locale === 'fil' ? 'Markahan bilang Nakumpleto' : 'Mark as Completed'}
+                </Button>
+              ) : null}
+              {selectedReservation.status === 'ready_for_pickup' && selectedReservation.resource === 'equipment' ? (
+                <Button type="button" variant="resident" onClick={() => void updateReservationStatus('returned')}>
+                  {locale === 'fil' ? 'Markahan bilang Naibalik' : 'Mark as Returned'}
+                </Button>
+              ) : null}
             </div>
           </section>
         </div>

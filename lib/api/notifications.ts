@@ -13,6 +13,15 @@ export type NotificationEventKey =
   | 'queue.status_changed'
   | 'checkup_appointment.status_changed'
   | 'incident.status_changed'
+  | 'reservation.status_changed'
+  | 'reservation.submitted'
+  | 'reservation.approved'
+  | 'reservation.declined'
+  | 'reservation.cancelled'
+  | 'reservation.ready_for_pickup'
+  | 'reservation.returned'
+  | 'reservation.completed'
+  | 'reservation.return_reminder'
   | 'announcement.published';
 
 type NotificationEntityType =
@@ -21,6 +30,7 @@ type NotificationEntityType =
   | 'queue_entry'
   | 'checkup_appointment'
   | 'incident_report'
+  | 'reservation'
   | 'announcement';
 type NotificationType = 'account' | 'request' | 'report' | 'system';
 

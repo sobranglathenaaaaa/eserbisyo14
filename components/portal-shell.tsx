@@ -290,6 +290,11 @@ const navConfig: Record<UserRole, NavSection[]> = {
           hint: { en: 'Review reports', fil: 'Suriin ang ulat' },
         },
         {
+          href: '/admin/request-history',
+          label: { en: 'Request History', fil: 'History ng mga Kahilingan' },
+          hint: { en: 'View resident service history', fil: 'Tingnan ang service history ng mga residente' },
+        },
+        {
           href: '/admin/reports',
           label: { en: 'Reports', fil: 'Mga Ulat' },
           hint: { en: 'Service insights', fil: 'Ulat ng serbisyo' },
@@ -320,6 +325,7 @@ const BADGE_STORAGE_KEYS = {
   userAccess: 'eserbisyo-admin-user-access-seen-count',
   staffRegistrationReviews: 'eserbisyo-staff-registration-reviews-seen-count',
   staffAppointments: 'eserbisyo-staff-appointments-seen-count',
+  staffReservations: 'eserbisyo-staff-reservations-seen-count',
   documentRequests: 'eserbisyo-admin-document-requests-seen-count',
   staffProcessRequests: 'eserbisyo-staff-process-requests-seen-count',
   incidentReports: 'eserbisyo-admin-incident-reports-seen-count',
@@ -381,6 +387,7 @@ export default function PortalShell({
     userAccess: readSeenBadgeCount(BADGE_STORAGE_KEYS.userAccess),
     staffRegistrationReviews: readSeenBadgeCount(BADGE_STORAGE_KEYS.staffRegistrationReviews),
     staffAppointments: readSeenBadgeCount(BADGE_STORAGE_KEYS.staffAppointments),
+    staffReservations: readSeenBadgeCount(BADGE_STORAGE_KEYS.staffReservations),
     documentRequests: readSeenBadgeCount(BADGE_STORAGE_KEYS.documentRequests),
     staffProcessRequests: readSeenBadgeCount(BADGE_STORAGE_KEYS.staffProcessRequests),
     incidentReports: readSeenBadgeCount(BADGE_STORAGE_KEYS.incidentReports),
@@ -390,6 +397,7 @@ export default function PortalShell({
     <PortalShellBase role={role} allowedRoles={allowedRoles}>
       {({ locale, setLocale, logoutAndRedirect, user, state }) => {
         const shellRole = allowedRoles?.includes(user.role) ? user.role : role;
+        const pendingReservationsCount = state.reservations.filter((reservation) => reservation.status === 'pending').length;
         const navSections = navConfig[shellRole];
         const isNavItemActive = (item: NavItem) => {
           const [itemPath, itemQuery] = item.href.split('?');
@@ -516,9 +524,15 @@ export default function PortalShell({
                               <Link
                                 key={item.href}
                                 href={item.href}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                                className={cn(
-                                  'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors',
+                                onClick={() => {
+                                  setIsMobileMenuOpen(false);
+                                  if (shellRole === 'staff' && item.href === '/staff/reservations' && pendingReservationsCount > 0) {
+                                    setSeenBadgeCounts((current) => ({ ...current, staffReservations: pendingReservationsCount }));
+                                    window.sessionStorage.setItem(BADGE_STORAGE_KEYS.staffReservations, String(pendingReservationsCount));
+                                  }
+                                }}
+                                  className={cn(
+                                  'relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors',
                                   isActive
                                     ? 'bg-[color:var(--portal-accent-soft)] text-[color:var(--portal-ink-900)] font-semibold'
                                     : 'text-[color:var(--portal-ink-700)] hover:bg-[color:var(--portal-surface-3)]'
@@ -526,6 +540,14 @@ export default function PortalShell({
                               >
                                 <Icon size={16} />
                                 <span>{locale === 'fil' ? item.label.fil : item.label.en}</span>
+                                {shellRole === 'staff' && item.href === '/staff/reservations' && pendingReservationsCount > seenBadgeCounts.staffReservations && !isActive ? (
+                                  <span
+                                    className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold text-white"
+                                    aria-label={`${pendingReservationsCount} pending reservations`}
+                                  >
+                                    {pendingReservationsCount > 9 ? '9+' : pendingReservationsCount}
+                                  </span>
+                                ) : null}
                               </Link>
                             );
                           })}
@@ -613,6 +635,10 @@ export default function PortalShell({
                                   if (item.href === '/staff/appointments' && shellRole === 'staff') {
                                     badgeKey = 'staffAppointments';
                                     pendingCount = state.checkupAppointments.filter((appointment) => appointment.status === 'pending').length;
+                                  }
+                                  if (item.href === '/staff/reservations' && shellRole === 'staff') {
+                                    badgeKey = 'staffReservations';
+                                    pendingCount = pendingReservationsCount;
                                   }
                                   if (item.href.includes('document-requests') || item.href === '/staff/process-requests') {
                                   badgeKey = item.href === '/staff/process-requests' && shellRole === 'staff'

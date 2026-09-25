@@ -54,7 +54,6 @@ export default function StaffDashboardPage() {
           <div className="grid gap-5">
             <DashboardSection
               title={locale === 'fil' ? 'Buod' : 'Summary'}
-              description={locale === 'fil' ? 'Mabilis na status ng kahilingan.' : 'Quick view of request status.'}
             >
               <div className="grid gap-3 lg:grid-cols-3">
                 <DashboardSummaryCard

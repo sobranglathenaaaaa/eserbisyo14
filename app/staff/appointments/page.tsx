@@ -798,10 +798,7 @@ export default function StaffAppointmentsPage() {
                           <td className="px-3 py-2 text-center">
                             <Button
                               type="button"
-                              size="sm"
-                              variant={
-                                isPending ? 'default' : 'secondary'
-                              }
+                              variant="ghost"
                               onClick={() =>
                                 openReviewModal(appointment.id)
                               }
