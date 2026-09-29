@@ -1,4 +1,4 @@
-import type { AppState, Locale, UserRole } from '../types/models';
+import type { AppState, DocumentTemplate, Locale, UserRole } from '../types/models';
 import { createEmptyAppState } from './empty-state';
 import { getDataProvider } from './provider';
 import type { SendChatMessageResult, UpdateCurrentProfilePayload } from './contracts/data-provider';
@@ -266,8 +266,10 @@ export const staffUpdateMedicineRequest = (
   reason?: string
 ) => provider.staffUpdateMedicineRequest(requestId, status, reason);
 
-export const upsertDocumentTemplate = (payload: { id?: string; name: string; body: string; dynamicFields: string[] }) =>
+export const upsertDocumentTemplate = (payload: Partial<DocumentTemplate> & { name: string; body: string; dynamicFields: string[] }) =>
   provider.upsertDocumentTemplate(payload);
+
+export const deleteDocumentTemplate = (templateId: string) => provider.deleteDocumentTemplate(templateId);
 
 export const markNotificationRead = (notificationId: string) => provider.markNotificationRead(notificationId);
 export const markAllNotificationsRead = () => provider.markAllNotificationsRead();

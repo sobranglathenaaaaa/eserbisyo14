@@ -74,23 +74,24 @@ const rolePageCopy: Record<string, RolePageCopy> = {
     },
   },
   'admin/document-templates': {
-    title: { en: 'Document Templates', fil: 'Mga Template ng Dokumento' },
+    title: { en: 'Document Template', fil: 'Document Template' },
     description: {
-      en: 'Edit the wording used in documents residents request.',
-      fil: 'I-edit ang mga salitang ginagamit sa dokumentong hinihingi ng resident.',
+      en: 'Upload existing templates (.docx/PDF) or design custom templates with AI field extraction, layout customization, and database binding.',
+      fil: 'Mag-upload ng lumang dokumento (.docx/PDF) o magdisenyo ng bagong template na may AI field extraction, layout customization, at database binding.',
     },
     guide: {
-      title: { en: 'Start here', fil: 'Simula dito' },
+      title: { en: 'Two Ways to Build & Manage Templates', fil: 'Dalawang Paraan sa Paggawa at Pamamahala ng Template' },
       summary: {
-        en: 'Keep templates clear and easy to fill out.',
-        fil: 'Panatilihing malinaw at madaling punan ang mga template.',
+        en: 'Upload existing barangay templates for automated structure extraction, or customize new templates with live preview and database variable binding.',
+        fil: 'Mag-upload ng umiiral na template ng barangay para sa smart structure extraction, o mag-customize ng bagong template gamit ang live preview at database binding.',
       },
       steps: [
-        { en: 'Choose the template you want to update.', fil: 'Piliin ang template na ia-update.' },
-        { en: 'Edit the text to be clear and short.', fil: 'I-edit ang text para malinaw at maiksi.' },
-        { en: 'Save and review the preview.', fil: 'I-save at tingnan ang preview.' },
+        { en: 'Choose "Upload Existing Template" or "Create New Template".', fil: 'Piliin ang "Upload Existing Template" o "Create New Template".' },
+        { en: 'Review detected AI fields and map static values to system variables.', fil: 'Suriin ang na-detect na AI fields at i-map ang mga static text sa system variables.' },
+        { en: 'Customize layout, styling, logos, and officials database binding in the smart editor.', fil: 'I-customize ang layout, styling, logo, at officials database binding sa smart editor.' },
+        { en: 'Preview real-time rendering and save as Active Template for document generation.', fil: 'Tingnan ang live preview at i-save bilang Active Template para sa pagbuo ng dokumento.' },
       ],
-      cta: { label: { en: 'Open templates', fil: 'Buksan ang mga template' }, href: '/admin/document-templates' },
+      cta: { label: { en: 'Manage templates', fil: 'Pamahalaan ang mga template' }, href: '/admin/document-templates' },
     },
   },
   'admin/incidents': {
@@ -153,7 +154,6 @@ const rolePageCopy: Record<string, RolePageCopy> = {
       cta: { label: { en: 'View updates', fil: 'Tingnan ang update' }, href: '/admin/notifications' },
     },
   },
-  
   'admin/reports': {
     title: { en: 'Reports', fil: 'Mga Ulat' },
     description: {

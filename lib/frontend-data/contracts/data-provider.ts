@@ -7,6 +7,7 @@ import type {
   IncidentCategory,
   DoctorAvailabilitySlot,
   DocumentRequest,
+  DocumentTemplate,
   CheckupAppointment,
   Locale,
   MedicineRequest,
@@ -235,7 +236,8 @@ export interface DataProvider {
   adminReviewMedicineRequest(requestId: string, decision: 'approved' | 'declined', reason?: string): Promise<void>;
   staffUpdateMedicineRequest(requestId: string, status: 'processing' | 'completed' | 'declined', reason?: string): Promise<void>;
 
-  upsertDocumentTemplate(payload: { id?: string; name: string; body: string; dynamicFields: string[] }): Promise<void>;
+  upsertDocumentTemplate(payload: Partial<DocumentTemplate> & { name: string; body: string; dynamicFields: string[] }): Promise<void>;
+  deleteDocumentTemplate(templateId: string): Promise<void>;
   markNotificationRead(notificationId: string): Promise<void>;
   markAllNotificationsRead(): Promise<void>;
 

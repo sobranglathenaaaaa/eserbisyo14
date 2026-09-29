@@ -9,6 +9,7 @@ import {
   type DoctorAvailabilitySlot,
   type DocumentCatalogItem,
   type DocumentRequest,
+  type DocumentTemplate,
   type DocumentRequestAttachment,
   type CheckupAppointment,
   type Equipment,
@@ -759,14 +760,35 @@ async function createState(): Promise<AppState> {
       createdAt: item.created_at,
       updatedAt: item.updated_at,
     })),
-    documentTemplates: ((templatesRes.data as any[] | null) ?? []).map((item) => ({
-      id: item.id,
-      name: item.name,
-      body: item.body,
-      dynamicFields: item.dynamic_fields ?? [],
-      updatedAt: item.updated_at,
-      updatedBy: item.updated_by ?? '',
-    })),
+    documentTemplates: ((templatesRes.data as any[] | null) ?? []).map((item) => {
+      let meta: Record<string, any> = {};
+      let cleanBody = item.body || '';
+      const metaMatch = cleanBody.match(/<!-- TEMPLATE_META:([\s\S]*?) -->$/);
+      if (metaMatch) {
+        try {
+          meta = JSON.parse(metaMatch[1]);
+          cleanBody = cleanBody.replace(/<!-- TEMPLATE_META:([\s\S]*?) -->$/, '').trim();
+        } catch {
+          // ignore
+        }
+      }
+      return {
+        id: item.id,
+        name: item.name,
+        body: cleanBody,
+        dynamicFields: item.dynamic_fields ?? [],
+        updatedAt: item.updated_at,
+        updatedBy: item.updated_by ?? '',
+        documentType: meta.documentType ?? 'custom',
+        sourceType: meta.sourceType ?? 'custom',
+        originalFileName: meta.originalFileName,
+        fieldMappings: meta.fieldMappings ?? [],
+        headerConfig: meta.headerConfig,
+        officialsConfig: meta.officialsConfig,
+        overrideSettings: meta.overrideSettings,
+        isActive: meta.isActive ?? true,
+      };
+    }),
     generatedDocuments: ((generatedRes.data as any[] | null) ?? []).map((item) => ({
       id: item.id,
       requestId: item.request_id ?? undefined,
@@ -1759,28 +1781,49 @@ export const backendProvider: DataProvider = {
     // Stub
   },
 
-  async upsertDocumentTemplate(payload: { id?: string; name: string; body: string; dynamicFields: string[] }) {
+  async upsertDocumentTemplate(payload: Partial<DocumentTemplate> & { name: string; body: string; dynamicFields: string[] }) {
     const editor = await requireRole(['admin', 'staff']);
     if (!editor) return;
     const supabase = getSupabaseBrowserClient();
+
+    const metaObj = {
+      documentType: payload.documentType ?? 'custom',
+      sourceType: payload.sourceType ?? 'custom',
+      originalFileName: payload.originalFileName,
+      fieldMappings: payload.fieldMappings,
+      headerConfig: payload.headerConfig,
+      officialsConfig: payload.officialsConfig,
+      overrideSettings: payload.overrideSettings,
+      isActive: payload.isActive ?? true,
+    };
+    const encodedBody = `${payload.body.trim()}\n\n<!-- TEMPLATE_META:${JSON.stringify(metaObj)} -->`;
+
     if (payload.id) {
       await supabase
         .from('document_templates')
         .update({
           name: payload.name,
-          body: payload.body,
+          body: encodedBody,
           dynamic_fields: payload.dynamicFields,
-           updated_by: editor.id,
+          updated_by: editor.id,
         })
         .eq('id', payload.id);
     } else {
       await supabase.from('document_templates').insert({
         name: payload.name,
-        body: payload.body,
+        body: encodedBody,
         dynamic_fields: payload.dynamicFields,
-         updated_by: editor.id,
+        updated_by: editor.id,
       });
     }
+    emitStateChanged();
+  },
+
+  async deleteDocumentTemplate(templateId: string) {
+    const editor = await requireRole(['admin']);
+    if (!editor) return;
+    const supabase = getSupabaseBrowserClient();
+    await supabase.from('document_templates').delete().eq('id', templateId);
     emitStateChanged();
   },
 

@@ -116,6 +116,13 @@ export interface DocumentRequest {
   attachments?: DocumentRequestAttachment[];
 }
 
+export interface DocumentTemplateFieldMapping {
+  staticText: string;
+  category: 'barangay' | 'official' | 'document' | 'resident' | 'other';
+  mappedTo: string;
+  confidence?: number;
+}
+
 export interface DocumentTemplate {
   id: string;
   name: string;
@@ -123,6 +130,35 @@ export interface DocumentTemplate {
   dynamicFields: string[];
   updatedAt: string;
   updatedBy: string;
+  documentType?: string;
+  sourceType?: 'uploaded' | 'custom';
+  originalFileName?: string;
+  fieldMappings?: DocumentTemplateFieldMapping[];
+  headerConfig?: {
+    showLogo?: boolean;
+    showSeal?: boolean;
+    provinceText?: string;
+    cityText?: string;
+    barangayText?: string;
+    officeTitle?: string;
+    fontFamily?: string;
+    alignment?: 'left' | 'center' | 'right';
+  };
+  officialsConfig?: {
+    includePunongBarangay?: boolean;
+    includeSecretary?: boolean;
+    includeTreasurer?: boolean;
+    includeKagawads?: boolean;
+    linkToOfficialsDb?: boolean;
+  };
+  overrideSettings?: {
+    useBarangayInfo?: boolean;
+    useOfficialsDb?: boolean;
+    useResidentRequestInfo?: boolean;
+  };
+  htmlBody?: string;
+  previewImageUrl?: string;
+  isActive?: boolean;
 }
 
 export interface GeneratedDocument {

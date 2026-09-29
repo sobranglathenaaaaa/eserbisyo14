@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Menu,
   X,
+  Sliders,
 } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -270,6 +271,11 @@ const navConfig: Record<UserRole, NavSection[]> = {
           hint: { en: 'Approve or not approve', fil: 'Aprubahan o hindi' },
         },
         {
+          href: '/admin/document-templates',
+          label: { en: 'Document Template', fil: 'Document Template' },
+          hint: { en: 'Upload and customize templates', fil: 'Mag-upload at mag-customize ng template' },
+        },
+        {
           href: '/admin/announcements',
           label: { en: 'Announcements', fil: 'Mga Anunsyo' },
           hint: { en: 'Post barangay updates', fil: 'Mag-post ng update' },
@@ -354,6 +360,7 @@ function resolveCopy(locale: 'en' | 'fil', value: string | LocalizedProp) {
 
 function resolveNavIcon(href: string) {
   if (href.includes('dashboard')) return LayoutDashboard;
+  if (href.includes('document-templates')) return Sliders;
   if (href.includes('document-requests')) return FileText;
   if (href.includes('process-requests')) return FileText;
   if (href.includes('requests')) return ClipboardCheck;

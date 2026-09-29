@@ -92,7 +92,7 @@ let sizeRegistered = false;
 function registerQuillSizes() {
   if (sizeRegistered || typeof window === 'undefined') return;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line
     const Quill = require('react-quill-new').Quill || (window as any).Quill;
     if (Quill) {
       const Size = Quill.import('attributors/style/size');
