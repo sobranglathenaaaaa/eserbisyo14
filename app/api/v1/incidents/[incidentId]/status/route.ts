@@ -14,25 +14,18 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   const { incidentId } = await context.params;
   const body = (await request.json().catch(() => null)) as
-    | { status: 'pending' | 'approved' | 'under_review' | 'proceed_to_barangay' | 'resolved' | 'declined'; note?: string }
+    | {
+        status?: string;
+        actionLog?: any;
+        proceeding?: any;
+        cfa?: any;
+        pnpReferral?: any;
+        note?: string;
+      }
     | null;
-  if (!body?.status) return fail('VALIDATION_ERROR', 'status is required', 400);
+  if (!body) return fail('VALIDATION_ERROR', 'Body is required', 400);
   if (auth.role !== 'staff' && auth.role !== 'admin') {
     return fail('AUTH_FORBIDDEN', 'Staff/Admin access required', 403);
-  }
-
-  // Admin approval is restricted to admin-only actions, but staff are expected to
-  // continue handling reports after the admin has approved or moved them forward.
-  if ((body.status === 'approved' || body.status === 'proceed_to_barangay') && auth.role !== 'admin') {
-    return fail('AUTH_FORBIDDEN', 'Admin access required to approve incidents', 403);
-  }
-
-  if (body.status === 'under_review' && auth.role !== 'staff' && auth.role !== 'admin') {
-    return fail('AUTH_FORBIDDEN', 'Staff/Admin access required to review incidents', 403);
-  }
-
-  if ((body.status === 'resolved' || body.status === 'declined') && auth.role !== 'staff' && auth.role !== 'admin') {
-    return fail('AUTH_FORBIDDEN', 'Staff/Admin access required to resolve or decline incidents', 403);
   }
 
   const admin = getSupabaseAdminClient();
@@ -46,9 +39,29 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     .single();
   if (fetchError || !existing) return fail('RESOURCE_NOT_FOUND', fetchError?.message ?? 'Incident not found', 404);
 
+  const nextStatus = body.status ?? existing.status;
+  const updatePayload: Record<string, any> = {
+    status: nextStatus,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (body.actionLog) updatePayload.action_log = body.actionLog;
+  if (body.cfa) updatePayload.cfa = body.cfa;
+  if (body.pnpReferral) updatePayload.pnp_referral = body.pnpReferral;
+
+  if (body.proceeding) {
+    const existingProceedings = Array.isArray(existing.proceedings) ? existing.proceedings : [];
+    const newProceeding = {
+      id: `proc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      ...body.proceeding,
+      createdAt: new Date().toISOString(),
+    };
+    updatePayload.proceedings = [...existingProceedings, newProceeding];
+  }
+
   const { data, error } = await admin
     .from('incident_reports')
-    .update({ status: body.status, updated_at: new Date().toISOString() })
+    .update(updatePayload)
     .eq('id', incidentId)
     .eq('tenant_id', auth.tenantId)
     .select('*')

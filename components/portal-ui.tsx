@@ -253,10 +253,10 @@ export function FieldLabel({
 
 export function statusToneFromState(value: string): UIStatusTone {
   const normalized = value.toLowerCase();
-  if (['completed', 'approved', 'resolved', 'read', 'available', 'active'].includes(normalized)) return 'success';
+  if (['completed', 'approved', 'resolved', 'closed', 'action_taken', 'read', 'available', 'active'].includes(normalized)) return 'success';
   if (['declined', 'cancelled', 'rejected', 'deleted'].includes(normalized)) return 'danger';
   if (['urgent'].includes(normalized)) return 'danger';
-  if (['pending', 'under_review', 'processing', 'serving', 'waiting'].includes(normalized)) return 'warning';
-  if (['info', 'queued'].includes(normalized)) return 'info';
+  if (['pending', 'submitted', 'under_review', 'assigned', 'hearing_scheduled', 'lupon_escalated', 'processing', 'serving', 'waiting'].includes(normalized)) return 'warning';
+  if (['info', 'queued', 'cfa_issued', 'referred_to_pnp'].includes(normalized)) return 'info';
   return 'neutral';
 }

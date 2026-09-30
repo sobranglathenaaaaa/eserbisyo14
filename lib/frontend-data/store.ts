@@ -157,16 +157,31 @@ export const adminAssignToStaff = (requestId: string, assigneeUserId: string) =>
 export const addFeedback = (payload: { requestId?: string; rating: number; comment?: string }) => provider.addFeedback(payload);
 
 export const submitReport = (payload: {
+  trackType?: 'community_concern' | 'incident';
+  desiredAction?: 'record_only' | 'request_meeting' | 'none';
   category: string;
   title: string;
   details: string;
   location: string;
   dateOfIncident: string;
   otherCategoryText?: string;
+  parties?: import('../types/models').CaseParty[];
 }) => provider.submitReport(payload);
 
-export const updateReportStatus = (reportId: string, status: 'pending' | 'approved' | 'under_review' | 'proceed_to_barangay' | 'resolved' | 'declined', note?: string) =>
+export const updateReportStatus = (reportId: string, status: import('../types/models').ReportStatus, note?: string) =>
   provider.updateReportStatus(reportId, status, note);
+
+export const updateCaseWorkflow = (
+  reportId: string,
+  payload: {
+    status?: import('../types/models').ReportStatus;
+    actionLog?: import('../types/models').CaseActionLog;
+    proceeding?: Omit<import('../types/models').CaseProceeding, 'id' | 'createdAt'>;
+    cfa?: import('../types/models').CaseCfa;
+    pnpReferral?: import('../types/models').CasePnpReferral;
+    note?: string;
+  }
+) => provider.updateCaseWorkflow(reportId, payload);
 export const upsertIncidentCategory = (payload: { id?: string; name: string; sortOrder?: number; isActive?: boolean }) =>
   provider.upsertIncidentCategory(payload);
 export const archiveIncidentCategory = (categoryId: string) => provider.archiveIncidentCategory(categoryId);

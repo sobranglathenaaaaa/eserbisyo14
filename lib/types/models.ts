@@ -18,7 +18,21 @@ export type RequestStatus =
   | 'declined'
   | 'cancelled';
 
-export type ReportStatus = 'pending' | 'approved' | 'under_review' | 'proceed_to_barangay' | 'resolved' | 'declined';
+export type ReportStatus =
+  | 'pending'
+  | 'submitted'
+  | 'under_review'
+  | 'assigned'
+  | 'action_taken'
+  | 'hearing_scheduled'
+  | 'lupon_escalated'
+  | 'cfa_issued'
+  | 'referred_to_pnp'
+  | 'resolved'
+  | 'closed'
+  | 'declined'
+  | 'approved'
+  | 'proceed_to_barangay';
 
 export type CheckupAppointmentStatus = 'pending' | 'approved' | 'proceed_to_barangay' | 'completed' | 'declined' | 'cancelled';
 
@@ -175,10 +189,58 @@ export interface GeneratedDocument {
   eSignatureName: string;
 }
 
+export interface CaseParty {
+  role: 'complainant' | 'respondent' | 'witness';
+  fullName: string;
+  contactInfo?: string;
+  address?: string;
+}
+
+export interface CaseProceeding {
+  id: string;
+  stage: 'barangay_hearing' | 'lupon_conciliation';
+  proceedingNo: number;
+  scheduledAt: string;
+  venue: string;
+  presidingOfficer?: string;
+  attendance?: string;
+  minutes?: string;
+  agreements?: string;
+  outcome?: 'settled' | 'another_hearing' | 'not_settled';
+  createdAt: string;
+}
+
+export interface CaseCfa {
+  certificateNumber: string;
+  dateIssued: string;
+  issuingAuthority: string;
+  chairmanSigned: boolean;
+  recipientName: string;
+  dateReleased?: string;
+  documentUrl?: string;
+}
+
+export interface CasePnpReferral {
+  dateReferred: string;
+  receivingUnit: string;
+  referenceNumber?: string;
+  documentsProvided?: string;
+  referralNotes?: string;
+}
+
+export interface CaseActionLog {
+  assignedTo?: string;
+  assignedAt?: string;
+  actionTaken?: string;
+  actionTakenAt?: string;
+}
+
 export interface IncidentReport {
   id: string;
   residentId: string;
   residentName: string;
+  trackType?: 'community_concern' | 'incident';
+  desiredAction?: 'record_only' | 'request_meeting' | 'none';
   kind: string;
   otherCategoryText?: string;
   title: string;
@@ -186,6 +248,11 @@ export interface IncidentReport {
   location: string;
   dateOfIncident: string;
   status: ReportStatus;
+  parties?: CaseParty[];
+  actionLog?: CaseActionLog;
+  proceedings?: CaseProceeding[];
+  cfa?: CaseCfa;
+  pnpReferral?: CasePnpReferral;
   createdAt: string;
   updatedAt: string;
 }

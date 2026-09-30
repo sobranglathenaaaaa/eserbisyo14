@@ -806,12 +806,19 @@ async function createState(): Promise<AppState> {
       residentId: item.resident_id,
       residentName: profileMap.get(item.resident_id)?.full_name ?? 'Resident',
       kind: item.kind,
+      trackType: item.track_type ?? (item.kind === 'blotter' ? 'incident' : 'community_concern'),
+      desiredAction: item.desired_action ?? (item.kind === 'blotter' ? 'request_meeting' : 'none'),
       otherCategoryText: item.other_category_text ?? undefined,
       title: item.title,
       details: item.details,
       location: item.location,
       dateOfIncident: formatDate(item.date_of_incident),
       status: item.status,
+      parties: item.parties ?? [],
+      actionLog: item.action_log ?? undefined,
+      proceedings: item.proceedings ?? [],
+      cfa: item.cfa ?? undefined,
+      pnpReferral: item.pnp_referral ?? undefined,
       createdAt: item.created_at,
       updatedAt: item.updated_at,
     })),
@@ -1421,23 +1428,28 @@ export const backendProvider: DataProvider = {
   },
 
   async submitReport(payload: {
+    trackType?: 'community_concern' | 'incident';
+    desiredAction?: 'record_only' | 'request_meeting' | 'none';
     category: string;
     title: string;
     details: string;
     location: string;
     dateOfIncident: string;
     otherCategoryText?: string;
+    parties?: import('../../types/models').CaseParty[];
   }) {
     await apiFetch('/api/v1/incidents', {
       method: 'POST',
       body: JSON.stringify({
+        trackType: payload.trackType,
+        desiredAction: payload.desiredAction,
         category: payload.category,
         title: payload.title,
         description: payload.details,
         location: payload.location,
         occurredAt: payload.dateOfIncident,
-
         otherCategoryText: payload.otherCategoryText,
+        parties: payload.parties,
       }),
     });
     emitStateChanged();
@@ -1447,6 +1459,24 @@ export const backendProvider: DataProvider = {
     await apiFetch(`/api/v1/incidents/${reportId}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status, note }),
+    });
+    emitStateChanged();
+  },
+
+  async updateCaseWorkflow(
+    reportId: string,
+    payload: {
+      status?: ReportStatus;
+      actionLog?: import('../../types/models').CaseActionLog;
+      proceeding?: Omit<import('../../types/models').CaseProceeding, 'id' | 'createdAt'>;
+      cfa?: import('../../types/models').CaseCfa;
+      pnpReferral?: import('../../types/models').CasePnpReferral;
+      note?: string;
+    }
+  ) {
+    await apiFetch(`/api/v1/incidents/${reportId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
     });
     emitStateChanged();
   },

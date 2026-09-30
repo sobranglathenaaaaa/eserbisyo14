@@ -19,6 +19,11 @@ import type {
   StandaloneOcrIssuance,
   User,
   UserRole,
+  CaseParty,
+  CaseActionLog,
+  CaseProceeding,
+  CaseCfa,
+  CasePnpReferral,
 } from '../../types/models';
 import type { Result } from '../../types/result';
 
@@ -129,14 +134,28 @@ export interface DataProvider {
 
   addFeedback(payload: { requestId?: string; rating: number; comment?: string }): Promise<void>;
   submitReport(payload: {
+    trackType?: 'community_concern' | 'incident';
+    desiredAction?: 'record_only' | 'request_meeting' | 'none';
     category: string;
     title: string;
     details: string;
     location: string;
     dateOfIncident: string;
     otherCategoryText?: string;
+    parties?: CaseParty[];
   }): Promise<void>;
   updateReportStatus(reportId: string, status: ReportStatus, note?: string): Promise<void>;
+  updateCaseWorkflow(
+    reportId: string,
+    payload: {
+      status?: ReportStatus;
+      actionLog?: CaseActionLog;
+      proceeding?: Omit<CaseProceeding, 'id' | 'createdAt'>;
+      cfa?: CaseCfa;
+      pnpReferral?: CasePnpReferral;
+      note?: string;
+    }
+  ): Promise<void>;
   upsertIncidentCategory(payload: {
     id?: string;
     name: string;

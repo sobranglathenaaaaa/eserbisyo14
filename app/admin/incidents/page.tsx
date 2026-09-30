@@ -220,15 +220,26 @@ export default function AdminIncidentsPage() {
       </TableCell>
       <TableCell className="text-center">{formatDateTime(item.createdAt, locale)}</TableCell>
       <TableCell className="text-center capitalize">
-        {item.kind}
-        {item.otherCategoryText ? `: ${item.otherCategoryText}` : ''}
+        <div className="flex items-center justify-center gap-1.5">
+          <span
+            className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
+              item.trackType === 'community_concern' ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'
+            }`}
+          >
+            {item.trackType === 'community_concern' ? 'Concern' : 'Incident'}
+          </span>
+          <span>
+            {item.kind}
+            {item.otherCategoryText ? `: ${item.otherCategoryText}` : ''}
+          </span>
+        </div>
       </TableCell>
       <TableCell className="text-center">{item.residentName}</TableCell>
       <TableCell className="text-center">
         <StatusBadge tone={statusToneFromState(item.status)}>{getReportStatusLabel(item.status, locale)}</StatusBadge>
       </TableCell>
       <TableCell className="text-center">
-        {item.status === 'resolved' ? (
+        {item.status === 'resolved' || item.status === 'closed' ? (
           formatDateTime(item.updatedAt, locale)
         ) : (
           <Button variant="ghost" type="button" onClick={() => openReviewModal(item.id)}>

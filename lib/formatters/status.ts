@@ -13,10 +13,18 @@ const requestStatusLabel: Record<RequestStatus, { en: string; fil: string }> = {
 
 const reportStatusLabel: Record<ReportStatus, { en: string; fil: string }> = {
   pending: { en: 'Waiting', fil: 'Naghihintay' },
+  submitted: { en: 'Submitted', fil: 'Na-submit' },
   approved: { en: 'Approved', fil: 'Inaprubahan' },
   under_review: { en: 'Under Review', fil: 'Sinusuri' },
+  assigned: { en: 'Action Assigned', fil: 'May Naka-assign' },
+  action_taken: { en: 'Action Taken', fil: 'Naaksyunan Na' },
+  hearing_scheduled: { en: 'Barangay Hearing', fil: 'Pagdinig sa Barangay' },
+  lupon_escalated: { en: 'Escalated to Lupon', fil: 'Inilipat sa Lupon' },
+  cfa_issued: { en: 'CFA Issued', fil: 'Nalabas na ang CFA' },
+  referred_to_pnp: { en: 'Referred to PNP', fil: 'Inilipat sa PNP' },
   proceed_to_barangay: { en: 'Proceed to Barangay', fil: 'Pumunta sa Barangay' },
-  resolved: { en: 'Done', fil: 'Naresolba' },
+  resolved: { en: 'Resolved', fil: 'Naresolba' },
+  closed: { en: 'Closed', fil: 'Isinara' },
   declined: { en: 'Declined', fil: 'Tinanggihan' },
 };
 

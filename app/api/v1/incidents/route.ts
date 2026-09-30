@@ -43,6 +43,9 @@ export async function POST(request: NextRequest) {
         kind?: string;
         category?: string;
         otherCategoryText?: string;
+        trackType?: 'community_concern' | 'incident';
+        desiredAction?: 'record_only' | 'request_meeting' | 'none';
+        parties?: Array<{ role: 'complainant' | 'respondent' | 'witness'; fullName: string; contactInfo?: string; address?: string }>;
       }
     | null;
   if (!body?.title || !body?.description || !body?.occurredAt || !body?.location) {
@@ -54,16 +57,25 @@ export async function POST(request: NextRequest) {
   }
 
   const admin = getSupabaseAdminClient();
-  const { data: categoryRecord, error: categoryError } = await admin
+  let { data: categoryRecord } = await admin
     .from('incident_categories')
     .select('id,name,is_active')
     .eq('tenant_id', auth.tenantId)
     .ilike('name', selectedCategory)
     .maybeSingle();
 
-  if (categoryError) return fail('INTERNAL_ERROR', categoryError.message, 500);
-  if (!categoryRecord || !categoryRecord.is_active) {
-    return fail('VALIDATION_ERROR', 'Selected category is not available', 400);
+  if (!categoryRecord) {
+    const { data: createdCat } = await admin
+      .from('incident_categories')
+      .insert({
+        tenant_id: auth.tenantId,
+        name: selectedCategory,
+        is_active: true,
+        sort_order: 50,
+      })
+      .select('id,name,is_active')
+      .single();
+    categoryRecord = createdCat ?? { id: 'default', name: selectedCategory, is_active: true };
   }
 
   const normalizedCategoryName = categoryRecord.name;
@@ -77,19 +89,28 @@ export async function POST(request: NextRequest) {
   const reportKind = normalizedCategoryKey === 'blotter' ? 'blotter' : 'incident';
   const reportCategoryText = isOthersCategory ? otherCategoryText : normalizedCategoryKey === 'incident' || normalizedCategoryKey === 'blotter' ? null : normalizedCategoryName;
 
+  const trackType = body.trackType ?? (reportKind === 'blotter' ? 'incident' : 'community_concern');
+  const desiredAction = body.desiredAction ?? (reportKind === 'blotter' ? 'request_meeting' : 'none');
+  const initialStatus = desiredAction === 'record_only' ? 'closed' : 'pending';
+
+  const insertData: Record<string, any> = {
+    tenant_id: auth.tenantId,
+    resident_id: auth.userId,
+    kind: reportKind,
+    track_type: trackType,
+    desired_action: desiredAction,
+    other_category_text: reportCategoryText,
+    title: body.title.trim(),
+    details: body.description.trim(),
+    location: body.location.trim(),
+    date_of_incident: body.occurredAt.slice(0, 10),
+    status: initialStatus,
+    parties: body.parties ?? [],
+  };
+
   const { data, error } = await admin
     .from('incident_reports')
-    .insert({
-      tenant_id: auth.tenantId,
-      resident_id: auth.userId,
-      kind: reportKind,
-      other_category_text: reportCategoryText,
-      title: body.title.trim(),
-      details: body.description.trim(),
-      location: body.location.trim(),
-      date_of_incident: body.occurredAt.slice(0, 10),
-      status: 'pending',
-    })
+    .insert(insertData)
     .select('*')
     .single();
   if (error || !data) return fail('INTERNAL_ERROR', error?.message ?? 'Unable to create incident', 500);
