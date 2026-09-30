@@ -9,6 +9,8 @@ export function createEmptyAppState(): AppState {
     generatedDocuments: [],
     reports: [],
     incidentCategories: [],
+    barangayStreets: [],
+    incidentRelationships: [],
     feedback: [],
     announcements: [],
     censusRecords: [],

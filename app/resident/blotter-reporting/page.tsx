@@ -17,7 +17,6 @@ import { ResidentSection } from '@/features/resident/view/resident-primitives';
 import { ResidentShell } from '@/features/resident/view/resident-shell';
 import { getRolePageCopy, resolveRoleCopy, resolveSteps } from '@/lib/content/role-pages';
 import type { CaseParty, IncidentReport } from '@/lib/types/models';
-import CaseReportDocumentModal from '@/components/case-report-document-modal';
 
 type TrackType = 'community_concern' | 'incident';
 type DesiredAction = 'record_only' | 'request_meeting';
@@ -71,9 +70,9 @@ export default function ResidentBlotterReportingPage() {
 
   // UI & Feedback
   const [submissionToast, setSubmissionToast] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedReport, setSelectedReport] = useState<IncidentReport | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [documentModalOpen, setDocumentModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const myReports = useMemo(() => getResidentReports(state, user?.id), [state, user?.id]);
@@ -84,6 +83,30 @@ export default function ResidentBlotterReportingPage() {
         .sort((a, b) => (a.sortOrder === b.sortOrder ? a.name.localeCompare(b.name) : a.sortOrder - b.sortOrder)),
     [state.incidentCategories]
   );
+
+  const streetOptions = useMemo(() => {
+    const list = (state.barangayStreets || []).filter((item) => item.isActive);
+    if (!list.length) return BARANGAY_STREETS;
+    return list.map((item) => item.name);
+  }, [state.barangayStreets]);
+
+  const relationshipOptions = useMemo(() => {
+    const list = (state.incidentRelationships || []).filter((item) => item.isActive);
+    if (!list.length) return RELATIONSHIP_OPTIONS.map((item) => item.value);
+    return list.map((item) => item.name);
+  }, [state.incidentRelationships]);
+
+  useEffect(() => {
+    if (streetOptions.length && !streetOptions.includes(streetName)) {
+      setStreetName(streetOptions[0]);
+    }
+  }, [streetOptions, streetName]);
+
+  useEffect(() => {
+    if (relationshipOptions.length && !relationshipOptions.includes(relationshipToRespondent)) {
+      setRelationshipToRespondent(relationshipOptions[0]);
+    }
+  }, [relationshipOptions, relationshipToRespondent]);
   const isOthersCategory = category.trim().toLowerCase() === 'others';
 
   useEffect(() => {
@@ -108,6 +131,7 @@ export default function ResidentBlotterReportingPage() {
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
+    setErrorMessage(null);
     try {
       const fullLocation = `${streetName}${specificLocation.trim() ? `, ${specificLocation.trim()}` : ''}`;
       const parties: CaseParty[] = [];
@@ -166,6 +190,7 @@ export default function ResidentBlotterReportingPage() {
       );
     } catch (err) {
       console.error(err);
+      setErrorMessage(err instanceof Error ? err.message : 'Nagkaroon ng problema sa pag-save. Subukang muli.');
     } finally {
       setIsSubmitting(false);
     }
@@ -173,6 +198,11 @@ export default function ResidentBlotterReportingPage() {
 
   return (
     <ResidentShell title={pageCopy.title} description={pageCopy.description} showHero={false}>
+      {errorMessage ? (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          {errorMessage}
+        </div>
+      ) : null}
       {submissionToast ? (
         <div className="pointer-events-none fixed left-1/2 top-6 z-50 flex w-[min(92vw,760px)] -translate-x-1/2 justify-center">
           <div
@@ -325,13 +355,13 @@ export default function ResidentBlotterReportingPage() {
             {/* Location Section: Street Dropdown + Typable Place Box */}
             <div className="md:col-span-2 grid gap-3 rounded-xl border border-[color:var(--portal-border-soft)] bg-[#f8faf8] p-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-[#123726]">
-                📍 {copyText(locale, 'Location Details', 'Detalye ng Lokasyon')}
+                {copyText(locale, 'Location Details', 'Detalye ng Lokasyon')}
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="grid gap-1.5 text-sm">
                   <span className="font-medium text-gray-700">{copyText(locale, 'Street (Kalsada)', 'Kalsada / Street')}</span>
                   <Select value={streetName} onChange={(e) => setStreetName(e.target.value)}>
-                    {BARANGAY_STREETS.map((st) => (
+                    {streetOptions.map((st) => (
                       <option key={st} value={st}>
                         {st}
                       </option>
@@ -357,7 +387,7 @@ export default function ResidentBlotterReportingPage() {
             {trackType === 'incident' ? (
               <div className="md:col-span-2 grid gap-4 rounded-xl border border-[color:var(--portal-border-soft)] bg-[#f8faf8] p-4">
                 <p className="text-xs font-semibold uppercase tracking-wider text-[#123726]">
-                  👥 {copyText(locale, 'WHO - People Involved', 'WHO - Mga Taong Involve')}
+                  {copyText(locale, 'People Involved', 'Mga Taong Involve')}
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="grid gap-1.5 text-sm">
@@ -384,9 +414,9 @@ export default function ResidentBlotterReportingPage() {
                       value={relationshipToRespondent}
                       onChange={(e) => setRelationshipToRespondent(e.target.value)}
                     >
-                      {RELATIONSHIP_OPTIONS.map((rel) => (
-                        <option key={rel.value} value={rel.value}>
-                          {locale === 'fil' ? rel.fil : rel.en} ({rel.value})
+                      {relationshipOptions.map((rel) => (
+                        <option key={rel} value={rel}>
+                          {rel}
                         </option>
                       ))}
                     </Select>
@@ -651,40 +681,22 @@ export default function ResidentBlotterReportingPage() {
               {/* CFA & PNP Referral Badges if issued */}
               {selectedReport.cfa ? (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                  <p className="font-semibold">📜 {copyText(locale, 'Certificate to File Action (CFA) Issued', 'Na-issue na ang CFA')}</p>
+                  <p className="font-semibold">{copyText(locale, 'Certificate to File Action (CFA) Issued', 'Na-issue na ang CFA')}</p>
                   <p className="mt-1">Cert #: {selectedReport.cfa.certificateNumber} • Date Issued: {selectedReport.cfa.dateIssued}</p>
                 </div>
               ) : null}
 
               {selectedReport.pnpReferral ? (
                 <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900">
-                  <p className="font-semibold">👮 {copyText(locale, 'Referred to Philippine National Police (PNP)', 'Inilipat sa PNP')}</p>
+                  <p className="font-semibold">{copyText(locale, 'Referred to Philippine National Police (PNP)', 'Inilipat sa PNP')}</p>
                   <p className="mt-1">Receiving Unit: {selectedReport.pnpReferral.receivingUnit} • Ref #: {selectedReport.pnpReferral.referenceNumber || 'N/A'}</p>
                 </div>
               ) : null}
-
-              {/* Action Button: Generate Printable Report Document */}
-              <div className="mt-3 border-t pt-4 flex justify-end">
-                <Button
-                  type="button"
-                  variant="resident"
-                  onClick={() => setDocumentModalOpen(true)}
-                  className="gap-2 text-xs"
-                >
-                  📄 {copyText(locale, 'Generate Official Case Document Report (PDF)', 'I-generate ang Opisyal na Report Document (PDF)')}
-                </Button>
-              </div>
             </div>
           ) : null}
         </DialogContent>
       </Dialog>
 
-      <CaseReportDocumentModal
-        open={documentModalOpen}
-        onOpenChange={setDocumentModalOpen}
-        report={selectedReport}
-        locale={locale}
-      />
     </ResidentShell>
   );
 }

@@ -141,16 +141,25 @@ export default function CaseReportDocumentModal({
               </p>
             </div>
 
-            {/* Case Meta Box */}
+            {/* Case Meta & Timeline Dates Box */}
             <div className="my-6 rounded border border-gray-300 bg-gray-50/50 p-4 text-xs font-sans grid gap-2">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
                 <p><strong>DATE FILED:</strong> {formatDateTime(report.createdAt, locale)}</p>
+                <p><strong>DATE OF INCIDENT:</strong> {report.dateOfIncident || 'N/A'}</p>
                 <p><strong>CASE TRACK:</strong> {isCommunity ? 'COMMUNITY CONCERN' : 'INCIDENT / BLOTTER'}</p>
                 <p><strong>CATEGORY:</strong> {report.kind.toUpperCase()}</p>
-                <p><strong>LOCATION:</strong> {report.location}</p>
-                <p><strong>INCIDENT DATE:</strong> {report.dateOfIncident}</p>
+                <p><strong>LOCATION / STREET:</strong> {report.location}</p>
                 <p><strong>FINAL STATUS:</strong> <span className="font-bold uppercase text-[#123726]">{report.status.replace(/_/g, ' ')}</span></p>
               </div>
+              {report.proceedings && report.proceedings.length > 0 && (
+                <div className="border-t border-gray-200 pt-2 mt-1 grid sm:grid-cols-2 md:grid-cols-3 gap-3 text-[11px] text-gray-700">
+                  <p><strong>FIRST HEARING:</strong> {formatDateTime(report.proceedings[0].scheduledAt, locale)}</p>
+                  {report.proceedings.find(p => p.stage === 'lupon_conciliation') && (
+                    <p><strong>LUPON MEETING:</strong> {formatDateTime(report.proceedings.find(p => p.stage === 'lupon_conciliation')!.scheduledAt, locale)}</p>
+                  )}
+                  <p><strong>DATE CONCLUDED:</strong> {formatDateTime(report.updatedAt || report.createdAt, locale)}</p>
+                </div>
+              )}
             </div>
 
             {/* Parties Section for Incidents */}
@@ -159,15 +168,15 @@ export default function CaseReportDocumentModal({
                 <h3 className="text-xs font-bold uppercase tracking-wider border-b pb-1 text-gray-800">
                   PARTIES INVOLVED / PARTICIPANTS
                 </h3>
-                <div className="grid grid-cols-2 gap-4 text-xs mt-2">
+                <div className="grid grid-cols-2 gap-4 text-xs mt-2 bg-gray-50/50 p-3 rounded border">
                   <div>
-                    <p className="font-semibold text-gray-700 uppercase">COMPLAINANT / REPORTER:</p>
-                    <p className="text-sm font-bold text-gray-900">{report.residentName}</p>
+                    <p className="font-semibold text-gray-700 uppercase text-[11px]">COMPLAINANT / NAGREREKLAMO:</p>
+                    <p className="text-sm font-bold text-gray-900 mt-0.5">{report.residentName}</p>
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-700 uppercase">RESPONDENT(S):</p>
-                    <p className="text-sm font-bold text-gray-900">
-                      {report.parties?.find((p) => p.role === 'respondent')?.fullName || 'N/A (Documented Record)'}
+                    <p className="font-semibold text-gray-700 uppercase text-[11px]">RESPONDENT / INIREREKLAMO:</p>
+                    <p className="text-sm font-bold text-gray-900 mt-0.5">
+                      {report.parties?.find((p) => p.role === 'respondent')?.fullName || (report as any).respondentName || 'N/A (Documented Blotter Record)'}
                     </p>
                     {report.relationshipToRespondent || report.parties?.find((p) => p.role === 'respondent')?.relationship ? (
                       <p className="text-xs text-gray-600 mt-0.5">
@@ -182,13 +191,93 @@ export default function CaseReportDocumentModal({
             {/* Incident Summary & Statements */}
             <div className="my-5 font-sans">
               <h3 className="text-xs font-bold uppercase tracking-wider border-b pb-1 text-gray-800">
-                SUBJECT MATTER & STATEMENT OF DETAILS
+                SUBJECT MATTER & STATEMENT OF INCIDENT (SALAYSAY NG PANGYAYARI)
               </h3>
               <p className="text-sm font-bold text-gray-900 mt-2 mb-1">{report.title}</p>
-              <p className="text-xs text-gray-800 leading-relaxed whitespace-pre-wrap bg-gray-50/70 p-3 rounded border">
+              <p className="text-xs text-gray-800 leading-relaxed whitespace-pre-wrap bg-gray-50/70 p-3.5 rounded border">
                 {report.details}
               </p>
             </div>
+
+            {/* Comprehensive Proceedings History Table */}
+            {report.proceedings?.length ? (
+              <div className="my-5 font-sans">
+                <h3 className="text-xs font-bold uppercase tracking-wider border-b pb-1 text-gray-800 mb-2">
+                  CHRONOLOGICAL SUMMARY OF PROCEEDINGS & HEARINGS (TALAAN NG PAGDINIG AT SESYON)
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border border-gray-300 border-collapse">
+                    <thead>
+                      <tr className="bg-gray-100 border-b border-gray-300 font-bold uppercase text-[11px]">
+                        <th className="p-2 border-r w-[18%]">SESSION & NO.</th>
+                        <th className="p-2 border-r w-[24%]">DATE, TIME & VENUE</th>
+                        <th className="p-2 border-r w-[36%]">MINUTES / DISCUSSION (PINAG-USAPAN)</th>
+                        <th className="p-2 w-[22%]">RESULT / OUTCOME</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-300">
+                      {report.proceedings.map((proc, index) => (
+                        <tr key={proc.id || index} className="align-top">
+                          <td className="p-2.5 font-semibold border-r">
+                            <p className="text-gray-900">{proc.stage === 'barangay_hearing' ? 'Barangay Hearing' : 'Lupon Conciliation'}</p>
+                            <span className="text-[10px] font-mono text-gray-500">Session #{proc.proceedingNo}</span>
+                            {proc.presidingOfficer && (
+                              <p className="text-[10px] text-gray-600 mt-1">
+                                <span className="font-medium">Officer:</span> {proc.presidingOfficer}
+                              </p>
+                            )}
+                          </td>
+                          <td className="p-2.5 border-r">
+                            <p className="font-semibold text-gray-900">{formatDateTime(proc.scheduledAt, locale)}</p>
+                            <p className="text-[11px] text-gray-600 mt-0.5">{proc.venue}</p>
+                          </td>
+                          <td className="p-2.5 border-r text-gray-800 leading-relaxed whitespace-pre-wrap">
+                            {proc.minutes || 'Session conducted as scheduled.'}
+                          </td>
+                          <td className="p-2.5">
+                            <span className="inline-block rounded bg-emerald-50 px-2 py-0.5 text-[11px] font-bold uppercase text-emerald-900 border border-emerald-200">
+                              {proc.outcome === 'settled' ? 'Settled / Nagkasundo' : proc.outcome === 'not_settled' ? 'Not Settled' : proc.outcome === 'another_hearing' ? 'Next Session Set' : proc.outcome || 'Logged'}
+                            </span>
+                            {proc.agreements ? (
+                              <p className="text-[11px] text-gray-700 mt-1 italic">
+                                {proc.agreements}
+                              </p>
+                            ) : null}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Dedicated Final Terms of Settlement & Agreements Box */}
+            {!isCommunity && report.proceedings?.some((p) => p.agreements?.trim() || p.outcome === 'settled') && (
+              <div className="my-6 font-sans rounded-lg border-2 border-emerald-600 bg-emerald-50/50 p-5 shadow-sm">
+                <div className="flex items-center gap-2 border-b border-emerald-300 pb-2">
+                  <CheckCircle2 size={18} className="text-emerald-700" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#123726]">
+                    FINAL SETTLEMENT TERMS & MUTUAL AGREEMENTS (MGA NAPAGKASUNDUAN NG MGA PARTIDO)
+                  </h3>
+                </div>
+                <p className="text-xs text-gray-700 mt-2 italic">
+                  Ang mga sumusunod na kasunduan ay kusang-loob na pinagtibay at nilagdaan sa harap ng Tanggapan ng Barangay / Lupon Tagapagkasundo:
+                </p>
+                <div className="mt-3 grid gap-2">
+                  {report.proceedings
+                    .filter((p) => p.agreements?.trim())
+                    .map((proc, idx) => (
+                      <div key={proc.id || idx} className="rounded bg-white p-3 border border-emerald-200 text-xs text-gray-900 leading-relaxed">
+                        <p className="font-bold text-[#123726] mb-1">
+                          {proc.stage === 'barangay_hearing' ? 'Kasunduan sa Barangay Hearing' : 'Kasunduan sa Lupon Conciliation'} #{proc.proceedingNo} ({formatDateTime(proc.scheduledAt, locale)}):
+                        </p>
+                        <p className="whitespace-pre-wrap font-medium">{proc.agreements}</p>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
 
             {/* Community Concern Action Log */}
             {isCommunity && report.actionLog ? (
@@ -196,7 +285,7 @@ export default function CaseReportDocumentModal({
                 <h3 className="text-xs font-bold uppercase tracking-wider border-b pb-1 text-gray-800">
                   BARANGAY ACTION TAKEN & RESOLUTION LOG
                 </h3>
-                <div className="text-xs grid gap-1.5 mt-2 bg-emerald-50/50 p-3 rounded border border-emerald-200">
+                <div className="text-xs grid gap-1.5 mt-2 bg-emerald-50/50 p-3.5 rounded border border-emerald-200">
                   {report.actionLog.assignedTo ? (
                     <p><strong>ASSIGNED PERSONNEL / CREW:</strong> {report.actionLog.assignedTo}</p>
                   ) : null}
@@ -210,48 +299,11 @@ export default function CaseReportDocumentModal({
               </div>
             ) : null}
 
-            {/* Proceedings History Table */}
-            {report.proceedings?.length ? (
-              <div className="my-5 font-sans">
-                <h3 className="text-xs font-bold uppercase tracking-wider border-b pb-1 text-gray-800 mb-2">
-                  SUMMARY OF BARANGAY PROCEEDINGS & HEARINGS
-                </h3>
-                <table className="w-full text-left text-xs border border-gray-300 border-collapse">
-                  <thead>
-                    <tr className="bg-gray-100 border-b border-gray-300 font-bold uppercase">
-                      <th className="p-2 border-r">SESSION</th>
-                      <th className="p-2 border-r">DATE / VENUE</th>
-                      <th className="p-2 border-r">MINUTES / DISCUSSION</th>
-                      <th className="p-2">OUTCOME</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-300">
-                    {report.proceedings.map((proc, index) => (
-                      <tr key={proc.id || index}>
-                        <td className="p-2 font-semibold border-r">
-                          {proc.stage === 'barangay_hearing' ? 'Hearing' : 'Lupon'} #{proc.proceedingNo}
-                        </td>
-                        <td className="p-2 border-r">
-                          {formatDateTime(proc.scheduledAt, locale)}
-                          <br />
-                          <span className="text-[10px] text-gray-500">{proc.venue}</span>
-                        </td>
-                        <td className="p-2 border-r">{proc.minutes || 'Session conducted'}</td>
-                        <td className="p-2 uppercase font-semibold text-emerald-900">
-                          {proc.agreements || proc.outcome || 'Logged'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : null}
-
             {/* CFA Block if issued */}
             {isCfa && report.cfa ? (
               <div className="my-6 font-sans p-4 rounded border-2 border-amber-300 bg-amber-50/50 text-xs">
                 <h4 className="font-bold text-amber-950 uppercase border-b border-amber-300 pb-1">
-                  CERTIFICATION OF FAILURE OF CONCILIATION
+                  CERTIFICATION OF FAILURE OF CONCILIATION (CERTIFICATE TO FILE ACTION)
                 </h4>
                 <p className="mt-2 text-amber-900 leading-relaxed">
                   This certifies that the above-mentioned incident was submitted for barangay conciliation under Case Control No.{' '}
@@ -288,22 +340,29 @@ export default function CaseReportDocumentModal({
             <div className="mt-12 pt-6 font-sans">
               <p className="text-xs text-gray-700 italic">
                 Issued and verified under the official authority of Barangay E-Serbisyo Digital System on{' '}
-                {new Date().toLocaleDateString()}.
+                {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}.
               </p>
 
-              <div className="mt-10 grid grid-cols-2 gap-8 text-center text-xs">
+              <div className="mt-10 grid grid-cols-3 gap-4 text-center text-xs">
                 <div>
-                  <div className="border-b border-gray-900 mx-auto w-48 mb-1 min-h-[30px] flex items-end justify-center font-bold uppercase">
+                  <div className="border-b border-gray-900 mx-auto w-40 mb-1 min-h-[30px] flex items-end justify-center font-bold uppercase text-[11px]">
                     {report.residentName}
                   </div>
-                  <p className="text-gray-600 uppercase text-[10px]">Complainant / Reporting Resident Signature</p>
+                  <p className="text-gray-600 uppercase text-[9px]">Complainant / Nagrereklamo</p>
                 </div>
 
                 <div>
-                  <div className="border-b border-gray-900 mx-auto w-48 mb-1 min-h-[30px] flex items-end justify-center font-bold uppercase text-[#123726]">
-                    HON. BARANGAY CHAIRMAN
+                  <div className="border-b border-gray-900 mx-auto w-40 mb-1 min-h-[30px] flex items-end justify-center font-bold uppercase text-[11px]">
+                    {report.parties?.find((p) => p.role === 'respondent')?.fullName || (report as any).respondentName || '—'}
                   </div>
-                  <p className="text-gray-600 uppercase text-[10px]">Punong Barangay / Authorized Presiding Officer</p>
+                  <p className="text-gray-600 uppercase text-[9px]">Respondent / Inirereklamo</p>
+                </div>
+
+                <div>
+                  <div className="border-b border-gray-900 mx-auto w-40 mb-1 min-h-[30px] flex items-end justify-center font-bold uppercase text-[#123726] text-[11px]">
+                    HON. PUNONG BARANGAY
+                  </div>
+                  <p className="text-gray-600 uppercase text-[9px]">Punong Barangay / Presiding Officer</p>
                 </div>
               </div>
 

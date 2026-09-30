@@ -25,9 +25,34 @@ import {
   type StandaloneOcrIssuance,
   type User,
   type UserRole,
+  type BarangayStreet,
+  type IncidentRelationship,
 } from '../../types/models';
 import { err, ok } from '../../types/result';
 import { createEmptyAppState } from '../empty-state';
+
+let memoryBarangayStreets: BarangayStreet[] = [
+  { id: 'st_1', name: 'Main Street', isActive: true, sortOrder: 10 },
+  { id: 'st_2', name: 'Rizal Street', isActive: true, sortOrder: 20 },
+  { id: 'st_3', name: 'Bonifacio Street', isActive: true, sortOrder: 30 },
+  { id: 'st_4', name: 'Magsaysay Avenue', isActive: true, sortOrder: 40 },
+  { id: 'st_5', name: 'Aguinaldo Highway', isActive: true, sortOrder: 50 },
+  { id: 'st_6', name: 'Luna Street', isActive: true, sortOrder: 60 },
+  { id: 'st_7', name: 'Del Pilar Street', isActive: true, sortOrder: 70 },
+  { id: 'st_8', name: 'P. Burgos Street', isActive: true, sortOrder: 80 },
+  { id: 'st_9', name: 'Sampaguita Street', isActive: true, sortOrder: 90 },
+  { id: 'st_10', name: 'Iba pang Kalsada / Outside Street', isActive: true, sortOrder: 99 },
+];
+
+let memoryIncidentRelationships: IncidentRelationship[] = [
+  { id: 'rel_1', name: 'Kapitbahay / Neighbor', isActive: true, sortOrder: 10 },
+  { id: 'rel_2', name: 'Kamag-anak / Relative', isActive: true, sortOrder: 20 },
+  { id: 'rel_3', name: 'Tenant / Renter / Landlord', isActive: true, sortOrder: 30 },
+  { id: 'rel_4', name: 'Kakilala / Acquaintance', isActive: true, sortOrder: 40 },
+  { id: 'rel_5', name: 'Hindi Kilala / Stranger', isActive: true, sortOrder: 50 },
+  { id: 'rel_6', name: 'Kasamahan sa Trabaho / Co-worker', isActive: true, sortOrder: 60 },
+  { id: 'rel_7', name: 'Iba pa / Other', isActive: true, sortOrder: 99 },
+];
 import type {
   DataProvider,
   RegisterResidentPayload,
@@ -801,30 +826,38 @@ async function createState(): Promise<AppState> {
       digitalSeal: Boolean(item.digital_seal),
       eSignatureName: item.e_signature_name ?? '',
     })),
-    reports: ((reportsRes.data as any[] | null) ?? []).map((item) => ({
-      id: item.id,
-      residentId: item.resident_id,
-      residentName: profileMap.get(item.resident_id)?.full_name ?? 'Resident',
-      kind: item.kind ?? 'Community Concern',
-      trackType: item.track_type ?? (item.kind === 'blotter' ? 'incident' : 'community_concern'),
-      desiredAction: item.desired_action ?? (item.kind === 'blotter' ? 'request_meeting' : 'none'),
-      otherCategoryText: item.other_category_text ?? undefined,
-      relationshipToRespondent: item.relationship_to_respondent ?? item.metadata?.relationshipToRespondent ?? undefined,
-      streetName: item.street_name ?? item.metadata?.streetName ?? undefined,
-      specificLocation: item.specific_location ?? item.metadata?.specificLocation ?? undefined,
-      title: item.title,
-      details: item.details,
-      location: item.location,
-      dateOfIncident: formatDate(item.date_of_incident),
-      status: item.status,
-      parties: item.parties ?? [],
-      actionLog: item.action_log ?? undefined,
-      proceedings: item.proceedings ?? [],
-      cfa: item.cfa ?? undefined,
-      pnpReferral: item.pnp_referral ?? undefined,
-      createdAt: item.created_at,
-      updatedAt: item.updated_at,
-    })),
+    reports: ((reportsRes.data as any[] | null) ?? []).map((item) => {
+      const trackType: 'community_concern' | 'incident' =
+        item.track_type === 'incident' || item.track_type === 'community_concern'
+          ? item.track_type
+          : item.kind && item.kind.toLowerCase() !== 'community concern'
+          ? 'incident'
+          : 'community_concern';
+      return {
+        id: item.id,
+        residentId: item.resident_id,
+        residentName: profileMap.get(item.resident_id)?.full_name ?? 'Resident',
+        kind: item.kind ?? (trackType === 'incident' ? 'Incident' : 'Community Concern'),
+        trackType,
+        desiredAction: item.desired_action ?? (trackType === 'incident' ? 'request_meeting' : 'none'),
+        otherCategoryText: item.other_category_text ?? undefined,
+        relationshipToRespondent: item.relationship_to_respondent ?? item.metadata?.relationshipToRespondent ?? undefined,
+        streetName: item.street_name ?? item.metadata?.streetName ?? undefined,
+        specificLocation: item.specific_location ?? item.metadata?.specificLocation ?? undefined,
+        title: item.title,
+        details: item.details,
+        location: item.location,
+        dateOfIncident: formatDate(item.date_of_incident),
+        status: item.status,
+        parties: item.parties ?? [],
+        actionLog: item.action_log ?? undefined,
+        proceedings: item.proceedings ?? [],
+        cfa: item.cfa ?? undefined,
+        pnpReferral: item.pnp_referral ?? undefined,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+      };
+    }),
     reservations: ((reservationsRes.data as any[] | null) ?? []).map((item): Reservation => ({
       id: item.id,
       residentId: item.resident_id,
@@ -850,6 +883,8 @@ async function createState(): Promise<AppState> {
       createdAt: item.created_at,
       updatedAt: item.updated_at,
     })),
+    barangayStreets: memoryBarangayStreets,
+    incidentRelationships: memoryIncidentRelationships,
     feedback: ((feedbackRes.data as any[] | null) ?? []).map((item) => ({
       id: item.id,
       requestId: item.request_id ?? undefined,
@@ -1582,6 +1617,52 @@ export const backendProvider: DataProvider = {
     emitStateChanged();
   },
 
+  async createReservation(payload: {
+    resource: Reservation['resource'];
+    itemName?: string;
+    quantityRequested?: number;
+    startAt: string;
+    endAt: string;
+    purpose: string;
+  }): Promise<Reservation> {
+    const data = await apiFetch<Reservation>('/api/v1/reservations', {
+      method: 'POST',
+      body: JSON.stringify({
+        serviceType: payload.resource,
+        itemName: payload.itemName,
+        quantityRequested: payload.quantityRequested ?? 1,
+        startAt: payload.startAt,
+        endAt: payload.endAt,
+        notes: payload.purpose,
+      }),
+    });
+    emitStateChanged();
+    return data;
+  },
+
+  async reviewReservation(reservationId: string, status: 'approved' | 'declined', reason?: string) {
+    await apiFetch(`/api/v1/reservations/${reservationId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, reason }),
+    });
+    emitStateChanged();
+  },
+
+  async cancelReservation(reservationId: string) {
+    await apiFetch(`/api/v1/reservations/${reservationId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'cancelled' }),
+    });
+    emitStateChanged();
+  },
+
+  async deleteReservation(reservationId: string) {
+    await apiFetch(`/api/v1/reservations/${reservationId}`, {
+      method: 'DELETE',
+    });
+    emitStateChanged();
+  },
+
   async upsertIncidentCategory(payload: { id?: string; name: string; sortOrder?: number; isActive?: boolean }) {
     const data = payload.id
       ? await apiFetch<any>(`/api/v1/incident-categories/${payload.id}`, {
@@ -1614,6 +1695,70 @@ export const backendProvider: DataProvider = {
     await apiFetch(`/api/v1/incident-categories/${categoryId}`, {
       method: 'DELETE',
     });
+    emitStateChanged();
+  },
+
+  async upsertBarangayStreet(payload: { id?: string; name: string; sortOrder?: number; isActive?: boolean }) {
+    if (payload.id) {
+      const idx = memoryBarangayStreets.findIndex((s) => s.id === payload.id);
+      if (idx !== -1) {
+        memoryBarangayStreets[idx] = {
+          ...memoryBarangayStreets[idx],
+          name: payload.name.trim(),
+          sortOrder: payload.sortOrder ?? memoryBarangayStreets[idx].sortOrder,
+          isActive: payload.isActive ?? memoryBarangayStreets[idx].isActive,
+        };
+      }
+    } else {
+      const newStreet: BarangayStreet = {
+        id: `st_${Date.now()}`,
+        name: payload.name.trim(),
+        sortOrder: payload.sortOrder ?? (memoryBarangayStreets.length + 1) * 10,
+        isActive: payload.isActive ?? true,
+      };
+      memoryBarangayStreets.push(newStreet);
+    }
+    emitStateChanged();
+    return memoryBarangayStreets[memoryBarangayStreets.length - 1];
+  },
+
+  async archiveBarangayStreet(streetId: string) {
+    const idx = memoryBarangayStreets.findIndex((s) => s.id === streetId);
+    if (idx !== -1) {
+      memoryBarangayStreets[idx].isActive = !memoryBarangayStreets[idx].isActive;
+    }
+    emitStateChanged();
+  },
+
+  async upsertIncidentRelationship(payload: { id?: string; name: string; sortOrder?: number; isActive?: boolean }) {
+    if (payload.id) {
+      const idx = memoryIncidentRelationships.findIndex((r) => r.id === payload.id);
+      if (idx !== -1) {
+        memoryIncidentRelationships[idx] = {
+          ...memoryIncidentRelationships[idx],
+          name: payload.name.trim(),
+          sortOrder: payload.sortOrder ?? memoryIncidentRelationships[idx].sortOrder,
+          isActive: payload.isActive ?? memoryIncidentRelationships[idx].isActive,
+        };
+      }
+    } else {
+      const newRel: IncidentRelationship = {
+        id: `rel_${Date.now()}`,
+        name: payload.name.trim(),
+        sortOrder: payload.sortOrder ?? (memoryIncidentRelationships.length + 1) * 10,
+        isActive: payload.isActive ?? true,
+      };
+      memoryIncidentRelationships.push(newRel);
+    }
+    emitStateChanged();
+    return memoryIncidentRelationships[memoryIncidentRelationships.length - 1];
+  },
+
+  async archiveIncidentRelationship(relationshipId: string) {
+    const idx = memoryIncidentRelationships.findIndex((r) => r.id === relationshipId);
+    if (idx !== -1) {
+      memoryIncidentRelationships[idx].isActive = !memoryIncidentRelationships[idx].isActive;
+    }
     emitStateChanged();
   },
 

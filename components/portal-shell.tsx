@@ -195,9 +195,9 @@ const navConfig: Record<UserRole, NavSection[]> = {
           hint: { en: 'Manage chairs, tables, and ladders', fil: 'Pamahalaan ang chairs, tables, at ladders' },
         },
         {
-          href: '/admin/incidents',
-          label: { en: 'Incident Reports', fil: 'Ulat ng Insidente' },
-          hint: { en: 'Review reports', fil: 'Suriin ang ulat' },
+          href: '/staff/incidents',
+          label: { en: 'Incidents & Concerns', fil: 'Mga Insidente at Concern' },
+          hint: { en: 'Review incident blotters and community concerns', fil: 'Suriin ang mga insidente at concern' },
         },
       ],
     },

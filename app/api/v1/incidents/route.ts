@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
   const reportCategoryText = isOthersCategory ? otherCategoryText : null;
 
   const desiredAction = body.desiredAction ?? (reportKind === 'blotter' ? 'request_meeting' : 'none');
-  const initialStatus = desiredAction === 'record_only' ? 'closed' : 'pending';
+  const initialStatus = desiredAction === 'record_only' ? 'resolved' : 'pending';
 
   const insertData: Record<string, any> = {
     tenant_id: auth.tenantId,

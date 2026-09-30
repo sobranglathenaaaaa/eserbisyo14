@@ -181,6 +181,12 @@ export default function ResidentReservationsPage() {
   }, [availability, selectedResource, selectedEquipmentItem]);
 
   const todayIso = useMemo(() => formatDateIso(new Date()), []);
+  const minLeadDateIso = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1); // minimum 1 to 2 days in advance
+    return formatDateIso(d);
+  }, []);
+
   const weekHeaders = useMemo(() => {
     const formatter = new Intl.DateTimeFormat(locale === 'fil' ? 'fil-PH' : 'en-US', { weekday: 'short' });
     return Array.from({ length: 7 }, (_, index) => formatter.format(new Date(2024, 0, 7 + index)));
@@ -220,7 +226,7 @@ export default function ResidentReservationsPage() {
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(year, month, day);
       const dateIso = formatDateIso(date);
-      const isPast = dateIso < todayIso;
+      const isPast = dateIso < minLeadDateIso;
 
       const startOfDay = new Date(year, month, day, 0, 0, 0).getTime();
       const endOfDay = new Date(year, month, day, 23, 59, 59).getTime();
@@ -296,6 +302,20 @@ export default function ResidentReservationsPage() {
       setEndAt(`${newDateStr}T${endTime}`);
     } else if (startDateStr && (!endDateStr || startDateStr === endDateStr)) {
       if (newDateStr >= startDateStr) {
+        const newEndMs = new Date(`${newDateStr}T${endTime}`).getTime();
+        const existingStartMs = new Date(`${startDateStr}T${startTime}`).getTime();
+        const maxDurationMs = 7 * 24 * 60 * 60 * 1000;
+        if (newEndMs - existingStartMs > maxDurationMs) {
+          setFeedback({
+            tone: 'error',
+            text: copyText(
+              locale,
+              'Maximum reservation duration is 1 week (7 days). If you need an extension beyond 1 week, please submit another separate reservation request.',
+              'Hanggang 1 linggo (7 araw) lamang ang pwedeng i-reserve. Kung kailangang mag-extend, magpasa ng panibagong hiwalay na kahilingan para sa reservation.'
+            ),
+          });
+          return;
+        }
         setEndAt(`${newDateStr}T${endTime}`);
       } else {
         setStartAt(`${newDateStr}T${startTime}`);
@@ -353,10 +373,14 @@ export default function ResidentReservationsPage() {
     }
 
     const startDateOnly = startAt.slice(0, 10);
-    if (startDateOnly < todayIso) {
+    if (startDateOnly < minLeadDateIso) {
       setFeedback({
         tone: 'error',
-        text: copyText(locale, 'Cannot reserve past dates', 'Hindi puwedeng mag-reserve sa nakalipas na petsa'),
+        text: copyText(
+          locale,
+          'Reservations must be booked 1 to 2 days before the actual reservation date.',
+          'Ang reservation ay kailangang i-book nang 1 hanggang 2 araw bago ang mismong petsa ng reservation.'
+        ),
       });
       return;
     }
@@ -368,6 +392,20 @@ export default function ResidentReservationsPage() {
       setFeedback({
         tone: 'error',
         text: copyText(locale, 'End time must be after start time', 'Dapat mas huli ang end time kaysa start time'),
+      });
+      return;
+    }
+
+    const durationMs = endMs - startMs;
+    const maxDurationMs = 7 * 24 * 60 * 60 * 1000;
+    if (durationMs > maxDurationMs) {
+      setFeedback({
+        tone: 'error',
+        text: copyText(
+          locale,
+          'Maximum reservation duration is 1 week (7 days). If you need an extension beyond 1 week, please submit another separate reservation request.',
+          'Hanggang 1 linggo (7 araw) lamang ang pwedeng i-reserve. Kung kailangang mag-extend, magpasa ng panibagong hiwalay na kahilingan para sa reservation.'
+        ),
       });
       return;
     }

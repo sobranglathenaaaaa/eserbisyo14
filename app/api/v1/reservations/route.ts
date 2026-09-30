@@ -48,9 +48,30 @@ export async function POST(request: NextRequest) {
     return fail('VALIDATION_ERROR', 'serviceType, startAt, endAt and notes are required', 400);
   }
 
-  const startAtIso = new Date(body.startAt).toISOString();
-  const endAtIso = new Date(body.endAt).toISOString();
-  const date = new Date(body.startAt).toISOString().slice(0, 10);
+  const startDate = new Date(body.startAt);
+  const endDate = new Date(body.endAt);
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    return fail('VALIDATION_ERROR', 'Invalid reservation startAt or endAt date format', 400);
+  }
+
+  // 1. Advance lead time check (must be booked 1 to 2 days in advance; cannot be today or past)
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const minAllowedStart = todayStart + (1 * 24 * 60 * 60 * 1000); // at least 1 day in advance from today
+  if (startDate.getTime() < minAllowedStart) {
+    return fail('VALIDATION_ERROR', 'Ang reservation ay kailangang i-book nang 1 hanggang 2 araw bago ang mismong petsa ng reservation. / Reservations must be booked 1 to 2 days before the actual reservation date.', 400);
+  }
+
+  // 2. Maximum duration check (maximum 7 days / 1 week per request)
+  const durationMs = endDate.getTime() - startDate.getTime();
+  const maxDurationMs = 7 * 24 * 60 * 60 * 1000;
+  if (durationMs > maxDurationMs) {
+    return fail('VALIDATION_ERROR', 'Hanggang 1 linggo (7 araw) lamang ang pwedeng i-reserve. Kung kailangang mag-extend, magpasa ng panibagong hiwalay na request para sa reservation. / Maximum reservation duration is 1 week (7 days). If you need an extension beyond 1 week, please submit another separate reservation request.', 400);
+  }
+
+  const startAtIso = startDate.toISOString();
+  const endAtIso = endDate.toISOString();
+  const date = startAtIso.slice(0, 10);
 
   const admin = getSupabaseAdminClient();
   // Availability checks

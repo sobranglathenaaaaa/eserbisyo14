@@ -321,6 +321,24 @@ export interface IncidentCategory {
   updatedAt: string;
 }
 
+export interface BarangayStreet {
+  id: string;
+  name: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface IncidentRelationship {
+  id: string;
+  name: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Doctor {
   id: string;
   name: string;
@@ -554,6 +572,8 @@ export interface AppState {
   generatedDocuments: GeneratedDocument[];
   reports: IncidentReport[];
   incidentCategories: IncidentCategory[];
+  barangayStreets: BarangayStreet[];
+  incidentRelationships: IncidentRelationship[];
   feedback: Feedback[];
   announcements: Announcement[];
   censusRecords: Census[];

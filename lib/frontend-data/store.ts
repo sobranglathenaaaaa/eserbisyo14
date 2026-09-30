@@ -189,6 +189,14 @@ export const upsertIncidentCategory = (payload: { id?: string; name: string; sor
   provider.upsertIncidentCategory(payload);
 export const archiveIncidentCategory = (categoryId: string) => provider.archiveIncidentCategory(categoryId);
 
+export const upsertBarangayStreet = (payload: { id?: string; name: string; sortOrder?: number; isActive?: boolean }) =>
+  provider.upsertBarangayStreet(payload);
+export const archiveBarangayStreet = (streetId: string) => provider.archiveBarangayStreet(streetId);
+
+export const upsertIncidentRelationship = (payload: { id?: string; name: string; sortOrder?: number; isActive?: boolean }) =>
+  provider.upsertIncidentRelationship(payload);
+export const archiveIncidentRelationship = (relationshipId: string) => provider.archiveIncidentRelationship(relationshipId);
+
 export const upsertAnnouncement = (payload: {
   id?: string;
   title: string;
@@ -219,6 +227,15 @@ export const joinQueue = (service: string) => provider.joinQueue(service);
 export const updateQueueStatus = (entryId: string, status: 'waiting' | 'serving' | 'completed' | 'cancelled') =>
   provider.updateQueueStatus(entryId, status);
 export const cancelQueue = (entryId: string) => provider.cancelQueue(entryId);
+
+export const reviewReservation = (reservationId: string, status: 'approved' | 'declined', reason?: string) =>
+  provider.reviewReservation?.(reservationId, status, reason);
+
+export const cancelReservation = (reservationId: string) =>
+  provider.cancelReservation?.(reservationId);
+
+export const deleteReservation = (reservationId: string) =>
+  provider.deleteReservation?.(reservationId);
 export const upsertDoctor = (payload: {
   id?: string;
   name: string;

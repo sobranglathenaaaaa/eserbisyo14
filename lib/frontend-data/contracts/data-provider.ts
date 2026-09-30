@@ -24,6 +24,8 @@ import type {
   CaseProceeding,
   CaseCfa,
   CasePnpReferral,
+  BarangayStreet,
+  IncidentRelationship,
 } from '../../types/models';
 import type { Result } from '../../types/result';
 
@@ -166,6 +168,22 @@ export interface DataProvider {
     isActive?: boolean;
   }): Promise<IncidentCategory>;
   archiveIncidentCategory(categoryId: string): Promise<void>;
+
+  upsertBarangayStreet(payload: {
+    id?: string;
+    name: string;
+    sortOrder?: number;
+    isActive?: boolean;
+  }): Promise<BarangayStreet>;
+  archiveBarangayStreet(streetId: string): Promise<void>;
+
+  upsertIncidentRelationship(payload: {
+    id?: string;
+    name: string;
+    sortOrder?: number;
+    isActive?: boolean;
+  }): Promise<IncidentRelationship>;
+  archiveIncidentRelationship(relationshipId: string): Promise<void>;
 
   upsertAnnouncement(payload: {
     id?: string;
