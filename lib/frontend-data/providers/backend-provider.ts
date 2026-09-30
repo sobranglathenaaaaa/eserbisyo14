@@ -805,10 +805,13 @@ async function createState(): Promise<AppState> {
       id: item.id,
       residentId: item.resident_id,
       residentName: profileMap.get(item.resident_id)?.full_name ?? 'Resident',
-      kind: item.kind,
+      kind: item.kind ?? 'Community Concern',
       trackType: item.track_type ?? (item.kind === 'blotter' ? 'incident' : 'community_concern'),
       desiredAction: item.desired_action ?? (item.kind === 'blotter' ? 'request_meeting' : 'none'),
       otherCategoryText: item.other_category_text ?? undefined,
+      relationshipToRespondent: item.relationship_to_respondent ?? item.metadata?.relationshipToRespondent ?? undefined,
+      streetName: item.street_name ?? item.metadata?.streetName ?? undefined,
+      specificLocation: item.specific_location ?? item.metadata?.specificLocation ?? undefined,
       title: item.title,
       details: item.details,
       location: item.location,
@@ -1430,7 +1433,10 @@ export const backendProvider: DataProvider = {
   async submitReport(payload: {
     trackType?: 'community_concern' | 'incident';
     desiredAction?: 'record_only' | 'request_meeting' | 'none';
-    category: string;
+    category?: string;
+    relationshipToRespondent?: string;
+    streetName?: string;
+    specificLocation?: string;
     title: string;
     details: string;
     location: string;
@@ -1443,7 +1449,10 @@ export const backendProvider: DataProvider = {
       body: JSON.stringify({
         trackType: payload.trackType,
         desiredAction: payload.desiredAction,
-        category: payload.category,
+        category: payload.category ?? (payload.trackType === 'incident' ? 'Incident' : 'Community Concern'),
+        relationshipToRespondent: payload.relationshipToRespondent,
+        streetName: payload.streetName,
+        specificLocation: payload.specificLocation,
         title: payload.title,
         description: payload.details,
         location: payload.location,

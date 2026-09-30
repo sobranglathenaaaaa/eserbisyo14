@@ -40,21 +40,24 @@ export async function POST(request: NextRequest) {
         description: string;
         occurredAt: string;
         location: string;
+        streetName?: string;
+        specificLocation?: string;
         kind?: string;
         category?: string;
         otherCategoryText?: string;
+        relationshipToRespondent?: string;
         trackType?: 'community_concern' | 'incident';
         desiredAction?: 'record_only' | 'request_meeting' | 'none';
-        parties?: Array<{ role: 'complainant' | 'respondent' | 'witness'; fullName: string; contactInfo?: string; address?: string }>;
+        parties?: Array<{ role: 'complainant' | 'respondent' | 'witness'; fullName: string; relationship?: string; contactInfo?: string; address?: string }>;
       }
     | null;
   if (!body?.title || !body?.description || !body?.occurredAt || !body?.location) {
     return fail('VALIDATION_ERROR', 'Missing required incident fields', 400);
   }
-  const selectedCategory = (body.category ?? body.kind ?? '').trim();
-  if (!selectedCategory) {
-    return fail('VALIDATION_ERROR', 'category is required', 400);
-  }
+
+  const trackType = body.trackType ?? 'community_concern';
+  const defaultCategoryName = trackType === 'community_concern' ? 'Community Concern' : 'Incident';
+  const selectedCategory = (body.category ?? body.kind ?? defaultCategoryName).trim();
 
   const admin = getSupabaseAdminClient();
   let { data: categoryRecord } = await admin
@@ -81,15 +84,11 @@ export async function POST(request: NextRequest) {
   const normalizedCategoryName = categoryRecord.name;
   const isOthersCategory = normalizedCategoryName.trim().toLowerCase() === 'others';
   const otherCategoryText = body.otherCategoryText?.trim() ?? '';
-  if (isOthersCategory && !otherCategoryText) {
-    return fail('VALIDATION_ERROR', 'otherCategoryText is required when Others is selected', 400);
-  }
 
   const normalizedCategoryKey = normalizedCategoryName.trim().toLowerCase();
-  const reportKind = normalizedCategoryKey === 'blotter' ? 'blotter' : 'incident';
-  const reportCategoryText = isOthersCategory ? otherCategoryText : normalizedCategoryKey === 'incident' || normalizedCategoryKey === 'blotter' ? null : normalizedCategoryName;
+  const reportKind = normalizedCategoryKey === 'blotter' ? 'blotter' : selectedCategory;
+  const reportCategoryText = isOthersCategory ? otherCategoryText : null;
 
-  const trackType = body.trackType ?? (reportKind === 'blotter' ? 'incident' : 'community_concern');
   const desiredAction = body.desiredAction ?? (reportKind === 'blotter' ? 'request_meeting' : 'none');
   const initialStatus = desiredAction === 'record_only' ? 'closed' : 'pending';
 
@@ -100,6 +99,9 @@ export async function POST(request: NextRequest) {
     track_type: trackType,
     desired_action: desiredAction,
     other_category_text: reportCategoryText,
+    relationship_to_respondent: body.relationshipToRespondent,
+    street_name: body.streetName,
+    specific_location: body.specificLocation,
     title: body.title.trim(),
     details: body.description.trim(),
     location: body.location.trim(),

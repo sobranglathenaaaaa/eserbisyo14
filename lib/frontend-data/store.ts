@@ -159,7 +159,10 @@ export const addFeedback = (payload: { requestId?: string; rating: number; comme
 export const submitReport = (payload: {
   trackType?: 'community_concern' | 'incident';
   desiredAction?: 'record_only' | 'request_meeting' | 'none';
-  category: string;
+  category?: string;
+  relationshipToRespondent?: string;
+  streetName?: string;
+  specificLocation?: string;
   title: string;
   details: string;
   location: string;

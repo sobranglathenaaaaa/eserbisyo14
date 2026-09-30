@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Building2, FileText, AlertTriangle, ShieldCheck, UserCheck, Scale, FileSpreadsheet, ArrowRight, Info, CheckCircle2, User, MapPin, Calendar, Clock } from 'lucide-react';
+import { Building2, FileText, CheckCircle2 } from 'lucide-react';
 import { PageGuide, StatusBadge, statusToneFromState, EmptyState, SectionCard } from '@/components/portal-ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,9 +17,33 @@ import { ResidentSection } from '@/features/resident/view/resident-primitives';
 import { ResidentShell } from '@/features/resident/view/resident-shell';
 import { getRolePageCopy, resolveRoleCopy, resolveSteps } from '@/lib/content/role-pages';
 import type { CaseParty, IncidentReport } from '@/lib/types/models';
+import CaseReportDocumentModal from '@/components/case-report-document-modal';
 
 type TrackType = 'community_concern' | 'incident';
 type DesiredAction = 'record_only' | 'request_meeting';
+
+const BARANGAY_STREETS = [
+  'Main Street',
+  'Rizal Street',
+  'Bonifacio Street',
+  'Magsaysay Avenue',
+  'Aguinaldo Highway',
+  'Luna Street',
+  'Del Pilar Street',
+  'P. Burgos Street',
+  'Sampaguita Street',
+  'Iba pang Kalsada / Outside Street',
+];
+
+const RELATIONSHIP_OPTIONS = [
+  { value: 'Kapitbahay / Neighbor', en: 'Neighbor', fil: 'Kapitbahay' },
+  { value: 'Kamag-anak / Relative', en: 'Relative', fil: 'Kamag-anak' },
+  { value: 'Tenant / Renter / Landlord', en: 'Tenant / Landlord', fil: 'Umuupa / Landlord' },
+  { value: 'Kakilala / Acquaintance', en: 'Acquaintance', fil: 'Kakilala' },
+  { value: 'Hindi Kilala / Stranger', en: 'Stranger', fil: 'Hindi Kilala' },
+  { value: 'Kasamahan sa Trabaho / Co-worker', en: 'Co-worker', fil: 'Kasamahan sa Trabaho' },
+  { value: 'Iba pa / Other', en: 'Other', fil: 'Iba pa' },
+];
 
 export default function ResidentBlotterReportingPage() {
   const { state, user, locale } = useAppState();
@@ -34,18 +58,22 @@ export default function ResidentBlotterReportingPage() {
   const [otherCategoryText, setOtherCategoryText] = useState('');
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');
-  const [location, setLocation] = useState('');
-  const [dateOfIncident, setDateOfIncident] = useState(new Date().toISOString().slice(0, 10));
+  
+  // Location Fields (Structured)
+  const [streetName, setStreetName] = useState(BARANGAY_STREETS[0]);
+  const [specificLocation, setSpecificLocation] = useState('');
 
-  // Incident Specific (Parties)
+  // Incident Specific (Parties & Relationship)
   const [complainantName, setComplainantName] = useState('');
   const [respondentName, setRespondentName] = useState('');
+  const [relationshipToRespondent, setRelationshipToRespondent] = useState(RELATIONSHIP_OPTIONS[0].value);
   const [witnesses, setWitnesses] = useState('');
 
   // UI & Feedback
   const [submissionToast, setSubmissionToast] = useState<string | null>(null);
   const [selectedReport, setSelectedReport] = useState<IncidentReport | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [documentModalOpen, setDocumentModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const myReports = useMemo(() => getResidentReports(state, user?.id), [state, user?.id]);
@@ -81,13 +109,18 @@ export default function ResidentBlotterReportingPage() {
     event.preventDefault();
     setIsSubmitting(true);
     try {
+      const fullLocation = `${streetName}${specificLocation.trim() ? `, ${specificLocation.trim()}` : ''}`;
       const parties: CaseParty[] = [];
       if (trackType === 'incident') {
         if (complainantName.trim()) {
           parties.push({ role: 'complainant', fullName: complainantName.trim() });
         }
         if (respondentName.trim()) {
-          parties.push({ role: 'respondent', fullName: respondentName.trim() });
+          parties.push({
+            role: 'respondent',
+            fullName: respondentName.trim(),
+            relationship: relationshipToRespondent,
+          });
         }
         if (witnesses.trim()) {
           parties.push({ role: 'witness', fullName: witnesses.trim() });
@@ -97,18 +130,21 @@ export default function ResidentBlotterReportingPage() {
       await submitReport({
         trackType,
         desiredAction: trackType === 'incident' ? desiredAction : 'none',
-        category,
+        category: trackType === 'incident' ? category : undefined,
         title,
         details,
-        location,
-        dateOfIncident,
-        otherCategoryText: isOthersCategory ? otherCategoryText : undefined,
+        streetName,
+        specificLocation,
+        location: fullLocation,
+        dateOfIncident: new Date().toISOString().slice(0, 10),
+        relationshipToRespondent: trackType === 'incident' ? relationshipToRespondent : undefined,
+        otherCategoryText: isOthersCategory && trackType === 'incident' ? otherCategoryText : undefined,
         parties: parties.length ? parties : undefined,
       });
 
       setTitle('');
       setDetails('');
-      setLocation('');
+      setSpecificLocation('');
       setRespondentName('');
       setWitnesses('');
       setOtherCategoryText('');
@@ -246,19 +282,22 @@ export default function ResidentBlotterReportingPage() {
           )}
         >
           <form className="grid gap-4 md:grid-cols-2" onSubmit={onSubmit}>
-            <label className="grid gap-2 text-sm">
-              <span className="font-medium text-[#123726]">{copyText(locale, 'Category', 'Kategorya')}</span>
-              <Select value={category} onChange={(event) => setCategory(event.target.value)} required>
-                {incidentCategories.map((item) => (
-                  <option key={item.id} value={item.name}>
-                    {item.name}
-                  </option>
-                ))}
-              </Select>
-            </label>
+            {/* Category dropdown ONLY shown for Incident / Blotter */}
+            {trackType === 'incident' ? (
+              <label className="grid gap-2 text-sm md:col-span-2">
+                <span className="font-medium text-[#123726]">{copyText(locale, 'Incident Category', 'Kategorya ng Insidente')}</span>
+                <Select value={category} onChange={(event) => setCategory(event.target.value)} required>
+                  {incidentCategories.map((item) => (
+                    <option key={item.id} value={item.name}>
+                      {item.name}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+            ) : null}
 
-            {isOthersCategory ? (
-              <label className="grid gap-2 text-sm">
+            {isOthersCategory && trackType === 'incident' ? (
+              <label className="grid gap-2 text-sm md:col-span-2">
                 <span className="font-medium text-[#123726]">{copyText(locale, 'Specify Category', 'Tukuyin ang Kategorya')}</span>
                 <Input
                   value={otherCategoryText}
@@ -269,7 +308,7 @@ export default function ResidentBlotterReportingPage() {
               </label>
             ) : null}
 
-            <label className="grid gap-2 text-sm">
+            <label className="grid gap-2 text-sm md:col-span-2">
               <span className="font-medium text-[#123726]">{copyText(locale, 'Title / Summary', 'Pamagat / Buod')}</span>
               <Input
                 value={title}
@@ -283,44 +322,76 @@ export default function ResidentBlotterReportingPage() {
               />
             </label>
 
-            <label className="grid gap-2 text-sm">
-              <span className="font-medium text-[#123726]">{copyText(locale, 'Location', 'Lokasyon')}</span>
-              <Input
-                value={location}
-                onChange={(event) => setLocation(event.target.value)}
-                required
-                placeholder={copyText(locale, 'Street, Purok, Landmark', 'Kalsada, Purok, Landmark')}
-              />
-            </label>
+            {/* Location Section: Street Dropdown + Typable Place Box */}
+            <div className="md:col-span-2 grid gap-3 rounded-xl border border-[color:var(--portal-border-soft)] bg-[#f8faf8] p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#123726]">
+                📍 {copyText(locale, 'Location Details', 'Detalye ng Lokasyon')}
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-1.5 text-sm">
+                  <span className="font-medium text-gray-700">{copyText(locale, 'Street (Kalsada)', 'Kalsada / Street')}</span>
+                  <Select value={streetName} onChange={(e) => setStreetName(e.target.value)}>
+                    {BARANGAY_STREETS.map((st) => (
+                      <option key={st} value={st}>
+                        {st}
+                      </option>
+                    ))}
+                  </Select>
+                </label>
 
-            <label className="grid gap-2 text-sm">
-              <span className="font-medium text-[#123726]">
-                {trackType === 'community_concern'
-                  ? copyText(locale, 'Date Noticed', 'Petsa nang Mapansin')
-                  : copyText(locale, 'Date of Incident', 'Petsa ng Insidente')}
-              </span>
-              <Input type="date" value={dateOfIncident} onChange={(event) => setDateOfIncident(event.target.value)} required />
-            </label>
+                <label className="grid gap-1.5 text-sm">
+                  <span className="font-medium text-gray-700">
+                    {copyText(locale, 'Residence / Purok / Landmark', 'Tirahan / Purok / Landmark')}
+                  </span>
+                  <Input
+                    value={specificLocation}
+                    onChange={(e) => setSpecificLocation(e.target.value)}
+                    required
+                    placeholder={copyText(locale, 'e.g., House #12, Purok 3, Near Chapel', 'hal. House #12, Purok 3, Malapit sa Kapilya')}
+                  />
+                </label>
+              </div>
+            </div>
 
             {/* Additional Fields for Incident / Blotter */}
             {trackType === 'incident' ? (
               <div className="md:col-span-2 grid gap-4 rounded-xl border border-[color:var(--portal-border-soft)] bg-[#f8faf8] p-4">
                 <p className="text-xs font-semibold uppercase tracking-wider text-[#123726]">
-                  {copyText(locale, 'WHO - People Involved', 'WHO - Mga Taong Involve')}
+                  👥 {copyText(locale, 'WHO - People Involved', 'WHO - Mga Taong Involve')}
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="grid gap-1.5 text-sm">
                     <span className="font-medium text-gray-700">{copyText(locale, 'Reporter / Complainant', 'Reporter / Complainant')}</span>
                     <Input value={complainantName} onChange={(e) => setComplainantName(e.target.value)} required />
                   </label>
+
                   <label className="grid gap-1.5 text-sm">
-                    <span className="font-medium text-gray-700">{copyText(locale, 'Respondent (Involved Person)', 'Respondent (Kabilang na Tao)')}</span>
+                    <span className="font-medium text-gray-700">{copyText(locale, 'Respondent (Involved Person)', 'Respondent (Nire-report na Tao)')}</span>
                     <Input
                       value={respondentName}
                       onChange={(e) => setRespondentName(e.target.value)}
-                      placeholder={copyText(locale, 'Name of respondent or N/A', 'Pangalan ng respondent o N/A')}
+                      required
+                      placeholder={copyText(locale, 'Name of person being reported', 'Pangalan ng nire-report na tao')}
                     />
                   </label>
+
+                  {/* Relationship Field */}
+                  <label className="grid gap-1.5 text-sm sm:col-span-2">
+                    <span className="font-medium text-gray-700">
+                      {copyText(locale, 'Relationship to Person Reported', 'Relasyon sa Nire-report na Tao')}
+                    </span>
+                    <Select
+                      value={relationshipToRespondent}
+                      onChange={(e) => setRelationshipToRespondent(e.target.value)}
+                    >
+                      {RELATIONSHIP_OPTIONS.map((rel) => (
+                        <option key={rel.value} value={rel.value}>
+                          {locale === 'fil' ? rel.fil : rel.en} ({rel.value})
+                        </option>
+                      ))}
+                    </Select>
+                  </label>
+
                   <label className="sm:col-span-2 grid gap-1.5 text-sm">
                     <span className="font-medium text-gray-700">{copyText(locale, 'Witnesses / Other Persons (Optional)', 'Mga Saksi / Iba Pang Tao (Optional)')}</span>
                     <Input
@@ -521,7 +592,7 @@ export default function ResidentBlotterReportingPage() {
                   </p>
                   <DialogTitle className="text-xl font-semibold text-[#123726] mt-1">{selectedReport.title}</DialogTitle>
                   <DialogDescription className="mt-1 text-xs text-gray-500">
-                    {copyText(locale, 'Category', 'Kategorya')}: {selectedReport.kind} • {formatDateTime(selectedReport.createdAt, locale)}
+                    {formatDateTime(selectedReport.createdAt, locale)}
                   </DialogDescription>
                 </div>
                 <StatusBadge tone={statusToneFromState(selectedReport.status)}>
@@ -534,7 +605,9 @@ export default function ResidentBlotterReportingPage() {
                 <div className="grid gap-2 sm:grid-cols-2">
                   <p><strong className="text-gray-700">{copyText(locale, 'Type', 'Uri')}:</strong> {selectedReport.trackType === 'community_concern' ? 'Community Concern' : 'Incident / Blotter'}</p>
                   <p><strong className="text-gray-700">{copyText(locale, 'Location', 'Lokasyon')}:</strong> {selectedReport.location}</p>
-                  <p><strong className="text-gray-700">{copyText(locale, 'Date of Incident', 'Petsa ng Insidente')}:</strong> {selectedReport.dateOfIncident}</p>
+                  {selectedReport.relationshipToRespondent ? (
+                    <p><strong className="text-gray-700">{copyText(locale, 'Relationship', 'Relasyon sa Nire-report')}:</strong> {selectedReport.relationshipToRespondent}</p>
+                  ) : null}
                   {selectedReport.desiredAction ? (
                     <p><strong className="text-gray-700">{copyText(locale, 'Resident Request', 'Hiling ng Resident')}:</strong> {selectedReport.desiredAction === 'record_only' ? 'Record Only' : selectedReport.desiredAction === 'request_meeting' ? 'Barangay Meeting' : 'N/A'}</p>
                   ) : null}
@@ -589,10 +662,29 @@ export default function ResidentBlotterReportingPage() {
                   <p className="mt-1">Receiving Unit: {selectedReport.pnpReferral.receivingUnit} • Ref #: {selectedReport.pnpReferral.referenceNumber || 'N/A'}</p>
                 </div>
               ) : null}
+
+              {/* Action Button: Generate Printable Report Document */}
+              <div className="mt-3 border-t pt-4 flex justify-end">
+                <Button
+                  type="button"
+                  variant="resident"
+                  onClick={() => setDocumentModalOpen(true)}
+                  className="gap-2 text-xs"
+                >
+                  📄 {copyText(locale, 'Generate Official Case Document Report (PDF)', 'I-generate ang Opisyal na Report Document (PDF)')}
+                </Button>
+              </div>
             </div>
           ) : null}
         </DialogContent>
       </Dialog>
+
+      <CaseReportDocumentModal
+        open={documentModalOpen}
+        onOpenChange={setDocumentModalOpen}
+        report={selectedReport}
+        locale={locale}
+      />
     </ResidentShell>
   );
 }

@@ -16,6 +16,7 @@ import { formatDateTime, formatIncidentCaseNumber, getReportStatusLabel, relativ
 import { updateCaseWorkflow, updateReportStatus } from '../../../lib/frontend-data/store';
 import { useAppState } from '../../../lib/frontend-data/use-app-state';
 import type { IncidentReport, ReportStatus } from '@/lib/types/models';
+import CaseReportDocumentModal from '@/components/case-report-document-modal';
 
 type ReportFilter = 'all' | 'pending' | 'community_concerns' | 'record_only' | 'barangay_hearings' | 'lupon' | 'cfa_pnp' | 'resolved';
 
@@ -37,6 +38,7 @@ export default function StaffIncidentsPage() {
   const [filter, setFilter] = useState<ReportFilter>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [documentModalOpen, setDocumentModalOpen] = useState(false);
   const [activeModalTab, setActiveModalTab] = useState<'details' | 'action' | 'hearing' | 'lupon' | 'cfa_pnp'>('details');
 
   // Community Concern Action Form State
@@ -571,7 +573,9 @@ export default function StaffIncidentsPage() {
                   <div className="grid gap-3 rounded-xl border bg-gray-50/60 p-4">
                     <div className="grid sm:grid-cols-2 gap-2">
                       <p><strong>Complainant / Reporter:</strong> {selectedReport.residentName}</p>
-                      <p><strong>Category:</strong> {selectedReport.kind}</p>
+                      {selectedReport.relationshipToRespondent ? (
+                        <p><strong>Relasyon sa Nire-report:</strong> {selectedReport.relationshipToRespondent}</p>
+                      ) : null}
                       <p><strong>Location:</strong> {selectedReport.location}</p>
                       <p><strong>Date:</strong> {selectedReport.dateOfIncident}</p>
                     </div>
@@ -789,10 +793,33 @@ export default function StaffIncidentsPage() {
                   </div>
                 </div>
               ) : null}
+
+              {/* Always-accessible Generate Official Report PDF Button */}
+              <div className="border-t bg-gray-50 px-6 py-3 flex justify-between items-center rounded-b-[24px]">
+                <p className="text-xs text-gray-500">
+                  {locale === 'fil' ? 'Opisyal na Dokumentasyon' : 'Official Case Documentation'}
+                </p>
+                <Button
+                  type="button"
+                  variant="resident"
+                  size="sm"
+                  onClick={() => setDocumentModalOpen(true)}
+                  className="gap-1.5 text-xs"
+                >
+                  📄 {locale === 'fil' ? 'I-generate ang Official Report (PDF)' : 'Generate Official Report (PDF)'}
+                </Button>
+              </div>
             </div>
           ) : null}
         </DialogContent>
       </Dialog>
+
+      <CaseReportDocumentModal
+        open={documentModalOpen}
+        onOpenChange={setDocumentModalOpen}
+        report={selectedReport}
+        locale={locale}
+      />
     </PortalShell>
   );
 }

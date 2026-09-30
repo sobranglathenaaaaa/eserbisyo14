@@ -192,6 +192,7 @@ export interface GeneratedDocument {
 export interface CaseParty {
   role: 'complainant' | 'respondent' | 'witness';
   fullName: string;
+  relationship?: string;
   contactInfo?: string;
   address?: string;
 }
@@ -243,6 +244,9 @@ export interface IncidentReport {
   desiredAction?: 'record_only' | 'request_meeting' | 'none';
   kind: string;
   otherCategoryText?: string;
+  relationshipToRespondent?: string;
+  streetName?: string;
+  specificLocation?: string;
   title: string;
   details: string;
   location: string;
