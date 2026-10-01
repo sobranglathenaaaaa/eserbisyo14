@@ -231,17 +231,7 @@ export default function AdminDocumentRequestsPage() {
                         <StatusBadge tone={statusToneFromState(item.status)}>{getRequestStatusLabel(item.status, locale)}</StatusBadge>
                       </TableCell>
                       <TableCell className="py-2 pr-2 text-center align-middle">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            type="button"
-                            onClick={() => setPreviewRequestId(item.id)}
-                            title={locale === 'fil' ? 'Silipin ang Dokumento' : 'Preview Document'}
-                            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                        <div className="flex justify-center">
                           <Button variant="ghost" size="sm" type="button" onClick={() => openReview(item.id)}>
                             {locale === 'fil' ? 'Suriin' : 'Review'}
                           </Button>

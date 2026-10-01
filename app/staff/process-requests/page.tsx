@@ -348,20 +348,7 @@ export default function StaffProcessRequestsPage() {
                               </StatusBadge>
                             </td>
                             <td className="px-4 py-3 text-center">
-                              <div className="flex items-center justify-center gap-1.5">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedId(request.id);
-                                    setPreviewRequestId(request.id);
-                                  }}
-                                  title={locale === 'fil' ? 'Silipin ang Dokumento' : 'Preview Document'}
-                                  className="h-8 w-8 p-0 text-blue-600 hover:text-blue-850 hover:bg-blue-50"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
+                              <div className="flex justify-center">
                                 <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedId(request.id)}>
                                   {locale === 'fil' ? 'Tingnan' : 'Review'}
                                 </Button>
