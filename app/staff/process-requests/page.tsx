@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Filter } from 'lucide-react';
+import { Filter, Eye } from 'lucide-react';
 import PortalShell from '../../../components/portal-shell';
 import { EmptyState, FormFeedback, PageGuide, SectionCard, StatusBadge, statusToneFromState } from '@/components/portal-ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import DocumentRequestPreviewModal from '@/components/document-request-preview-modal';
 import { getRequestStatusLabel, relativeTime } from '@/lib/formatters';
 import { getRolePageCopy, resolveRoleCopy, resolveSteps } from '@/lib/content/role-pages';
 import { buildRequestTemplateDefaultFields } from '@/lib/documents/request-template-fields';
@@ -30,6 +31,8 @@ export default function StaffProcessRequestsPage() {
   const { state, locale } = useAppState();
   const [reason, setReason] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [previewRequestId, setPreviewRequestId] = useState<string | null>(null);
+  const [isMarkingReady, setIsMarkingReady] = useState(false);
   const [fieldDraft, setFieldDraft] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<{ tone: UIStatusTone; text: string } | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -345,8 +348,21 @@ export default function StaffProcessRequestsPage() {
                               </StatusBadge>
                             </td>
                             <td className="px-4 py-3 text-center">
-                              <div className="flex justify-center">
-                                <Button type="button" variant="ghost" onClick={() => setSelectedId(request.id)}>
+                              <div className="flex items-center justify-center gap-1.5">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedId(request.id);
+                                    setPreviewRequestId(request.id);
+                                  }}
+                                  title={locale === 'fil' ? 'Silipin ang Dokumento' : 'Preview Document'}
+                                  className="h-8 w-8 p-0 text-blue-600 hover:text-blue-850 hover:bg-blue-50"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedId(request.id)}>
                                   {locale === 'fil' ? 'Tingnan' : 'Review'}
                                 </Button>
                               </div>
@@ -502,7 +518,18 @@ export default function StaffProcessRequestsPage() {
                 </div>
               ) : null}
 
-              <div className="flex flex-wrap justify-end gap-2">
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {/* PREVIEW DOCUMENT BUTTON */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setPreviewRequestId(selected.id)}
+                  className="gap-1.5 text-xs text-blue-700 border-blue-200 hover:bg-blue-50"
+                >
+                  <Eye className="h-3.5 w-3.5 text-blue-600" />
+                  {locale === 'fil' ? 'Silipin ang Dokumento' : 'Preview Document'}
+                </Button>
+
                 {selected.status === 'approved' ? (
                   <Button
                     variant="resident"
@@ -546,6 +573,33 @@ export default function StaffProcessRequestsPage() {
         </DialogContent>
       </Dialog>
       
+      {/* AUTHENTIC DOCUMENT PREVIEW MODAL */}
+      <DocumentRequestPreviewModal
+        open={Boolean(previewRequestId)}
+        onOpenChange={(open) => {
+          if (!open) setPreviewRequestId(null);
+        }}
+        request={selected}
+        resident={selectedResident}
+        fieldDraft={fieldDraft}
+        documentTemplates={state.documentTemplates}
+        onMarkReadyForPickup={
+          selected?.status === 'approved'
+            ? async () => {
+                if (selected) {
+                  setIsMarkingReady(true);
+                  try {
+                    await updateRequest(selected.id, 'ready_for_pickup');
+                  } finally {
+                    setIsMarkingReady(false);
+                  }
+                }
+              }
+            : undefined
+        }
+        isMarkingReady={isMarkingReady}
+        locale={locale}
+      />
     </PortalShell>
   );
 }

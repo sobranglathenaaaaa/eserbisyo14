@@ -70,6 +70,7 @@ const SYSTEM_DYNAMIC_TAGS = [
   { tag: '{{barangay_address}}', fieldName: 'barangay_address', label: 'Barangay Office Address' },
   { tag: '{{barangay_email}}', fieldName: 'barangay_email', label: 'Barangay Official Email' },
   { tag: '{{barangay_phone}}', fieldName: 'barangay_phone', label: 'Barangay Contact Numbers' },
+  { tag: '{{barangay_watermark}}', fieldName: 'barangay_watermark', label: 'Center Barangay Watermark Seal' },
   { tag: '{{country_seal}}', fieldName: 'country_seal', label: 'Bagong Pilipinas / Country Seal' },
   { tag: '{{city_seal}}', fieldName: 'city_seal', label: 'City / Municipal Seal' },
   { tag: '{{barangay_seal}}', fieldName: 'barangay_seal', label: 'Barangay Official Seal' },
@@ -86,7 +87,8 @@ type KagawadItem = {
 function buildDefaultHtmlLayout(
   docTypeKey: string,
   sealAlignment: 'side_by_side' | 'centered' | 'stacked' = 'centered',
-  layoutStyle: 'single_column' | 'two_column_sidebar' = 'two_column_sidebar'
+  layoutStyle: 'single_column' | 'two_column_sidebar' = 'two_column_sidebar',
+  sideColumnVerticalSpacing: 'compact' | 'standard' | 'spacious' = 'standard'
 ): string {
   const barangayLogoHtml = `{{barangay_seal}}`;
   const cityLogoHtml = `{{city_seal}}`;
@@ -96,25 +98,26 @@ function buildDefaultHtmlLayout(
 
   if (sealAlignment === 'side_by_side') {
     headerHtml = `
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-  <div style="width:70px;text-align:center;">${barangayLogoHtml}</div>
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+  <div style="width:65px;text-align:center;">${barangayLogoHtml}</div>
   <div style="text-align:center;flex:1;padding:0 8px;">
-    <p style="font-family:Georgia,serif;font-size:12px;font-weight:bold;font-style:italic;text-transform:uppercase;color:#786c3b;margin:0;">REPUBLIC OF THE PHILIPPINES</p>
-    <p style="font-family:Georgia,serif;font-size:11px;font-style:italic;color:#786c3b;margin:1px 0;">{{city}}</p>
-    <p style="font-family:Georgia,serif;font-size:13px;font-weight:bold;font-style:italic;text-transform:uppercase;color:#786c3b;margin:0;">{{barangay_name}}</p>
-    <p style="font-family:Georgia,serif;font-size:10px;font-weight:bold;font-style:italic;text-transform:uppercase;color:#786c3b;margin:2px 0 0 0;">OFFICE OF THE PUNONG BARANGAY</p>
+    <p style="font-family:Georgia,serif;font-size:13px;font-weight:bold;font-style:italic;text-transform:uppercase;color:#4f6e34;margin:0;letter-spacing:0.5px;">REPUBLIC OF THE PHILIPPINES</p>
+    <p style="font-family:Georgia,serif;font-size:12px;font-style:italic;color:#4f6e34;margin:1px 0;">{{city}}</p>
+    <p style="font-family:Georgia,serif;font-size:14px;font-weight:bold;font-style:italic;text-transform:uppercase;color:#4f6e34;margin:0;">{{barangay_name}}</p>
+    <p style="font-family:Georgia,serif;font-size:11px;font-weight:bold;font-style:italic;text-transform:uppercase;color:#4f6e34;margin:2px 0 0 0;">OFFICE OF THE PUNONG BARANGAY</p>
   </div>
-  <div style="width:70px;text-align:center;">${cityLogoHtml}</div>
+  <div style="width:65px;text-align:center;">${cityLogoHtml}</div>
 </div>
 `;
   } else if (sealAlignment === 'stacked') {
     headerHtml = `
-<div style="text-align:center;margin-bottom:12px;">
-  <div style="margin-bottom:6px;">${countryLogoHtml}</div>
-  <p style="font-family:Georgia,serif;font-size:12px;font-weight:bold;font-style:italic;text-transform:uppercase;color:#786c3b;margin:0;">REPUBLIC OF THE PHILIPPINES</p>
-  <p style="font-family:Georgia,serif;font-size:11px;font-style:italic;color:#786c3b;margin:1px 0;">{{city}}</p>
-  <p style="font-family:Georgia,serif;font-size:13px;font-weight:bold;font-style:italic;text-transform:uppercase;color:#786c3b;margin:0;">{{barangay_name}}</p>
-  <div style="display:flex;align-items:center;justify-content:center;gap:18px;margin-top:6px;">
+<div style="text-align:center;margin-bottom:8px;">
+  <div style="margin-bottom:4px;">${countryLogoHtml}</div>
+  <p style="font-family:Georgia,serif;font-size:13px;font-weight:bold;font-style:italic;text-transform:uppercase;color:#4f6e34;margin:0;letter-spacing:0.5px;">REPUBLIC OF THE PHILIPPINES</p>
+  <p style="font-family:Georgia,serif;font-size:12px;font-style:italic;color:#4f6e34;margin:1px 0;">{{city}}</p>
+  <p style="font-family:Georgia,serif;font-size:14px;font-weight:bold;font-style:italic;text-transform:uppercase;color:#4f6e34;margin:0;">{{barangay_name}}</p>
+  <p style="font-family:Georgia,serif;font-size:11px;font-weight:bold;font-style:italic;text-transform:uppercase;color:#4f6e34;margin:2px 0 0 0;">OFFICE OF THE PUNONG BARANGAY</p>
+  <div style="display:flex;align-items:center;justify-content:center;gap:18px;margin-top:4px;">
     ${barangayLogoHtml}
     ${cityLogoHtml}
   </div>
@@ -123,16 +126,16 @@ function buildDefaultHtmlLayout(
   } else {
     // Centered Row (Default Top Row of 3 Seals matching Barangay Progreso 1:1)
     headerHtml = `
-<div style="text-align:center;margin-bottom:12px;">
-  <div style="display:flex;align-items:center;justify-content:center;gap:18px;margin-bottom:8px;">
+<div style="text-align:center;margin-bottom:8px;">
+  <div style="display:flex;align-items:center;justify-content:center;gap:18px;margin-bottom:6px;">
     ${barangayLogoHtml}
     ${cityLogoHtml}
     ${countryLogoHtml}
   </div>
-  <p style="font-family:Georgia,serif;font-size:13px;font-weight:bold;font-style:italic;text-transform:uppercase;color:#786c3b;margin:0;letter-spacing:0.5px;">REPUBLIC OF THE PHILIPPINES</p>
-  <p style="font-family:Georgia,serif;font-size:12px;font-style:italic;color:#786c3b;margin:1px 0;">{{city}}</p>
-  <p style="font-family:Georgia,serif;font-size:14px;font-weight:bold;font-style:italic;text-transform:uppercase;color:#786c3b;margin:0;">{{barangay_name}}</p>
-  <p style="font-family:Georgia,serif;font-size:11px;font-weight:bold;font-style:italic;text-transform:uppercase;color:#786c3b;margin:2px 0 0 0;">OFFICE OF THE PUNONG BARANGAY</p>
+  <p style="font-family:Georgia,serif;font-size:13px;font-weight:bold;font-style:italic;text-transform:uppercase;color:#4f6e34;margin:0;letter-spacing:0.5px;">REPUBLIC OF THE PHILIPPINES</p>
+  <p style="font-family:Georgia,serif;font-size:12px;font-style:italic;color:#4f6e34;margin:1px 0;">{{city}}</p>
+  <p style="font-family:Georgia,serif;font-size:14px;font-weight:bold;font-style:italic;text-transform:uppercase;color:#4f6e34;margin:0;">{{barangay_name}}</p>
+  <p style="font-family:Georgia,serif;font-size:11px;font-weight:bold;font-style:italic;text-transform:uppercase;color:#4f6e34;margin:2px 0 0 0;">OFFICE OF THE PUNONG BARANGAY</p>
 </div>
 `;
   }
@@ -144,16 +147,16 @@ function buildDefaultHtmlLayout(
     case 'barangay_certificate':
       docTitleUpper = 'BARANGAY CLEARANCE';
       bodyWordingHtml = `
-<p style="font-size:13px;line-height:1.9;text-indent:36px;margin-bottom:18px;text-align:justify;color:#000;">
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
   This is to certify that <u style="font-weight:bold;">{{resident_name}}</u> whose residence at <u style="font-weight:bold;">{{resident_address}}</u> is within the jurisdiction of {{barangay_name}}, {{city}}.
 </p>
-<p style="font-size:13px;line-height:1.9;text-indent:36px;margin-bottom:18px;text-align:justify;color:#000;">
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
   RECORD CHECK IN THIS OFFICE SHOWS THAT THE ABOVE-NAMED INDIVIDUAL HAS NO DEROGATORY AND/OR PENDING CRIMINAL RECORD FILED AGAINST HIM/HER AS OF THIS DATE.
 </p>
-<p style="font-size:13px;line-height:1.9;text-indent:36px;margin-bottom:24px;text-align:justify;color:#000;">
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
   This certification is being issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">{{purpose}}</u>.
 </p>
-<p style="font-size:13px;margin-bottom:32px;color:#000;">
+<p style="font-size:14.5px;margin-top:28px;margin-bottom:36px;color:#000;">
   Issued this <u style="font-weight:bold;">{{date_issued}}</u>.
 </p>
 `;
@@ -162,16 +165,16 @@ function buildDefaultHtmlLayout(
     case 'certificate_residency':
       docTitleUpper = 'CERTIFICATE OF RESIDENCY';
       bodyWordingHtml = `
-<p style="font-size:13px;line-height:1.9;text-indent:36px;margin-bottom:18px;text-align:justify;color:#000;">
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
   This is to certify that <u style="font-weight:bold;">{{resident_name}}</u> whose residence at <u style="font-weight:bold;">{{resident_address}}</u> is a verified permanent resident of {{barangay_name}}, {{city}}.
 </p>
-<p style="font-size:13px;line-height:1.9;text-indent:36px;margin-bottom:18px;text-align:justify;color:#000;">
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
   The barangay also certifies that he/she is a law-abiding citizen of good standing in this community.
 </p>
-<p style="font-size:13px;line-height:1.9;text-indent:36px;margin-bottom:24px;text-align:justify;color:#000;">
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
   This certification is being issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">{{purpose}}</u>.
 </p>
-<p style="font-size:13px;margin-bottom:32px;color:#000;">
+<p style="font-size:14.5px;margin-top:28px;margin-bottom:36px;color:#000;">
   Issued this <u style="font-weight:bold;">{{date_issued}}</u>.
 </p>
 `;
@@ -180,16 +183,16 @@ function buildDefaultHtmlLayout(
     case 'good_moral':
       docTitleUpper = 'CERTIFICATE OF GOOD MORAL CHARACTER';
       bodyWordingHtml = `
-<p style="font-size:13px;line-height:1.9;text-indent:36px;margin-bottom:18px;text-align:justify;color:#000;">
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
   This is to certify that <u style="font-weight:bold;">{{resident_name}}</u> residing at <u style="font-weight:bold;">{{resident_address}}</u> is personally known to the undersigned officials as a person of good moral character.
 </p>
-<p style="font-size:13px;line-height:1.9;text-indent:36px;margin-bottom:18px;text-align:justify;color:#000;">
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
   He/She has no record of involvement in any unlawful activities in this barangay.
 </p>
-<p style="font-size:13px;line-height:1.9;text-indent:36px;margin-bottom:24px;text-align:justify;color:#000;">
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
   This certification is being issued upon request for <u style="font-weight:bold;">{{purpose}}</u>.
 </p>
-<p style="font-size:13px;margin-bottom:32px;color:#000;">
+<p style="font-size:14.5px;margin-top:28px;margin-bottom:36px;color:#000;">
   Issued this <u style="font-weight:bold;">{{date_issued}}</u>.
 </p>
 `;
@@ -198,13 +201,13 @@ function buildDefaultHtmlLayout(
     case 'business_permit':
       docTitleUpper = 'BARANGAY BUSINESS CLEARANCE';
       bodyWordingHtml = `
-<p style="font-size:13px;line-height:1.9;text-indent:36px;margin-bottom:18px;text-align:justify;color:#000;">
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
   Barangay clearance is hereby granted to <u style="font-weight:bold;">{{resident_name}}</u> to operate business under registered trade name located at <u style="font-weight:bold;">{{resident_address}}</u>, {{barangay_name}}, {{city}}.
 </p>
-<p style="font-size:13px;line-height:1.9;text-indent:36px;margin-bottom:24px;text-align:justify;color:#000;">
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
   Subject to compliance with all existing barangay ordinances and municipal health laws.
 </p>
-<p style="font-size:13px;margin-bottom:32px;color:#000;">
+<p style="font-size:14.5px;margin-top:28px;margin-bottom:36px;color:#000;">
   Issued this <u style="font-weight:bold;">{{date_issued}}</u> for <u style="font-weight:bold;">{{purpose}}</u>.
 </p>
 `;
@@ -213,11 +216,11 @@ function buildDefaultHtmlLayout(
     case 'lupon_summons':
       docTitleUpper = 'PATAWAG / SUMMONS (KP FORM #9)';
       bodyWordingHtml = `
-<p style="font-size:12px;font-weight:bold;margin-bottom:12px;color:#000;">TO RESPONDENT: <u style="font-weight:bold;">{{resident_name}}</u></p>
-<p style="font-size:13px;line-height:1.9;text-indent:36px;margin-bottom:18px;text-align:justify;color:#000;">
+<p style="font-size:14px;font-weight:bold;margin-bottom:16px;color:#000;">TO RESPONDENT: <u style="font-weight:bold;">{{resident_name}}</u></p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
   You are hereby summoned to appear before me personally at the Barangay Hall on <u style="font-weight:bold;">{{date_issued}}</u> for a mediation/conciliation hearing regarding complaint filed against you.
 </p>
-<p style="font-size:13px;line-height:1.9;text-indent:36px;margin-bottom:24px;text-align:justify;color:#000;">
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
   Fail not, or else face prejudice and legal action in court according to law.
 </p>
 `;
@@ -227,78 +230,123 @@ function buildDefaultHtmlLayout(
     default:
       docTitleUpper = 'CERTIFICATE OF INDIGENCY';
       bodyWordingHtml = `
-<p style="font-size:13px;line-height:1.9;text-indent:36px;margin-bottom:18px;text-align:justify;color:#000;">
+<p style="font-size:15.5px;line-height:2.1;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
   This is to certify that <u style="font-weight:bold;">{{resident_name}}</u> whose residence at <u style="font-weight:bold;">{{resident_address}}</u> is within the jurisdiction of {{barangay_name}}, {{city}} and belongs to the indigent families of this barangay. The barangay also certifies that their daily income is barely enough to meet their day-to-day needs.
 </p>
-<p style="font-size:13px;line-height:1.9;text-indent:36px;margin-bottom:24px;text-align:justify;color:#000;">
-  This certification is being issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for whatever legal purpose it may serve him/her.
+<p style="font-size:15.5px;line-height:2.1;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  This certification is being issued upon the request of Mr./Mrs./Ms. <u style="font-weight:bold;">{{resident_name}}</u> for whatever legal purpose it may serve him/her.
 </p>
-<p style="font-size:13px;margin-bottom:32px;color:#000;">
+<p style="font-size:15.5px;margin-top:26px;margin-bottom:32px;color:#000;text-align:center;">
   Issued this <u style="font-weight:bold;">{{date_issued}}</u>.
 </p>
 `;
       break;
   }
 
-  // 2-COLUMN SIDEBAR LAYOUT (FULLY DYNAMIC PLACEHOLDERS)
+  // Sidebar height & spacing distributions:
+  // - 'compact': ~50% page length (upper half)
+  // - 'standard': ~75% (3/4) page length
+  // - 'spacious': 100% full page length stretching to bottom
+  const sidebarPadding =
+    sideColumnVerticalSpacing === 'compact'
+      ? '8px 6px'
+      : sideColumnVerticalSpacing === 'spacious'
+      ? '18px 10px 14px 10px'
+      : '12px 8px 8px 8px';
+  const punongPbMargin =
+    sideColumnVerticalSpacing === 'compact'
+      ? '4px'
+      : sideColumnVerticalSpacing === 'spacious'
+      ? '16px'
+      : '10px';
+  const kagawadHeaderMargin =
+    sideColumnVerticalSpacing === 'compact'
+      ? '4px 0 2px 0'
+      : sideColumnVerticalSpacing === 'spacious'
+      ? '14px 0 8px 0'
+      : '8px 0 4px 0';
+  const execMarginTop =
+    sideColumnVerticalSpacing === 'compact'
+      ? '6px'
+      : sideColumnVerticalSpacing === 'spacious'
+      ? 'auto'
+      : '20px';
+  const execOfficerMargin =
+    sideColumnVerticalSpacing === 'compact'
+      ? '2px'
+      : sideColumnVerticalSpacing === 'spacious'
+      ? '14px'
+      : '6px';
+  const sidebarJustify =
+    sideColumnVerticalSpacing === 'spacious' ? 'space-between' : 'flex-start';
+
+  // 2-COLUMN SIDEBAR LAYOUT (FULL A4 HEIGHT PROPORTIONS & DYNAMIC WHOLE-PAGE WATERMARK)
   if (layoutStyle === 'two_column_sidebar') {
     return `
-<div style="font-family:'Times New Roman',Georgia,serif;color:#000;width:100%;max-width:820px;margin:0 auto;background:#fff;">
+<div style="font-family:'Times New Roman',Georgia,serif;color:#000;width:100%;max-width:840px;min-height:272mm;height:100%;margin:0 auto;background:#fff;display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;padding:2mm 4mm;position:relative;">
+  <!-- DYNAMIC WATERMARK SEAL SPANNING WHOLE CERTIFICATE SHEET -->
+  {{barangay_watermark}}
+
   <!-- TOP 3-SEAL HEADER -->
-  ${headerHtml}
+  <div style="position:relative;z-index:2;">
+    ${headerHtml}
+  </div>
 
-  <!-- MAIN OUTER BLACK BORDER BOX CONTAINING 2 COLUMNS -->
-  <div style="border:2px solid #000;display:flex;align-items:stretch;position:relative;">
+  <!-- MAIN OUTER BLACK BORDER BOX CONTAINING 2 COLUMNS (FLEX-1 STRETCH TO FILL FULL HEIGHT) -->
+  <div class="doc-frame" style="border:2px solid #000;display:flex;align-items:stretch;flex:1 1 auto;min-height:226mm;position:relative;margin:4px 0 6px 0;box-sizing:border-box;z-index:2;background:transparent;">
     
-    <!-- LEFT SIDEBAR: BARANGAY OFFICIALS & KAGAWAD ROSTER -->
-    <div style="width:230px;shrink:0;border-right:2px solid #000;padding:12px 10px;text-align:center;font-size:11px;">
+    <!-- LEFT SIDEBAR: BARANGAY OFFICIALS & KAGAWAD ROSTER (SIZED UP BY +2PX) -->
+    <div style="width:235px;min-width:235px;border-right:2px solid #000;padding:${sidebarPadding};text-align:center;font-size:13.5px;display:flex;flex-direction:column;justify-content:${sidebarJustify};background:transparent;box-sizing:border-box;">
       
-      <!-- PUNONG BARANGAY -->
-      <div style="margin-bottom:12px;">
-        <p style="font-size:11px;font-weight:bold;text-decoration:underline;margin:0;color:#000;">
-          {{punong_barangay}}
-        </p>
-        <p style="font-size:10px;font-weight:bold;margin:1px 0 0 0;color:#000;">
-          Punong Barangay
-        </p>
-        <p style="font-size:8px;font-style:italic;margin:1px 0 0 0;color:#333;">
-          Senior Citizen & PWD's Committee
-        </p>
-      </div>
-
-      <!-- KAGAWAD HEADER -->
-      <p style="font-size:11px;font-weight:bold;text-transform:uppercase;margin:10px 0 8px 0;color:#000;">
-        KAGAWAD:
-      </p>
-
-      <!-- DYNAMIC KAGAWAD ROSTER LIST WITH COMMITTEES -->
-      <div style="font-size:9px;line-height:1.35;">
-        {{kagawad_list}}
-      </div>
-
-      <!-- EXECUTIVE OFFICERS (TREASURER & SECRETARY) -->
-      <div style="margin-top:14px;">
-        <div style="margin-bottom:8px;">
-          <p style="font-size:10px;font-weight:bold;margin:0;color:#000;">{{barangay_treasurer}}</p>
-          <p style="font-size:8px;font-style:italic;margin:1px 0 0 0;color:#333;">Barangay Treasurer</p>
+      <div>
+        <!-- PUNONG BARANGAY -->
+        <div style="margin-bottom:${punongPbMargin};">
+          <p style="font-size:15.5px;font-weight:bold;text-decoration:underline;margin:0;color:#000;text-transform:uppercase;">
+            {{punong_barangay}}
+          </p>
+          <p style="font-size:14px;font-weight:bold;margin:2px 0 0 0;color:#000;">
+            Punong Barangay
+          </p>
+          <p style="font-size:12.5px;font-style:italic;margin:2px 0 0 0;color:#333;">
+            Senior Citizen & PWD's Committee
+          </p>
         </div>
 
+        <!-- KAGAWAD HEADER -->
+        <p style="font-size:15px;font-weight:bold;text-transform:uppercase;margin:${kagawadHeaderMargin};color:#000;letter-spacing:0.5px;">
+          KAGAWAD:
+        </p>
+
+        <!-- DYNAMIC KAGAWAD ROSTER LIST WITH COMMITTEES -->
         <div>
-          <p style="font-size:10px;font-weight:bold;margin:0;color:#000;">{{barangay_secretary}}</p>
-          <p style="font-size:8px;font-style:italic;margin:1px 0 0 0;color:#333;">Barangay Secretary</p>
+          {{kagawad_list}}
+        </div>
+
+        <!-- EXECUTIVE OFFICERS (TREASURER & SECRETARY) -->
+        <div style="margin-top:${execMarginTop};">
+          <div style="margin-bottom:${execOfficerMargin};">
+            <p style="font-size:14.5px;font-weight:bold;margin:0;color:#000;">{{barangay_treasurer}}</p>
+            <p style="font-size:12.5px;font-style:italic;margin:1px 0 0 0;color:#333;">Barangay Treasurer</p>
+          </div>
+
+          <div>
+            <p style="font-size:14.5px;font-weight:bold;margin:0;color:#000;">{{barangay_secretary}}</p>
+            <p style="font-size:12.5px;font-style:italic;margin:1px 0 0 0;color:#333;">Barangay Secretary</p>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- RIGHT COLUMN: DOCUMENT TITLE, BODY & SIGNATURE -->
-    <div style="flex:1;padding:20px 24px;display:flex;flex-direction:column;justify-content:space-between;position:relative;">
+    <div style="flex:1;padding:26px 30px 18px 30px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;box-sizing:border-box;background:transparent;">
       
-      <div>
-        <h2 style="text-align:center;font-size:20px;font-weight:800;font-family:'Times New Roman',serif;letter-spacing:1px;color:#000;text-transform:uppercase;margin:10px 0 24px 0;">
+      <!-- MAIN CONTENT LAYER -->
+      <div style="position:relative;z-index:2;">
+        <h2 style="text-align:center;font-size:23px;font-weight:800;font-family:'Times New Roman',serif;letter-spacing:1.8px;color:#000;text-transform:uppercase;margin:6px 0 28px 0;">
           ${docTitleUpper}
         </h2>
 
-        <p style="font-size:13px;font-weight:bold;margin-bottom:18px;color:#000;">
+        <p style="font-size:14.5px;font-weight:bold;margin-bottom:24px;color:#000;">
           TO WHOM IT MAY CONCERN:
         </p>
 
@@ -306,25 +354,25 @@ function buildDefaultHtmlLayout(
       </div>
 
       <!-- BOTTOM SIGNATURE & OFFICIAL NOTICE SECTION -->
-      <div>
-        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:36px;margin-bottom:20px;">
-          <div style="font-size:9px;font-weight:bold;font-style:italic;color:#333;">
+      <div style="position:relative;z-index:2;margin-top:auto;padding-top:32px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px;">
+          <div style="font-size:10.5px;font-weight:bold;font-style:italic;color:#333;line-height:1.25;">
             Not Valid Without<br />Official Seal
           </div>
 
-          <div style="text-align:center;min-width:200px;">
-            <p style="font-size:13px;font-weight:bold;margin:0;color:#000;">
+          <div style="text-align:center;min-width:220px;">
+            <p style="font-size:14.5px;font-weight:bold;margin:0;color:#000;">
               {{punong_barangay}}
             </p>
-            <p style="font-size:11px;font-weight:bold;margin:2px 0 0 0;color:#000;">
+            <p style="font-size:12px;font-weight:bold;margin:3px 0 0 0;color:#000;">
               Punong Barangay
             </p>
           </div>
         </div>
 
         <!-- WARNING FOOTER BAR -->
-        <div style="border-top:1px solid #000;padding-top:4px;text-align:center;">
-          <p style="font-size:9px;font-weight:bold;color:#000;margin:0;text-transform:uppercase;">
+        <div style="border-top:1px solid #000;padding-top:6px;text-align:center;">
+          <p style="font-size:9.5px;font-weight:bold;color:#000;margin:0;text-transform:uppercase;letter-spacing:0.3px;">
             **ALTERATION ON THIS PAGE WILL MAKE THIS CERTIFICATION VOID/INVALID**
           </p>
         </div>
@@ -334,10 +382,10 @@ function buildDefaultHtmlLayout(
   </div>
 
   <!-- DYNAMIC FOOTER ADDRESS & CONTACT INFORMATION -->
-  <div style="text-align:center;margin-top:8px;font-size:10px;font-style:italic;color:#556b2f;font-weight:bold;">
+  <div style="position:relative;z-index:2;text-align:center;margin-top:auto;padding-top:8px;font-size:11.5px;font-style:italic;color:#4f6e34;font-weight:bold;line-height:1.4;font-family:Georgia,serif;">
     <p style="margin:0;">{{barangay_address}}</p>
     <p style="margin:2px 0 0 0;">
-      Email Address: <span style="text-decoration:underline;color:#2e7d32;">{{barangay_email}}</span>
+      Email Address: <span style="text-decoration:underline;">{{barangay_email}}</span>
     </p>
     <p style="margin:2px 0 0 0;">Telephone Nos. {{barangay_phone}}</p>
   </div>
@@ -347,25 +395,41 @@ function buildDefaultHtmlLayout(
 
   // STANDARD SINGLE COLUMN LAYOUT
   return `
-<div style="font-family:'Times New Roman',Georgia,serif;color:#000;width:100%;max-width:800px;margin:0 auto;background:#fff;">
-  ${headerHtml}
-  <hr style="border:none;border-top:2px solid #000;margin:12px 0 24px 0;" />
-  <h2 style="text-align:center;font-size:20px;font-weight:800;letter-spacing:1px;color:#000;text-transform:uppercase;margin:20px 0 24px 0;">
-    ${docTitleUpper}
-  </h2>
-  <p style="font-size:13px;font-weight:bold;margin-bottom:16px;">TO WHOM IT MAY CONCERN:</p>
-  ${bodyWordingHtml}
-  <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:40px;page-break-inside:avoid;">
-    <div style="font-size:9px;font-weight:bold;font-style:italic;color:#333;">
-      Not Valid Without<br />Official Seal
+<div style="font-family:'Times New Roman',Georgia,serif;color:#000;width:100%;max-width:800px;min-height:272mm;height:100%;margin:0 auto;background:#fff;display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;position:relative;padding:2mm 4mm;">
+  <!-- DYNAMIC WATERMARK SEAL IN THE EXACT MIDDLE -->
+  {{barangay_watermark}}
+
+  <div style="position:relative;z-index:2;">
+    ${headerHtml}
+    <hr style="border:none;border-top:2px solid #000;margin:14px 0 28px 0;" />
+    <h2 style="text-align:center;font-size:23px;font-weight:800;letter-spacing:1.8px;color:#000;text-transform:uppercase;margin:20px 0 28px 0;">
+      ${docTitleUpper}
+    </h2>
+    <p style="font-size:14.5px;font-weight:bold;margin-bottom:22px;">TO WHOM IT MAY CONCERN:</p>
+    ${bodyWordingHtml}
+  </div>
+
+  <div style="position:relative;z-index:2;margin-top:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:40px;margin-bottom:24px;">
+      <div style="font-size:10.5px;font-weight:bold;font-style:italic;color:#333;">
+        Not Valid Without<br />Official Seal
+      </div>
+      <div style="text-align:center;min-width:220px;">
+        <p style="font-size:14.5px;font-weight:bold;margin:0;color:#000;">
+          {{punong_barangay}}
+        </p>
+        <p style="font-size:12px;font-weight:bold;margin:3px 0 0 0;color:#000;">
+          Punong Barangay
+        </p>
+      </div>
     </div>
-    <div style="text-align:center;min-width:200px;">
-      <p style="font-size:13px;font-weight:bold;margin:0;color:#000;">
-        {{punong_barangay}}
+    <!-- DYNAMIC FOOTER ADDRESS & CONTACT INFORMATION -->
+    <div style="text-align:center;margin-top:20px;border-top:1px solid #000;padding-top:8px;font-size:11.5px;font-style:italic;color:#4f6e34;font-weight:bold;line-height:1.4;font-family:Georgia,serif;">
+      <p style="margin:0;">{{barangay_address}}</p>
+      <p style="margin:2px 0 0 0;">
+        Email Address: <span style="text-decoration:underline;">{{barangay_email}}</span>
       </p>
-      <p style="font-size:11px;font-weight:bold;margin:2px 0 0 0;color:#000;">
-        Punong Barangay
-      </p>
+      <p style="margin:2px 0 0 0;">Telephone Nos. {{barangay_phone}}</p>
     </div>
   </div>
 </div>
@@ -422,15 +486,18 @@ export default function AdminDocumentTemplatesPage() {
   const [alignment, setAlignment] = useState<'left' | 'center' | 'right'>('center');
 
   // 3-Seal Media State (Country, City, Barangay)
-  const [countryLogoUrl, setCountryLogoUrl] = useState<string>('');
-  const [cityLogoUrl, setCityLogoUrl] = useState<string>('');
-  const [barangayLogoUrl, setBarangayLogoUrl] = useState<string>('');
+  const [countryLogoUrl, setCountryLogoUrl] = useState<string>('/images/indigency-template/bagong-pilipinas.png');
+  const [cityLogoUrl, setCityLogoUrl] = useState<string>('/images/indigency-template/san-juan-seal.jpeg');
+  const [barangayLogoUrl, setBarangayLogoUrl] = useState<string>('/images/indigency-template/barangay-progreso-seal.jpeg');
 
   // Seal Arrangement Options: 'side_by_side' | 'centered' | 'stacked'
   const [sealAlignment, setSealAlignment] = useState<'side_by_side' | 'centered' | 'stacked'>('centered');
 
   // Document Layout Style Options: 'single_column' | 'two_column_sidebar'
   const [layoutStyle, setLayoutStyle] = useState<'single_column' | 'two_column_sidebar'>('two_column_sidebar');
+
+  // Side Column Vertical Spacing Customization (Compact / Standard / Spacious)
+  const [sideColumnVerticalSpacing, setSideColumnVerticalSpacing] = useState<'compact' | 'standard' | 'spacious'>('standard');
 
   // Interactive Barangay General & Contact Information State
   const [cityText, setCityText] = useState('City Of San Juan');
@@ -499,11 +566,12 @@ export default function AdminDocumentTemplatesPage() {
       .map((k) => `• ${k.name}${k.committee ? ` (${k.committee})` : ''}`)
       .join('\n');
 
+    const currentYear = new Date().getFullYear();
     const sampleData: Record<string, string> = {
       resident_name: '________________________',
       resident_address: '________________________________________',
       purpose: '________________________',
-      date_issued: '______ day of ____________, 2025',
+      date_issued: `______ day of ____________, ${currentYear}`,
       reference_number: '____________________',
       barangay_name: barangayText.trim() || 'BARANGAY PROGRESO',
       city: cityText.trim() || 'City Of San Juan',
@@ -537,41 +605,52 @@ export default function AdminDocumentTemplatesPage() {
       html = buildDefaultHtmlLayout(
         editorDocType || activeTemplate?.documentType || 'certificate_indigency',
         sealAlignment,
-        layoutStyle
+        layoutStyle,
+        sideColumnVerticalSpacing
       );
     }
 
-    // Format Kagawad Roster Items dynamically with Bold Names & Italic Committees
+    // Dynamic Barangay Watermark Seal: large format spanning the whole paper sheet (~1 inch side space)
+    const activeWatermarkSrc =
+      barangayLogoUrl || '/images/indigency-template/watermark-seal.png' || '/images/indigency-template/barangay-progreso-seal.jpeg';
+    const dynamicWatermarkHtml = `<img src="${activeWatermarkSrc}" class="doc-watermark" style="position:absolute;left:50%;top:50%;width:560px;max-width:88%;transform:translate(-50%, -50%);opacity:0.12;filter:contrast(115%);pointer-events:none;z-index:1;user-select:none;-webkit-user-select:none;" alt="Barangay Seal Watermark" />`;
+
+    // Replace any legacy watermark src with the active barangay logo
+    html = html.replaceAll('/images/indigency-template/watermark-seal.png', activeWatermarkSrc);
+
+    // Format Kagawad Roster Items dynamically with customizable vertical spacing
+    const kagawadItemMargin = sideColumnVerticalSpacing === 'compact' ? '2px' : sideColumnVerticalSpacing === 'spacious' ? '14px' : '7px';
     const formattedKagawadListHtml = kagawadList
       .filter((k) => k.name.trim().length > 0)
       .map(
         (k) => `
-<div style="margin-bottom:8px;">
-  <p style="font-size:10px;font-weight:bold;margin:0;color:#000;">${k.name}</p>
-  ${k.committee ? `<p style="font-size:8px;font-style:italic;margin:1px 0 0 0;color:#333;">${k.committee}</p>` : ''}
+<div style="margin-bottom:${kagawadItemMargin};">
+  <p style="font-size:14px;font-weight:bold;margin:0;color:#000;line-height:1.25;">${k.name}</p>
+  ${k.committee ? `<p style="font-size:12px;font-style:italic;margin:2px 0 0 0;color:#333;line-height:1.2;">${k.committee}</p>` : ''}
 </div>`
       )
       .join('');
 
     // Dynamic Seals HTML Elements
     const barangaySealHtml = barangayLogoUrl
-      ? `<img src="${barangayLogoUrl}" style="height:64px;width:64px;object-fit:contain;" alt="Barangay Seal" />`
-      : `<div style="height:58px;width:58px;border-radius:9999px;border:2px solid #15803d;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:bold;color:#15803d;text-align:center;margin:0 auto;background:#f0fdf4;">BRGY SEAL</div>`;
+      ? `<img src="${barangayLogoUrl}" style="height:60px;width:60px;object-fit:contain;" alt="Barangay Seal" />`
+      : `<img src="/images/indigency-template/barangay-progreso-seal.jpeg" style="height:60px;width:60px;object-fit:contain;" alt="Barangay Seal" />`;
 
     const citySealHtml = cityLogoUrl
-      ? `<img src="${cityLogoUrl}" style="height:64px;width:64px;object-fit:contain;" alt="City Seal" />`
-      : `<div style="height:58px;width:58px;border-radius:9999px;border:2px solid #b45309;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:bold;color:#b45309;text-align:center;margin:0 auto;background:#fef3c7;">CITY SEAL</div>`;
+      ? `<img src="${cityLogoUrl}" style="height:60px;width:60px;object-fit:contain;" alt="City Seal" />`
+      : `<img src="/images/indigency-template/san-juan-seal.jpeg" style="height:60px;width:60px;object-fit:contain;" alt="City Seal" />`;
 
     const countrySealHtml = countryLogoUrl
-      ? `<img src="${countryLogoUrl}" style="height:64px;width:64px;object-fit:contain;" alt="Bagong Pilipinas Seal" />`
-      : `<div style="height:58px;width:58px;border-radius:9999px;border:2px solid #1e3a8a;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:bold;color:#1e3a8a;text-align:center;margin:0 auto;background:#eff6ff;">BAGONG PILIPINAS</div>`;
+      ? `<img src="${countryLogoUrl}" style="height:55px;width:68px;object-fit:contain;" alt="Bagong Pilipinas Seal" />`
+      : `<img src="/images/indigency-template/bagong-pilipinas.png" style="height:55px;width:68px;object-fit:contain;" alt="Bagong Pilipinas Seal" />`;
 
+    const currentYear = new Date().getFullYear();
     // Dynamic Substitution Object mapping system variables to active system inputs
     const sampleData: Record<string, string> = {
       resident_name: '<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>',
       resident_address: '<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>',
       purpose: '<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>',
-      date_issued: '<u>______ day of ____________, 2025</u>',
+      date_issued: `<u>______ day of ____________, ${currentYear}</u>`,
       reference_number: '<u>____________________</u>',
       barangay_name: barangayText.trim() ? `<strong>${barangayText.trim()}</strong>` : 'BARANGAY PROGRESO',
       city: cityText.trim() ? `<strong>${cityText.trim()}</strong>` : 'City Of San Juan',
@@ -582,6 +661,7 @@ export default function AdminDocumentTemplatesPage() {
       barangay_address: barangayAddress.trim() || '#15 M. Cruz Street Barangay Progreso, San Juan City',
       barangay_email: barangayEmail.trim() || 'barangayprogreso@yahoo.com',
       barangay_phone: barangayPhone.trim() || '(02)8727-5635 / (02)76258731',
+      barangay_watermark: dynamicWatermarkHtml,
       official_seal: '<div style="display:inline-block;border:2px solid #1e3a8a;color:#1e3a8a;padding:4px 10px;border-radius:9999px;font-weight:bold;font-size:10px;">[ OFFICIAL BARANGAY SEAL ]</div>',
       country_seal: countrySealHtml,
       city_seal: citySealHtml,
@@ -598,14 +678,106 @@ export default function AdminDocumentTemplatesPage() {
       html = html.replaceAll(`{{${key}}}`, val);
     });
 
+    // If template does not contain any watermark element, inject it dynamically into the document
+    if (!html.includes('Barangay Seal Watermark') && !html.includes('doc-watermark')) {
+      if (html.includes('<!-- MAIN CONTENT LAYER (Z-INDEX 2) -->')) {
+        html = html.replace('<!-- MAIN CONTENT LAYER (Z-INDEX 2) -->', `${dynamicWatermarkHtml}\n<!-- MAIN CONTENT LAYER (Z-INDEX 2) -->`);
+      } else {
+        html = `${dynamicWatermarkHtml}\n${html}`;
+      }
+    }
+
     return html;
-  }, [htmlContent, activeTemplate, editorDocType, cityLogoUrl, barangayLogoUrl, countryLogoUrl, sealAlignment, layoutStyle, dynamicFieldsInput, barangayText, cityText, punongBarangay, barangaySecretary, barangayTreasurer, kagawadList, barangayAddress, barangayEmail, barangayPhone]);
+  }, [htmlContent, activeTemplate, editorDocType, cityLogoUrl, barangayLogoUrl, countryLogoUrl, sealAlignment, layoutStyle, sideColumnVerticalSpacing, dynamicFieldsInput, barangayText, cityText, punongBarangay, barangaySecretary, barangayTreasurer, kagawadList, barangayAddress, barangayEmail, barangayPhone]);
+
+  // Dedicated Isolated Document Printing (Prints ONLY the authentic certificate document with Full A4 proportions)
+  const handlePrintDocument = () => {
+    const printWindow = window.open('', '_blank', 'width=900,height=1200');
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+    const fontCss =
+      fontFamily === 'Times New Roman'
+        ? '"Times New Roman", Times, serif'
+        : fontFamily === 'Arial'
+        ? 'Arial, sans-serif'
+        : '"Bookman Old Style", Georgia, serif';
+
+    printWindow.document.write(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${activeTemplate?.name || editorName || 'Barangay Document'} - Print</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 4mm 6mm;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      font-family: ${fontCss};
+      color: #000;
+      width: 100%;
+      height: 100%;
+    }
+    .print-document-wrapper {
+      width: 100%;
+      max-width: 198mm;
+      min-height: 275mm;
+      height: 275mm;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: #fff;
+      box-sizing: border-box;
+      padding: 2mm 0;
+    }
+    .print-document-wrapper > div {
+      min-height: 275mm !important;
+      height: 100% !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+    }
+    .print-document-wrapper .doc-frame {
+      flex: 1 1 auto !important;
+      min-height: 226mm !important;
+      height: 226mm !important;
+      display: flex !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="print-document-wrapper">
+    ${liveRenderedPreviewHtml}
+  </div>
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.focus();
+        window.print();
+      }, 250);
+    };
+  </script>
+</body>
+</html>`);
+    printWindow.document.close();
+  };
 
   // Open Template Details View
   const handleViewTemplate = (template: DocumentTemplate) => {
     setSelectedTemplateId(template.id);
     setBodyContent(template.body);
-    setHtmlContent(template.htmlBody || buildDefaultHtmlLayout(template.documentType || 'certificate_indigency', sealAlignment, layoutStyle));
+    setHtmlContent(template.htmlBody || buildDefaultHtmlLayout(template.documentType || 'certificate_indigency', sealAlignment, layoutStyle, sideColumnVerticalSpacing));
     setViewMode('view_details');
   };
 
@@ -619,7 +791,7 @@ export default function AdminDocumentTemplatesPage() {
       setEditorSourceType(template.sourceType ?? 'custom');
       setEditorFileName(template.originalFileName ?? '');
       setBodyContent(template.body);
-      setHtmlContent(template.htmlBody || buildDefaultHtmlLayout(docType, sealAlignment, layoutStyle));
+      setHtmlContent(template.htmlBody || buildDefaultHtmlLayout(docType, sealAlignment, layoutStyle, sideColumnVerticalSpacing));
       setDynamicFieldsInput((template.dynamicFields || []).join(','));
       setIsActive(template.isActive ?? true);
       if (template.headerConfig) {
@@ -639,7 +811,7 @@ export default function AdminDocumentTemplatesPage() {
       setEditorSourceType('custom');
       setEditorFileName('');
       setBodyContent('');
-      setHtmlContent(buildDefaultHtmlLayout(defaultDocType, sealAlignment, layoutStyle));
+      setHtmlContent(buildDefaultHtmlLayout(defaultDocType, sealAlignment, layoutStyle, sideColumnVerticalSpacing));
       setDynamicFieldsInput('resident_name,resident_address,purpose,date_issued,punong_barangay');
       setIsActive(true);
     }
@@ -653,22 +825,25 @@ export default function AdminDocumentTemplatesPage() {
     const docObj = DOCUMENT_TYPES.find((d) => d.id === newDocType);
     if (docObj) {
       setEditorName(`${docObj.labelEn} Template`);
-      setHtmlContent(buildDefaultHtmlLayout(newDocType, sealAlignment, layoutStyle));
+      setHtmlContent(buildDefaultHtmlLayout(newDocType, sealAlignment, layoutStyle, sideColumnVerticalSpacing));
     }
   };
 
-  // Re-generate HTML Layout when Seal Alignment or Layout Style changes
+  // Re-generate HTML Layout when Seal Alignment, Layout Style, or Vertical Spacing changes
   const handleRegenerateLayout = (
-    newSealAlignment: 'side_by_side' | 'centered' | 'stacked',
-    newLayoutStyle: 'single_column' | 'two_column_sidebar'
+    newSealAlignment: 'side_by_side' | 'centered' | 'stacked' = sealAlignment,
+    newLayoutStyle: 'single_column' | 'two_column_sidebar' = layoutStyle,
+    newVerticalSpacing: 'compact' | 'standard' | 'spacious' = sideColumnVerticalSpacing
   ) => {
     setSealAlignment(newSealAlignment);
     setLayoutStyle(newLayoutStyle);
+    setSideColumnVerticalSpacing(newVerticalSpacing);
     setHtmlContent(
       buildDefaultHtmlLayout(
         editorDocType,
         newSealAlignment,
-        newLayoutStyle
+        newLayoutStyle,
+        newVerticalSpacing
       )
     );
   };
@@ -815,7 +990,8 @@ export default function AdminDocumentTemplatesPage() {
           buildDefaultHtmlLayout(
             wizardDocType,
             sealAlignment,
-            layoutStyle
+            layoutStyle,
+            sideColumnVerticalSpacing
           )
         );
       }
@@ -1135,7 +1311,7 @@ export default function AdminDocumentTemplatesPage() {
                 <Edit3 className="h-3.5 w-3.5" />
                 Edit Template
               </Button>
-              <Button type="button" onClick={() => window.print()} className="gap-1.5 text-xs">
+              <Button type="button" onClick={handlePrintDocument} className="gap-1.5 text-xs">
                 <Printer className="h-3.5 w-3.5" />
                 Preview & Print
               </Button>
@@ -1148,7 +1324,7 @@ export default function AdminDocumentTemplatesPage() {
           >
             <div className="grid gap-6 lg:grid-cols-[minmax(300px,1fr)_minmax(0,1.5fr)]">
               {/* Left Column: Template Information */}
-              <div className="space-y-4 rounded-[var(--portal-radius-md)] border border-slate-200 bg-slate-50 p-5 text-xs">
+              <div className="space-y-4 rounded-[var(--portal-radius-md)] border border-slate-200 bg-slate-50 p-5 text-xs no-print">
                 <h4 className="font-bold text-slate-800 uppercase tracking-wider mb-3 text-sm">
                   TEMPLATE INFORMATION
                 </h4>
@@ -1192,19 +1368,20 @@ export default function AdminDocumentTemplatesPage() {
 
               {/* Right Column: Authentic Document Paper Sheet Canvas */}
               <div className="space-y-3">
-                <h4 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                <h4 className="font-bold text-slate-800 text-sm flex items-center gap-2 no-print">
                   <Eye className="h-4 w-4 text-blue-600" />
                   AUTHENTIC DOCUMENT CANVAS (1-TO-1 EXACT PREVIEW)
                 </h4>
 
                 <div
+                  id="printable-document-canvas"
                   className="mx-auto max-w-[850px] min-h-[650px] rounded-sm border border-slate-300 bg-white p-8 shadow-xl text-slate-900"
                   style={{
                     fontFamily: fontFamily === 'Times New Roman' ? '"Times New Roman", Times, serif' : fontFamily === 'Arial' ? 'Arial, sans-serif' : '"Bookman Old Style", Georgia, serif',
                   }}
                 >
                   <div
-                    className="prose max-w-none text-slate-900 leading-relaxed text-sm [&_p]:mb-3 [&_h2]:text-center [&_h2]:font-bold [&_h2]:text-lg [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:p-2"
+                    className="w-full text-slate-900 leading-relaxed [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:p-2"
                     dangerouslySetInnerHTML={{ __html: liveRenderedPreviewHtml }}
                   />
                 </div>
@@ -1383,6 +1560,11 @@ export default function AdminDocumentTemplatesPage() {
                   Delete Template
                 </Button>
               ) : null}
+
+              <Button type="button" variant="secondary" onClick={handlePrintDocument} className="gap-1.5 text-xs">
+                <Printer className="h-3.5 w-3.5" />
+                Preview & Print
+              </Button>
 
               <Button type="submit" className="gap-1.5">
                 <Save className="h-4 w-4" />
@@ -1564,7 +1746,7 @@ export default function AdminDocumentTemplatesPage() {
                       type="button"
                       size="sm"
                       variant="secondary"
-                      onClick={() => handleRegenerateLayout(sealAlignment, layoutStyle)}
+                      onClick={() => handleRegenerateLayout(sealAlignment, layoutStyle, sideColumnVerticalSpacing)}
                       className="text-[11px] h-6 px-2 text-blue-600 gap-1"
                     >
                       <RotateCcw className="h-3 w-3" /> Reset Category Layout
@@ -1573,11 +1755,11 @@ export default function AdminDocumentTemplatesPage() {
 
                   {htmlContent && htmlContent.trim().length > 0 ? (
                     <div
-                      className="prose max-w-none text-slate-900 leading-relaxed text-sm [&_p]:mb-3 [&_h2]:text-center [&_h2]:font-bold [&_h2]:text-lg [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:p-2"
+                      className="w-full text-slate-900 leading-relaxed [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:p-2"
                       dangerouslySetInnerHTML={{ __html: liveRenderedPreviewHtml }}
                     />
                   ) : (
-                    <div className="whitespace-pre-wrap leading-relaxed text-sm text-left">
+                    <div className="whitespace-pre-wrap leading-relaxed text-base text-left">
                       {liveRenderedPreviewText}
                     </div>
                   )}
@@ -1614,7 +1796,8 @@ export default function AdminDocumentTemplatesPage() {
                     onChange={(e) =>
                       handleRegenerateLayout(
                         e.target.value as 'side_by_side' | 'centered' | 'stacked',
-                        layoutStyle
+                        layoutStyle,
+                        sideColumnVerticalSpacing
                       )
                     }
                   >
@@ -1630,7 +1813,8 @@ export default function AdminDocumentTemplatesPage() {
                     onChange={(e) =>
                       handleRegenerateLayout(
                         sealAlignment,
-                        e.target.value as 'single_column' | 'two_column_sidebar'
+                        e.target.value as 'single_column' | 'two_column_sidebar',
+                        sideColumnVerticalSpacing
                       )
                     }
                   >
@@ -1638,6 +1822,25 @@ export default function AdminDocumentTemplatesPage() {
                     <option value="single_column">Standard 1-Column Layout</option>
                   </Select>
                 </FieldLabel>
+
+                {layoutStyle === 'two_column_sidebar' && (
+                  <FieldLabel label="Side Column Vertical Spacing">
+                    <Select
+                      value={sideColumnVerticalSpacing}
+                      onChange={(e) =>
+                        handleRegenerateLayout(
+                          sealAlignment,
+                          layoutStyle,
+                          e.target.value as 'compact' | 'standard' | 'spacious'
+                        )
+                      }
+                    >
+                      <option value="compact">Compact (Half Page Length ~50%)</option>
+                      <option value="standard">Standard (3/4 Page Length ~75%)</option>
+                      <option value="spacious">Extra Spacious (Full Page Length 100%)</option>
+                    </Select>
+                  </FieldLabel>
+                )}
               </div>
             </div>
           </div>
@@ -1657,10 +1860,10 @@ export default function AdminDocumentTemplatesPage() {
             <div className="mb-6 rounded-[var(--portal-radius-md)] border border-slate-200 bg-slate-50 p-4">
               <h4 className="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
                 <Building2 className="h-4 w-4 text-blue-600" />
-                1. Barangay General & Contact Details (Dynamic System Variables)
+                1. Barangay General & Contact Details
               </h4>
               <div className="grid gap-4 md:grid-cols-2">
-                <FieldLabel label="City / Municipality (&#123;&#123;city&#125;&#125;)">
+                <FieldLabel label="City / Municipality">
                   <Input
                     value={cityText}
                     onChange={(e) => setCityText(e.target.value)}
@@ -1668,7 +1871,7 @@ export default function AdminDocumentTemplatesPage() {
                   />
                 </FieldLabel>
 
-                <FieldLabel label="Barangay Name (&#123;&#123;barangay_name&#125;&#125;)">
+                <FieldLabel label="Barangay Name">
                   <Input
                     value={barangayText}
                     onChange={(e) => setBarangayText(e.target.value)}
@@ -1676,7 +1879,7 @@ export default function AdminDocumentTemplatesPage() {
                   />
                 </FieldLabel>
 
-                <FieldLabel label="Barangay Office Address (&#123;&#123;barangay_address&#125;&#125;)">
+                <FieldLabel label="Barangay Office Address">
                   <Input
                     value={barangayAddress}
                     onChange={(e) => setBarangayAddress(e.target.value)}
@@ -1684,7 +1887,7 @@ export default function AdminDocumentTemplatesPage() {
                   />
                 </FieldLabel>
 
-                <FieldLabel label="Official Barangay Email (&#123;&#123;barangay_email&#125;&#125;)">
+                <FieldLabel label="Official Barangay Email">
                   <Input
                     value={barangayEmail}
                     onChange={(e) => setBarangayEmail(e.target.value)}
@@ -1693,7 +1896,7 @@ export default function AdminDocumentTemplatesPage() {
                 </FieldLabel>
 
                 <div className="md:col-span-2">
-                  <FieldLabel label="Contact Telephone Numbers (&#123;&#123;barangay_phone&#125;&#125;)">
+                  <FieldLabel label="Contact Telephone Numbers">
                     <Input
                       value={barangayPhone}
                       onChange={(e) => setBarangayPhone(e.target.value)}
@@ -1708,12 +1911,12 @@ export default function AdminDocumentTemplatesPage() {
             <div className="mb-6 rounded-[var(--portal-radius-md)] border border-slate-200 bg-white p-4">
               <h4 className="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
                 <ImageIcon className="h-4 w-4 text-blue-600" />
-                2. Official Seal Logos (Dynamic {"{{barangay_seal}}"}, {"{{city_seal}}"}, {"{{country_seal}}"})
+                2. Official Seal Logos
               </h4>
               <div className="grid gap-4 md:grid-cols-3">
                 {/* 1. Barangay Seal */}
                 <div className="rounded-[var(--portal-radius-md)] border border-slate-200 bg-slate-50 p-4 space-y-3">
-                  <p className="font-bold text-slate-800 text-xs uppercase tracking-wider">Barangay Official Seal ({"{{barangay_seal}}"})</p>
+                  <p className="font-bold text-slate-800 text-xs uppercase tracking-wider">Barangay Official Seal</p>
                   <div className="flex items-center gap-3">
                     <div className="h-14 w-14 rounded-full border-2 border-emerald-300 bg-white p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
                       {barangayLogoUrl ? (
@@ -1741,7 +1944,7 @@ export default function AdminDocumentTemplatesPage() {
 
                 {/* 2. City / Municipal Seal */}
                 <div className="rounded-[var(--portal-radius-md)] border border-slate-200 bg-slate-50 p-4 space-y-3">
-                  <p className="font-bold text-slate-800 text-xs uppercase tracking-wider">City / Municipal Seal ({"{{city_seal}}"})</p>
+                  <p className="font-bold text-slate-800 text-xs uppercase tracking-wider">City / Municipal Seal</p>
                   <div className="flex items-center gap-3">
                     <div className="h-14 w-14 rounded-full border-2 border-amber-300 bg-white p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
                       {cityLogoUrl ? (
@@ -1769,7 +1972,7 @@ export default function AdminDocumentTemplatesPage() {
 
                 {/* 3. Country / Bagong Pilipinas Seal */}
                 <div className="rounded-[var(--portal-radius-md)] border border-slate-200 bg-slate-50 p-4 space-y-3">
-                  <p className="font-bold text-slate-800 text-xs uppercase tracking-wider">Bagong Pilipinas / National Seal ({"{{country_seal}}"})</p>
+                  <p className="font-bold text-slate-800 text-xs uppercase tracking-wider">Bagong Pilipinas / National Seal</p>
                   <div className="flex items-center gap-3">
                     <div className="h-14 w-14 rounded-full border-2 border-blue-300 bg-white p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
                       {countryLogoUrl ? (
@@ -1801,11 +2004,11 @@ export default function AdminDocumentTemplatesPage() {
             <div className="mb-6 rounded-[var(--portal-radius-md)] border border-slate-200 bg-white p-4">
               <h4 className="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
                 <Users className="h-4 w-4 text-blue-600" />
-                3. Key Executive Officials (Dynamic {"{{punong_barangay}}"}, {"{{barangay_secretary}}"}, {"{{barangay_treasurer}}"})
+                3. Key Executive Officials
               </h4>
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="rounded-[var(--portal-radius-md)] border border-slate-200 bg-slate-50 p-4">
-                  <FieldLabel label="Punong Barangay Full Name (&#123;&#123;punong_barangay&#125;&#125;)">
+                  <FieldLabel label="Punong Barangay Full Name">
                     <Input
                       value={punongBarangay}
                       onChange={(e) => setPunongBarangay(e.target.value)}
@@ -1815,7 +2018,7 @@ export default function AdminDocumentTemplatesPage() {
                 </div>
 
                 <div className="rounded-[var(--portal-radius-md)] border border-slate-200 bg-slate-50 p-4">
-                  <FieldLabel label="Barangay Secretary Full Name (&#123;&#123;barangay_secretary&#125;&#125;)">
+                  <FieldLabel label="Barangay Secretary Full Name">
                     <Input
                       value={barangaySecretary}
                       onChange={(e) => setBarangaySecretary(e.target.value)}
@@ -1825,7 +2028,7 @@ export default function AdminDocumentTemplatesPage() {
                 </div>
 
                 <div className="rounded-[var(--portal-radius-md)] border border-slate-200 bg-slate-50 p-4">
-                  <FieldLabel label="Barangay Treasurer Full Name (&#123;&#123;barangay_treasurer&#125;&#125;)">
+                  <FieldLabel label="Barangay Treasurer Full Name">
                     <Input
                       value={barangayTreasurer}
                       onChange={(e) => setBarangayTreasurer(e.target.value)}
@@ -1842,7 +2045,7 @@ export default function AdminDocumentTemplatesPage() {
                 <div>
                   <h4 className="font-bold text-slate-800 text-sm flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-blue-600" />
-                    4. Barangay Kagawad Roster & Committees (Dynamic {"{{kagawad_list}}"})
+                    4. Barangay Kagawad Roster & Committees
                   </h4>
                   <p className="text-xs text-slate-500">
                     Add, edit, or remove Kagawad members and their assigned committees for the dynamic 2-Column Sidebar Layout.
@@ -1905,6 +2108,55 @@ export default function AdminDocumentTemplatesPage() {
           </SectionCard>
         </form>
       )}
+
+      {/* Global CSS for Print-Only Document Isolation */}
+      <style jsx global>{`
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 4mm 6mm;
+          }
+          html, body {
+            background: #fff !important;
+            color: #000 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+          }
+          body * {
+            visibility: hidden;
+          }
+          #printable-document-canvas,
+          #printable-document-canvas * {
+            visibility: visible;
+          }
+          #printable-document-canvas {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-height: 280mm !important;
+            margin: 0 !important;
+            padding: 4mm 6mm !important;
+            border: none !important;
+            box-shadow: none !important;
+            background: #fff !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+          }
+          nav,
+          header,
+          aside,
+          button,
+          .no-print,
+          [data-portal-shell-nav] {
+            display: none !important;
+          }
+        }
+      `}</style>
     </PortalShell>
   );
 }

@@ -1,8 +1,9 @@
 'use client';
 
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { X, Funnel } from 'lucide-react';
+import { X, Funnel, Eye } from 'lucide-react';
 import { EmptyState, FieldLabel, PageGuide, SectionCard, StatusBadge, statusToneFromState } from '@/components/portal-ui';
+import DocumentRequestPreviewModal from '@/components/document-request-preview-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -25,9 +26,12 @@ export default function AdminDocumentRequestsPage() {
   const { state, locale } = useAppState();
   const [reason, setReason] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [previewRequestId, setPreviewRequestId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'approved' | 'declined' | 'cancelled' | 'pending' | 'staff_reviewed'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const selectedRequest = selectedId ? (state.documentRequests ?? []).find((item) => item.id === selectedId) ?? null : null;
+  const previewRequest = previewRequestId ? (state.documentRequests ?? []).find((item) => item.id === previewRequestId) ?? null : null;
+  const previewResident = previewRequest ? (state.users ?? []).find((u) => u.id === previewRequest.residentId) ?? null : null;
   useBodyScrollLock(Boolean(selectedRequest));
   const [search, setSearch] = useState('');
   const pageCopy = getRolePageCopy('admin/document-requests');
@@ -227,8 +231,18 @@ export default function AdminDocumentRequestsPage() {
                         <StatusBadge tone={statusToneFromState(item.status)}>{getRequestStatusLabel(item.status, locale)}</StatusBadge>
                       </TableCell>
                       <TableCell className="py-2 pr-2 text-center align-middle">
-                        <div className="flex justify-center">
-                          <Button variant="ghost" type="button" onClick={() => openReview(item.id)}>
+                        <div className="flex items-center justify-center gap-1.5">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            type="button"
+                            onClick={() => setPreviewRequestId(item.id)}
+                            title={locale === 'fil' ? 'Silipin ang Dokumento' : 'Preview Document'}
+                            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" type="button" onClick={() => openReview(item.id)}>
                             {locale === 'fil' ? 'Suriin' : 'Review'}
                           </Button>
                         </div>
@@ -334,7 +348,17 @@ export default function AdminDocumentRequestsPage() {
               </FieldLabel>
             </div>
 
-            <div className="flex flex-wrap justify-end gap-2 border-t border-[color:var(--portal-border-soft)] px-5 py-4">
+            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[color:var(--portal-border-soft)] px-5 py-4">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setPreviewRequestId(selectedRequest.id)}
+                className="gap-1.5 text-xs text-blue-700 border-blue-200 hover:bg-blue-50 mr-auto"
+              >
+                <Eye className="h-3.5 w-3.5 text-blue-600" />
+                {locale === 'fil' ? 'Silipin ang Dokumento' : 'Preview Document'}
+              </Button>
+
               <Button variant="ghost" type="button" onClick={closeReview}>
                 {locale === 'fil' ? 'Kanselahin' : 'Cancel'}
               </Button>
@@ -362,6 +386,18 @@ export default function AdminDocumentRequestsPage() {
           </section>
         </div>
       ) : null}
+
+      {/* AUTHENTIC DOCUMENT PREVIEW MODAL */}
+      <DocumentRequestPreviewModal
+        open={Boolean(previewRequestId)}
+        onOpenChange={(open) => {
+          if (!open) setPreviewRequestId(null);
+        }}
+        request={previewRequest}
+        resident={previewResident}
+        documentTemplates={state.documentTemplates}
+        locale={locale}
+      />
     </PortalShell>
   );
 }
