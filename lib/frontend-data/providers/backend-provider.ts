@@ -31,28 +31,55 @@ import {
 import { err, ok } from '../../types/result';
 import { createEmptyAppState } from '../empty-state';
 
-let memoryBarangayStreets: BarangayStreet[] = [
-  { id: 'st_1', name: 'Main Street', isActive: true, sortOrder: 10 },
-  { id: 'st_2', name: 'Rizal Street', isActive: true, sortOrder: 20 },
-  { id: 'st_3', name: 'Bonifacio Street', isActive: true, sortOrder: 30 },
-  { id: 'st_4', name: 'Magsaysay Avenue', isActive: true, sortOrder: 40 },
-  { id: 'st_5', name: 'Aguinaldo Highway', isActive: true, sortOrder: 50 },
-  { id: 'st_6', name: 'Luna Street', isActive: true, sortOrder: 60 },
-  { id: 'st_7', name: 'Del Pilar Street', isActive: true, sortOrder: 70 },
-  { id: 'st_8', name: 'P. Burgos Street', isActive: true, sortOrder: 80 },
-  { id: 'st_9', name: 'Sampaguita Street', isActive: true, sortOrder: 90 },
-  { id: 'st_10', name: 'Iba pang Kalsada / Outside Street', isActive: true, sortOrder: 99 },
-];
+const STREETS_STORAGE_KEY = 'eserbisyo_barangay_streets';
+const RELATIONSHIPS_STORAGE_KEY = 'eserbisyo_incident_relationships';
 
-let memoryIncidentRelationships: IncidentRelationship[] = [
-  { id: 'rel_1', name: 'Kapitbahay / Neighbor', isActive: true, sortOrder: 10 },
-  { id: 'rel_2', name: 'Kamag-anak / Relative', isActive: true, sortOrder: 20 },
-  { id: 'rel_3', name: 'Tenant / Renter / Landlord', isActive: true, sortOrder: 30 },
-  { id: 'rel_4', name: 'Kakilala / Acquaintance', isActive: true, sortOrder: 40 },
-  { id: 'rel_5', name: 'Hindi Kilala / Stranger', isActive: true, sortOrder: 50 },
-  { id: 'rel_6', name: 'Kasamahan sa Trabaho / Co-worker', isActive: true, sortOrder: 60 },
-  { id: 'rel_7', name: 'Iba pa / Other', isActive: true, sortOrder: 99 },
-];
+let memoryBarangayStreets: BarangayStreet[] = [];
+let memoryIncidentRelationships: IncidentRelationship[] = [];
+
+function getStoredStreets(): BarangayStreet[] {
+  if (typeof window === 'undefined') return memoryBarangayStreets;
+  try {
+    const raw = localStorage.getItem(STREETS_STORAGE_KEY);
+    if (!raw) return memoryBarangayStreets;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      memoryBarangayStreets = parsed;
+      return parsed;
+    }
+  } catch {}
+  return memoryBarangayStreets;
+}
+
+function saveStoredStreets(streets: BarangayStreet[]) {
+  memoryBarangayStreets = [...streets];
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STREETS_STORAGE_KEY, JSON.stringify(streets));
+  } catch {}
+}
+
+function getStoredRelationships(): IncidentRelationship[] {
+  if (typeof window === 'undefined') return memoryIncidentRelationships;
+  try {
+    const raw = localStorage.getItem(RELATIONSHIPS_STORAGE_KEY);
+    if (!raw) return memoryIncidentRelationships;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      memoryIncidentRelationships = parsed;
+      return parsed;
+    }
+  } catch {}
+  return memoryIncidentRelationships;
+}
+
+function saveStoredRelationships(rels: IncidentRelationship[]) {
+  memoryIncidentRelationships = [...rels];
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(RELATIONSHIPS_STORAGE_KEY, JSON.stringify(rels));
+  } catch {}
+}
 import type {
   DataProvider,
   RegisterResidentPayload,
@@ -653,6 +680,8 @@ async function createState(): Promise<AppState> {
     auditLogsRes,
     ocrRes,
     doctorsRes,
+    barangayStreetsRes,
+    incidentRelationshipsRes,
     appMetaRes,
   ] = await Promise.all([
     safeAuthGetUser(supabase),
@@ -679,6 +708,8 @@ async function createState(): Promise<AppState> {
     supabase.from('audit_logs').select('*').order('created_at', { ascending: false }),
     supabase.from('ocr_jobs').select('*').order('created_at', { ascending: false }),
     supabase.from('doctors').select('*').order('name', { ascending: true }),
+    supabase.from('barangay_streets').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: false }),
+    supabase.from('incident_relationships').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: false }),
     supabase.from('app_meta').select('*').order('updated_at', { ascending: false }).limit(1),
   ]);
 
@@ -883,8 +914,22 @@ async function createState(): Promise<AppState> {
       createdAt: item.created_at,
       updatedAt: item.updated_at,
     })),
-    barangayStreets: memoryBarangayStreets,
-    incidentRelationships: memoryIncidentRelationships,
+    barangayStreets: ((barangayStreetsRes?.data as any[] | null) ?? []).length > 0
+      ? ((barangayStreetsRes?.data as any[] | null) ?? []).map((item): BarangayStreet => ({
+          id: item.id,
+          name: item.name,
+          isActive: Boolean(item.is_active),
+          sortOrder: Number(item.sort_order ?? 0),
+        }))
+      : getStoredStreets(),
+    incidentRelationships: ((incidentRelationshipsRes?.data as any[] | null) ?? []).length > 0
+      ? ((incidentRelationshipsRes?.data as any[] | null) ?? []).map((item): IncidentRelationship => ({
+          id: item.id,
+          name: item.name,
+          isActive: Boolean(item.is_active),
+          sortOrder: Number(item.sort_order ?? 0),
+        }))
+      : getStoredRelationships(),
     feedback: ((feedbackRes.data as any[] | null) ?? []).map((item) => ({
       id: item.id,
       requestId: item.request_id ?? undefined,
@@ -1699,67 +1744,147 @@ export const backendProvider: DataProvider = {
   },
 
   async upsertBarangayStreet(payload: { id?: string; name: string; sortOrder?: number; isActive?: boolean }) {
-    if (payload.id) {
-      const idx = memoryBarangayStreets.findIndex((s) => s.id === payload.id);
-      if (idx !== -1) {
-        memoryBarangayStreets[idx] = {
-          ...memoryBarangayStreets[idx],
-          name: payload.name.trim(),
-          sortOrder: payload.sortOrder ?? memoryBarangayStreets[idx].sortOrder,
-          isActive: payload.isActive ?? memoryBarangayStreets[idx].isActive,
-        };
-      }
-    } else {
-      const newStreet: BarangayStreet = {
-        id: `st_${Date.now()}`,
-        name: payload.name.trim(),
-        sortOrder: payload.sortOrder ?? (memoryBarangayStreets.length + 1) * 10,
-        isActive: payload.isActive ?? true,
+    try {
+      const data = payload.id
+        ? await apiFetch<any>(`/api/v1/barangay-streets/${payload.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({
+              name: payload.name,
+              sortOrder: payload.sortOrder,
+              isActive: payload.isActive,
+            }),
+          })
+        : await apiFetch<any>('/api/v1/barangay-streets', {
+            method: 'POST',
+            body: JSON.stringify({
+              name: payload.name,
+              sortOrder: payload.sortOrder,
+            }),
+          });
+      emitStateChanged();
+      return {
+        id: data.id,
+        name: data.name,
+        isActive: Boolean(data.is_active),
+        sortOrder: Number(data.sort_order ?? 0),
       };
-      memoryBarangayStreets.push(newStreet);
+    } catch {
+      const streets = [...getStoredStreets()];
+      if (payload.id) {
+        const idx = streets.findIndex((s) => s.id === payload.id);
+        if (idx !== -1) {
+          streets[idx] = {
+            ...streets[idx],
+            name: payload.name.trim(),
+            sortOrder: payload.sortOrder ?? streets[idx].sortOrder,
+            isActive: payload.isActive ?? streets[idx].isActive,
+          };
+        }
+      } else {
+        const newStreet: BarangayStreet = {
+          id: `st_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          name: payload.name.trim(),
+          sortOrder: payload.sortOrder ?? (streets.length + 1) * 10,
+          isActive: payload.isActive ?? true,
+        };
+        streets.push(newStreet);
+      }
+      saveStoredStreets(streets);
+      emitStateChanged();
+      return streets[streets.length - 1];
     }
-    emitStateChanged();
-    return memoryBarangayStreets[memoryBarangayStreets.length - 1];
   },
 
   async archiveBarangayStreet(streetId: string) {
-    const idx = memoryBarangayStreets.findIndex((s) => s.id === streetId);
-    if (idx !== -1) {
-      memoryBarangayStreets[idx].isActive = !memoryBarangayStreets[idx].isActive;
+    try {
+      await apiFetch(`/api/v1/barangay-streets/${streetId}`, {
+        method: 'DELETE',
+      });
+      emitStateChanged();
+    } catch {
+      const streets = [...getStoredStreets()];
+      const idx = streets.findIndex((s) => s.id === streetId);
+      if (idx !== -1) {
+        streets[idx] = {
+          ...streets[idx],
+          isActive: !streets[idx].isActive,
+        };
+        saveStoredStreets(streets);
+        emitStateChanged();
+      }
     }
-    emitStateChanged();
   },
 
   async upsertIncidentRelationship(payload: { id?: string; name: string; sortOrder?: number; isActive?: boolean }) {
-    if (payload.id) {
-      const idx = memoryIncidentRelationships.findIndex((r) => r.id === payload.id);
-      if (idx !== -1) {
-        memoryIncidentRelationships[idx] = {
-          ...memoryIncidentRelationships[idx],
-          name: payload.name.trim(),
-          sortOrder: payload.sortOrder ?? memoryIncidentRelationships[idx].sortOrder,
-          isActive: payload.isActive ?? memoryIncidentRelationships[idx].isActive,
-        };
-      }
-    } else {
-      const newRel: IncidentRelationship = {
-        id: `rel_${Date.now()}`,
-        name: payload.name.trim(),
-        sortOrder: payload.sortOrder ?? (memoryIncidentRelationships.length + 1) * 10,
-        isActive: payload.isActive ?? true,
+    try {
+      const data = payload.id
+        ? await apiFetch<any>(`/api/v1/incident-relationships/${payload.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({
+              name: payload.name,
+              sortOrder: payload.sortOrder,
+              isActive: payload.isActive,
+            }),
+          })
+        : await apiFetch<any>('/api/v1/incident-relationships', {
+            method: 'POST',
+            body: JSON.stringify({
+              name: payload.name,
+              sortOrder: payload.sortOrder,
+            }),
+          });
+      emitStateChanged();
+      return {
+        id: data.id,
+        name: data.name,
+        isActive: Boolean(data.is_active),
+        sortOrder: Number(data.sort_order ?? 0),
       };
-      memoryIncidentRelationships.push(newRel);
+    } catch {
+      const rels = [...getStoredRelationships()];
+      if (payload.id) {
+        const idx = rels.findIndex((r) => r.id === payload.id);
+        if (idx !== -1) {
+          rels[idx] = {
+            ...rels[idx],
+            name: payload.name.trim(),
+            sortOrder: payload.sortOrder ?? rels[idx].sortOrder,
+            isActive: payload.isActive ?? rels[idx].isActive,
+          };
+        }
+      } else {
+        const newRel: IncidentRelationship = {
+          id: `rel_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          name: payload.name.trim(),
+          sortOrder: payload.sortOrder ?? (rels.length + 1) * 10,
+          isActive: payload.isActive ?? true,
+        };
+        rels.push(newRel);
+      }
+      saveStoredRelationships(rels);
+      emitStateChanged();
+      return rels[rels.length - 1];
     }
-    emitStateChanged();
-    return memoryIncidentRelationships[memoryIncidentRelationships.length - 1];
   },
 
   async archiveIncidentRelationship(relationshipId: string) {
-    const idx = memoryIncidentRelationships.findIndex((r) => r.id === relationshipId);
-    if (idx !== -1) {
-      memoryIncidentRelationships[idx].isActive = !memoryIncidentRelationships[idx].isActive;
+    try {
+      await apiFetch(`/api/v1/incident-relationships/${relationshipId}`, {
+        method: 'DELETE',
+      });
+      emitStateChanged();
+    } catch {
+      const rels = [...getStoredRelationships()];
+      const idx = rels.findIndex((r) => r.id === relationshipId);
+      if (idx !== -1) {
+        rels[idx] = {
+          ...rels[idx],
+          isActive: !rels[idx].isActive,
+        };
+        saveStoredRelationships(rels);
+        emitStateChanged();
+      }
     }
-    emitStateChanged();
   },
 
   async acknowledgeDocumentRequestFeedbackPrompt(requestId: string) {

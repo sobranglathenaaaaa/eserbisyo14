@@ -189,13 +189,27 @@ export const upsertIncidentCategory = (payload: { id?: string; name: string; sor
   provider.upsertIncidentCategory(payload);
 export const archiveIncidentCategory = (categoryId: string) => provider.archiveIncidentCategory(categoryId);
 
-export const upsertBarangayStreet = (payload: { id?: string; name: string; sortOrder?: number; isActive?: boolean }) =>
-  provider.upsertBarangayStreet(payload);
-export const archiveBarangayStreet = (streetId: string) => provider.archiveBarangayStreet(streetId);
+export const upsertBarangayStreet = async (payload: { id?: string; name: string; sortOrder?: number; isActive?: boolean }) => {
+  const result = await provider.upsertBarangayStreet(payload);
+  await refreshStateFromProvider();
+  return result;
+};
+export const archiveBarangayStreet = async (streetId: string) => {
+  const result = await provider.archiveBarangayStreet(streetId);
+  await refreshStateFromProvider();
+  return result;
+};
 
-export const upsertIncidentRelationship = (payload: { id?: string; name: string; sortOrder?: number; isActive?: boolean }) =>
-  provider.upsertIncidentRelationship(payload);
-export const archiveIncidentRelationship = (relationshipId: string) => provider.archiveIncidentRelationship(relationshipId);
+export const upsertIncidentRelationship = async (payload: { id?: string; name: string; sortOrder?: number; isActive?: boolean }) => {
+  const result = await provider.upsertIncidentRelationship(payload);
+  await refreshStateFromProvider();
+  return result;
+};
+export const archiveIncidentRelationship = async (relationshipId: string) => {
+  const result = await provider.archiveIncidentRelationship(relationshipId);
+  await refreshStateFromProvider();
+  return result;
+};
 
 export const upsertAnnouncement = (payload: {
   id?: string;

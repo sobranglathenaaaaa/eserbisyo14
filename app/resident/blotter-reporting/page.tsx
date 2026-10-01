@@ -21,29 +21,6 @@ import type { CaseParty, IncidentReport } from '@/lib/types/models';
 type TrackType = 'community_concern' | 'incident';
 type DesiredAction = 'record_only' | 'request_meeting';
 
-const BARANGAY_STREETS = [
-  'Main Street',
-  'Rizal Street',
-  'Bonifacio Street',
-  'Magsaysay Avenue',
-  'Aguinaldo Highway',
-  'Luna Street',
-  'Del Pilar Street',
-  'P. Burgos Street',
-  'Sampaguita Street',
-  'Iba pang Kalsada / Outside Street',
-];
-
-const RELATIONSHIP_OPTIONS = [
-  { value: 'Kapitbahay / Neighbor', en: 'Neighbor', fil: 'Kapitbahay' },
-  { value: 'Kamag-anak / Relative', en: 'Relative', fil: 'Kamag-anak' },
-  { value: 'Tenant / Renter / Landlord', en: 'Tenant / Landlord', fil: 'Umuupa / Landlord' },
-  { value: 'Kakilala / Acquaintance', en: 'Acquaintance', fil: 'Kakilala' },
-  { value: 'Hindi Kilala / Stranger', en: 'Stranger', fil: 'Hindi Kilala' },
-  { value: 'Kasamahan sa Trabaho / Co-worker', en: 'Co-worker', fil: 'Kasamahan sa Trabaho' },
-  { value: 'Iba pa / Other', en: 'Other', fil: 'Iba pa' },
-];
-
 export default function ResidentBlotterReportingPage() {
   const { state, user, locale } = useAppState();
   const pageCopy = getRolePageCopy('resident/blotter-reporting');
@@ -59,13 +36,13 @@ export default function ResidentBlotterReportingPage() {
   const [details, setDetails] = useState('');
   
   // Location Fields (Structured)
-  const [streetName, setStreetName] = useState(BARANGAY_STREETS[0]);
+  const [streetName, setStreetName] = useState('');
   const [specificLocation, setSpecificLocation] = useState('');
 
   // Incident Specific (Parties & Relationship)
   const [complainantName, setComplainantName] = useState('');
   const [respondentName, setRespondentName] = useState('');
-  const [relationshipToRespondent, setRelationshipToRespondent] = useState(RELATIONSHIP_OPTIONS[0].value);
+  const [relationshipToRespondent, setRelationshipToRespondent] = useState('');
   const [witnesses, setWitnesses] = useState('');
 
   // UI & Feedback
@@ -85,25 +62,27 @@ export default function ResidentBlotterReportingPage() {
   );
 
   const streetOptions = useMemo(() => {
-    const list = (state.barangayStreets || []).filter((item) => item.isActive);
-    if (!list.length) return BARANGAY_STREETS;
-    return list.map((item) => item.name);
+    return (state.barangayStreets || [])
+      .filter((item) => item.isActive)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((item) => item.name);
   }, [state.barangayStreets]);
 
   const relationshipOptions = useMemo(() => {
-    const list = (state.incidentRelationships || []).filter((item) => item.isActive);
-    if (!list.length) return RELATIONSHIP_OPTIONS.map((item) => item.value);
-    return list.map((item) => item.name);
+    return (state.incidentRelationships || [])
+      .filter((item) => item.isActive)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((item) => item.name);
   }, [state.incidentRelationships]);
 
   useEffect(() => {
-    if (streetOptions.length && !streetOptions.includes(streetName)) {
+    if (streetOptions.length && (!streetName || !streetOptions.includes(streetName))) {
       setStreetName(streetOptions[0]);
     }
   }, [streetOptions, streetName]);
 
   useEffect(() => {
-    if (relationshipOptions.length && !relationshipOptions.includes(relationshipToRespondent)) {
+    if (relationshipOptions.length && (!relationshipToRespondent || !relationshipOptions.includes(relationshipToRespondent))) {
       setRelationshipToRespondent(relationshipOptions[0]);
     }
   }, [relationshipOptions, relationshipToRespondent]);
@@ -361,6 +340,9 @@ export default function ResidentBlotterReportingPage() {
                 <label className="grid gap-1.5 text-sm">
                   <span className="font-medium text-gray-700">{copyText(locale, 'Street (Kalsada)', 'Kalsada / Street')}</span>
                   <Select value={streetName} onChange={(e) => setStreetName(e.target.value)}>
+                    {!streetOptions.length ? (
+                      <option value="">{copyText(locale, 'No streets configured by staff yet', 'Wala pang nakatalang kalsada mula sa staff')}</option>
+                    ) : null}
                     {streetOptions.map((st) => (
                       <option key={st} value={st}>
                         {st}
@@ -414,6 +396,9 @@ export default function ResidentBlotterReportingPage() {
                       value={relationshipToRespondent}
                       onChange={(e) => setRelationshipToRespondent(e.target.value)}
                     >
+                      {!relationshipOptions.length ? (
+                        <option value="">{copyText(locale, 'No relationship options configured yet', 'Wala pang nakatalang relasyon mula sa staff')}</option>
+                      ) : null}
                       {relationshipOptions.map((rel) => (
                         <option key={rel} value={rel}>
                           {rel}

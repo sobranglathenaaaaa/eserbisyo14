@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { X, Lock, FileText, CheckCircle2 } from 'lucide-react';
+import { X, Lock, FileText, CheckCircle2, Search, RotateCcw, MapPin, Users, ShieldAlert, HeartHandshake, Layers } from 'lucide-react';
 import PortalShell from '../../../components/portal-shell';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -28,9 +28,8 @@ import CaseReportDocumentModal from '@/components/case-report-document-modal';
 // Types & helpers
 // ---------------------------------------------------------------------------
 
-type ReportFilter =
-  | 'all' | 'pending' | 'community_concerns' | 'incidents'
-  | 'record_only' | 'barangay_hearings' | 'lupon' | 'cfa_pnp' | 'resolved';
+type TrackFilter = 'all' | 'incident' | 'community_concern';
+type StageFilter = 'all' | 'pending' | 'hearings' | 'lupon' | 'cfa_pnp' | 'record_only' | 'resolved';
 
 type ModalTab = 'details' | 'action' | 'hearing' | 'lupon' | 'cfa_pnp';
 
@@ -56,16 +55,20 @@ function defaultTab(report: IncidentReport | null): ModalTab {
 const ENDED: ReportStatus[] = ['resolved', 'closed', 'cfa_issued', 'referred_to_pnp'];
 const isEnded = (s: ReportStatus) => ENDED.includes(s);
 
-const FILTER_OPTIONS: Array<{ value: ReportFilter; en: string; fil: string }> = [
-  { value: 'all',               en: 'All Cases & Concerns',   fil: 'Lahat ng Kaso at Concern' },
-  { value: 'pending',           en: 'Pending Review',         fil: 'Naghihintay ng Review' },
-  { value: 'community_concerns',en: 'Community Concerns',     fil: 'Community Concerns' },
-  { value: 'incidents',         en: 'Incident Blotters',      fil: 'Incident Blotter Reports' },
-  { value: 'record_only',       en: 'Blotter Record Only',    fil: 'Blotter Record Only' },
-  { value: 'barangay_hearings', en: 'Barangay Hearings',      fil: 'Pagdinig sa Barangay' },
-  { value: 'lupon',             en: 'Lupon Conciliation',     fil: 'Lupon Conciliation' },
-  { value: 'cfa_pnp',          en: 'CFA & PNP Referrals',    fil: 'CFA at PNP Referrals' },
-  { value: 'resolved',          en: 'Resolved / Closed',      fil: 'Naresolba / Isinara' },
+const TRACK_OPTIONS: Array<{ value: TrackFilter; en: string; fil: string; icon?: string }> = [
+  { value: 'all',               en: 'All Cases & Concerns', fil: 'Lahat ng Kaso at Concern' },
+  { value: 'incident',          en: 'Incident Blotters',    fil: 'Incident Blotters' },
+  { value: 'community_concern', en: 'Community Concerns',   fil: 'Community Concerns' },
+];
+
+const STAGE_OPTIONS: Array<{ value: StageFilter; en: string; fil: string }> = [
+  { value: 'all',         en: 'All Stages & Statuses', fil: 'Lahat ng Yugto at Katayuan' },
+  { value: 'pending',     en: 'Pending Review',        fil: 'Naghihintay ng Review' },
+  { value: 'hearings',    en: 'Barangay Hearings',     fil: 'Pagdinig sa Barangay' },
+  { value: 'lupon',       en: 'Lupon Conciliation',    fil: 'Lupon Conciliation' },
+  { value: 'cfa_pnp',     en: 'CFA & PNP Referrals',   fil: 'CFA at PNP Referrals' },
+  { value: 'record_only', en: 'Blotter Record Only',   fil: 'Blotter Record Only' },
+  { value: 'resolved',    en: 'Resolved / Closed',     fil: 'Naresolba / Isinara' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -76,10 +79,11 @@ export default function StaffIncidentsPage() {
   const { state, locale } = useAppState();
   const pageCopy = getRolePageCopy('staff/incidents');
 
-  // List
-  const [search,     setSearch]     = useState('');
-  const [filter,     setFilter]     = useState<ReportFilter>('all');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // List & Filters
+  const [search,      setSearch]      = useState('');
+  const [trackFilter, setTrackFilter] = useState<TrackFilter>('all');
+  const [stageFilter, setStageFilter] = useState<StageFilter>('all');
+  const [selectedId,  setSelectedId]  = useState<string | null>(null);
 
   // Modal
   const [reviewOpen,        setReviewOpen]        = useState(false);
@@ -147,6 +151,85 @@ export default function StaffIncidentsPage() {
   const [feedback,     setFeedback]     = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
 
   // ---------------------------------------------------------------------------
+  // Street & Relationship Handlers
+  // ---------------------------------------------------------------------------
+  const handleAddStreet = async () => {
+    const trimmed = newStreetName.trim();
+    if (!trimmed) return;
+    setStreetAction('adding');
+    try {
+      await upsertBarangayStreet({ name: trimmed });
+      setNewStreetName('');
+      setFeedback({
+        tone: 'success',
+        text: locale === 'fil' ? `Matagumpay na naidagdag ang "${trimmed}".` : `"${trimmed}" street added successfully.`,
+      });
+    } catch (err) {
+      setFeedback({
+        tone: 'error',
+        text: err instanceof Error ? err.message : 'Failed to add street.',
+      });
+    } finally {
+      setStreetAction(null);
+    }
+  };
+
+  const handleToggleStreetArchive = async (st: { id: string; name: string; isActive: boolean }) => {
+    try {
+      await archiveBarangayStreet(st.id);
+      setFeedback({
+        tone: 'success',
+        text: st.isActive
+          ? (locale === 'fil' ? `Nai-archive ang kalsada: "${st.name}".` : `Street "${st.name}" archived.`)
+          : (locale === 'fil' ? `Naibalik ang kalsada: "${st.name}".` : `Street "${st.name}" restored.`),
+      });
+    } catch (err) {
+      setFeedback({
+        tone: 'error',
+        text: err instanceof Error ? err.message : 'Failed to update street status.',
+      });
+    }
+  };
+
+  const handleAddRelationship = async () => {
+    const trimmed = newRelName.trim();
+    if (!trimmed) return;
+    setRelAction('adding');
+    try {
+      await upsertIncidentRelationship({ name: trimmed });
+      setNewRelName('');
+      setFeedback({
+        tone: 'success',
+        text: locale === 'fil' ? `Matagumpay na naidagdag ang "${trimmed}".` : `"${trimmed}" relationship option added successfully.`,
+      });
+    } catch (err) {
+      setFeedback({
+        tone: 'error',
+        text: err instanceof Error ? err.message : 'Failed to add relationship option.',
+      });
+    } finally {
+      setRelAction(null);
+    }
+  };
+
+  const handleToggleRelArchive = async (rel: { id: string; name: string; isActive: boolean }) => {
+    try {
+      await archiveIncidentRelationship(rel.id);
+      setFeedback({
+        tone: 'success',
+        text: rel.isActive
+          ? (locale === 'fil' ? `Nai-archive ang relasyon: "${rel.name}".` : `Relationship "${rel.name}" archived.`)
+          : (locale === 'fil' ? `Naibalik ang relasyon: "${rel.name}".` : `Relationship "${rel.name}" restored.`),
+      });
+    } catch (err) {
+      setFeedback({
+        tone: 'error',
+        text: err instanceof Error ? err.message : 'Failed to update relationship option status.',
+      });
+    }
+  };
+
+  // ---------------------------------------------------------------------------
   // Derived
   // ---------------------------------------------------------------------------
   const reports = useMemo(
@@ -154,22 +237,63 @@ export default function StaffIncidentsPage() {
     [state.reports]
   );
 
+  const trackCounts = useMemo(() => ({
+    all: reports.length,
+    incident: reports.filter((r) => r.trackType === 'incident').length,
+    community_concern: reports.filter((r) => r.trackType === 'community_concern').length,
+  }), [reports]);
+
+  const stageCounts = useMemo(() => {
+    const base = reports.filter((r) => {
+      if (trackFilter === 'incident') return r.trackType === 'incident';
+      if (trackFilter === 'community_concern') return r.trackType === 'community_concern';
+      return true;
+    });
+    return {
+      all: base.length,
+      pending: base.filter((r) => r.status === 'pending' || r.status === 'submitted').length,
+      hearings: base.filter((r) => (r.status === 'proceed_to_barangay' || r.status === 'under_review' || (r.proceedings && r.proceedings.length > 0)) && !r.proceedings?.some((p) => p.stage === 'lupon_conciliation')).length,
+      lupon: base.filter((r) => r.proceedings?.some((p) => p.stage === 'lupon_conciliation')).length,
+      cfa_pnp: base.filter((r) => Boolean(r.cfa || r.pnpReferral || r.status === 'referred_to_pnp')).length,
+      record_only: base.filter((r) => r.desiredAction === 'record_only').length,
+      resolved: base.filter((r) => r.status === 'resolved' || r.status === 'closed').length,
+    };
+  }, [reports, trackFilter]);
+
   const filteredReports = useMemo(() => {
     const q = search.trim().toLowerCase();
     return reports.filter((item) => {
-      if (filter === 'pending'            && item.status !== 'pending'         && item.status !== 'submitted')    return false;
-      if (filter === 'community_concerns' && item.trackType !== 'community_concern')                              return false;
-      if (filter === 'incidents'          && item.trackType !== 'incident')                                       return false;
-      if (filter === 'record_only'        && item.desiredAction !== 'record_only')                                return false;
-      if (filter === 'barangay_hearings'  && item.status !== 'proceed_to_barangay' && item.status !== 'under_review' && (!item.proceedings || item.proceedings.length === 0)) return false;
-      if (filter === 'lupon'              && !item.proceedings?.some(p => p.stage === 'lupon_conciliation'))     return false;
-      if (filter === 'cfa_pnp'           && !item.cfa && !item.pnpReferral && item.status !== 'referred_to_pnp') return false;
-      if (filter === 'resolved'           && item.status !== 'resolved'           && item.status !== 'closed')    return false;
+      // 1. Track filter
+      if (trackFilter === 'incident' && item.trackType !== 'incident') return false;
+      if (trackFilter === 'community_concern' && item.trackType !== 'community_concern') return false;
+
+      // 2. Stage/Status filter
+      if (stageFilter === 'pending' && item.status !== 'pending' && item.status !== 'submitted') return false;
+      if (stageFilter === 'record_only' && item.desiredAction !== 'record_only') return false;
+      if (stageFilter === 'hearings' && item.status !== 'proceed_to_barangay' && item.status !== 'under_review' && (!item.proceedings || item.proceedings.length === 0)) return false;
+      if (stageFilter === 'lupon' && !item.proceedings?.some((p) => p.stage === 'lupon_conciliation')) return false;
+      if (stageFilter === 'cfa_pnp' && !item.cfa && !item.pnpReferral && item.status !== 'referred_to_pnp') return false;
+      if (stageFilter === 'resolved' && item.status !== 'resolved' && item.status !== 'closed') return false;
+
+      // 3. Search query
       if (!q) return true;
-      return [item.id, item.title, item.details, item.location, item.residentName, item.kind, item.otherCategoryText ?? '']
-        .join(' ').toLowerCase().includes(q);
+      return [
+        item.id,
+        item.title,
+        item.details,
+        item.location,
+        item.residentName,
+        item.streetName ?? '',
+        item.relationshipToRespondent ?? '',
+        item.kind,
+        item.otherCategoryText ?? '',
+        ...(item.parties?.map((p) => p.fullName) ?? []),
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(q);
     });
-  }, [filter, reports, search]);
+  }, [reports, trackFilter, stageFilter, search]);
 
   const selectedReport = useMemo(
     () => filteredReports.find((r) => r.id === selectedId) ?? filteredReports[0] ?? reports[0] ?? null,
@@ -585,38 +709,111 @@ export default function StaffIncidentsPage() {
 
       <div className="space-y-6">
         {/* Cases table */}
-        <SectionCard title={locale === 'fil' ? 'Barangay Cases & Concerns' : 'Barangay Cases & Concerns'}>
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={locale === 'fil' ? 'Hanapin: Case No, pangalan, lokasyon...' : 'Search: Case No, name, location...'}
-              className="max-w-[380px]"
-            />
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-[color:var(--portal-ink-600)] whitespace-nowrap">Filter:</span>
-              <Select value={filter} onChange={(e) => setFilter(e.target.value as ReportFilter)} className="w-[240px] text-xs">
-                {FILTER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{locale === 'fil' ? o.fil : o.en}</option>)}
+        <SectionCard
+          title={locale === 'fil' ? 'Mga Kaso at Concern ng Barangay' : 'Barangay Cases & Concerns'}
+          description={locale === 'fil' ? 'Subaybayan, i-review, at pamahalaan ang lahat ng blotter at community concern reports.' : 'Review, manage, and process incident blotters and community concerns.'}
+        >
+          {/* Primary Track Tabs */}
+          <div className="flex flex-wrap items-center gap-2 border-b border-[color:var(--portal-border-soft)] pb-3">
+            {TRACK_OPTIONS.map((t) => {
+              const isActive = trackFilter === t.value;
+              const count = trackCounts[t.value];
+              return (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => setTrackFilter(t.value)}
+                  className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${
+                    isActive
+                      ? 'bg-[color:var(--portal-accent)] text-white shadow-sm ring-1 ring-[color:var(--portal-accent)]'
+                      : 'bg-[color:var(--portal-surface-2)] text-[color:var(--portal-ink-700)] hover:bg-[color:var(--portal-border-soft)]'
+                  }`}
+                >
+                  {t.value === 'all' ? <Layers size={14} /> : t.value === 'incident' ? <ShieldAlert size={14} /> : <HeartHandshake size={14} />}
+                  <span>{locale === 'fil' ? t.fil : t.en}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-white text-[color:var(--portal-ink-700)] border border-[color:var(--portal-border-soft)]'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Search & Stage Filter Toolbar */}
+          <div className="mt-3.5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="relative flex-1 max-w-md">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={locale === 'fil' ? 'Hanapin: Case No, pangalan, lokasyon...' : 'Search: Case No, name, location...'}
+                className="pl-9 pr-8 text-xs h-9 w-full"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-full"
+                  aria-label="Clear search"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <label htmlFor="staff-stage-filter" className="text-xs font-medium text-[color:var(--portal-ink-600)] whitespace-nowrap">
+                {locale === 'fil' ? 'Yugto / Katayuan:' : 'Stage / Status:'}
+              </label>
+              <Select
+                id="staff-stage-filter"
+                value={stageFilter}
+                onChange={(e) => setStageFilter(e.target.value as StageFilter)}
+                className="w-[230px] text-xs h-9"
+              >
+                {STAGE_OPTIONS.map((o) => {
+                  const c = stageCounts[o.value];
+                  return (
+                    <option key={o.value} value={o.value}>
+                      {(locale === 'fil' ? o.fil : o.en)} ({c})
+                    </option>
+                  );
+                })}
               </Select>
+
+              {(search || trackFilter !== 'all' || stageFilter !== 'all') && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setSearch('');
+                    setTrackFilter('all');
+                    setStageFilter('all');
+                  }}
+                  className="h-9 px-2.5 text-xs text-gray-500 hover:text-gray-900"
+                  title={locale === 'fil' ? 'I-reset ang lahat ng filter' : 'Reset all filters'}
+                >
+                  <RotateCcw size={13} className="mr-1.5" />
+                  {locale === 'fil' ? 'I-reset' : 'Reset'}
+                </Button>
+              )}
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2 border-t border-[color:var(--portal-border-soft)] pt-3">
-            {[
-              { value: 'all',               en: 'All',               fil: 'Lahat' },
-              { value: 'community_concerns',en: 'Community Concerns', fil: 'Community Concerns' },
-              { value: 'incidents',         en: 'Incident Blotters', fil: 'Incident Blotters' },
-              { value: 'pending',           en: 'Pending Review',    fil: 'Naghihintay ng Review' },
-              { value: 'barangay_hearings', en: 'Hearings',          fil: 'Pagdinig' },
-              { value: 'resolved',          en: 'Resolved / Closed', fil: 'Naresolba' },
-            ].map((t) => (
-              <Button key={t.value} type="button" size="sm" variant={filter === t.value ? 'resident' : 'secondary'} onClick={() => setFilter(t.value as ReportFilter)} className="text-xs h-8 px-3">
-                {locale === 'fil' ? t.fil : t.en}
-              </Button>
-            ))}
+          {/* Results counter */}
+          <div className="mt-2 text-xs text-[color:var(--portal-ink-500)] flex items-center justify-between">
+            <span>
+              {locale === 'fil'
+                ? `Ipinapakita ang ${filteredReports.length} sa ${reports.length} kaso`
+                : `Showing ${filteredReports.length} of ${reports.length} total records`}
+            </span>
           </div>
 
-          <div className="mt-4 overflow-hidden rounded-[var(--portal-radius-md)] border border-[color:var(--portal-border-soft)]">
+          {/* Cases Table */}
+          <div className="mt-3 overflow-hidden rounded-[var(--portal-radius-md)] border border-[color:var(--portal-border-soft)] shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
                 <thead>
@@ -673,48 +870,122 @@ export default function StaffIncidentsPage() {
 
         {/* Street & Relationship management */}
         <div className="grid gap-6 md:grid-cols-2">
-          <SectionCard title={locale === 'fil' ? 'Pamamahala ng Kalsada' : 'Manage Barangay Streets'}>
+          <SectionCard
+            title={locale === 'fil' ? `Pamamahala ng Kalsada (${streets.length})` : `Manage Barangay Streets (${streets.length})`}
+            description={locale === 'fil' ? 'Lalabas sa dropdown ng lokasyon ng resident kapag nag-fill out ng blotter report.' : 'Configures options in the resident street location dropdown.'}
+          >
             <div className="grid gap-3">
-              <p className="text-xs text-gray-500">{locale === 'fil' ? 'Lalabas sa dropdown ng lokasyon ng resident.' : 'These appear in the resident location dropdown.'}</p>
               <div className="flex gap-2">
-                <Input value={newStreetName} onChange={(e) => setNewStreetName(e.target.value)} placeholder={locale === 'fil' ? 'Bagong Kalsada' : 'New Street Name'} className="text-xs" />
-                <Button type="button" variant="resident" size="sm" disabled={Boolean(streetAction) || !newStreetName.trim()} className="whitespace-nowrap text-xs px-4"
-                  onClick={async () => { setStreetAction('adding'); try { await upsertBarangayStreet({ name: newStreetName.trim() }); setNewStreetName(''); } finally { setStreetAction(null); } }}>
+                <Input
+                  value={newStreetName}
+                  onChange={(e) => setNewStreetName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void handleAddStreet();
+                    }
+                  }}
+                  placeholder={locale === 'fil' ? 'Pangalan ng Kalsada (hal. Mabini St.)' : 'Street Name (e.g. Mabini St.)'}
+                  className="text-xs"
+                />
+                <Button
+                  type="button"
+                  variant="resident"
+                  size="sm"
+                  disabled={Boolean(streetAction) || !newStreetName.trim()}
+                  className="whitespace-nowrap text-xs px-4"
+                  onClick={() => void handleAddStreet()}
+                >
                   {streetAction === 'adding' ? '...' : locale === 'fil' ? 'Idagdag' : 'Add'}
                 </Button>
               </div>
-              <div className="max-h-[200px] overflow-y-auto divide-y rounded-lg border text-xs bg-white">
-                {streets.map((st) => (
-                  <div key={st.id} className="flex items-center justify-between p-3">
-                    <span className={st.isActive ? 'font-medium text-gray-900' : 'line-through text-gray-400'}>{st.name}</span>
-                    <Button type="button" size="sm" variant="residentOutline" className="h-7 px-3 text-xs" onClick={() => void archiveBarangayStreet(st.id)}>
-                      {st.isActive ? 'Archive' : 'Restore'}
-                    </Button>
+              <div className="max-h-[240px] overflow-y-auto divide-y rounded-lg border text-xs bg-white">
+                {streets.length ? (
+                  streets.map((st) => (
+                    <div key={st.id} className="flex items-center justify-between p-3 hover:bg-gray-50/70 transition-colors">
+                      <div className="flex items-center gap-2 min-w-0 pr-2">
+                        <MapPin size={13} className={st.isActive ? 'text-emerald-600 shrink-0' : 'text-gray-400 shrink-0'} />
+                        <span className={st.isActive ? 'font-medium text-gray-900 truncate' : 'line-through text-gray-400 truncate'}>{st.name}</span>
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold ${st.isActive ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-500 border border-gray-200'}`}>
+                          {st.isActive ? (locale === 'fil' ? 'Aktibo' : 'Active') : (locale === 'fil' ? 'Naka-archive' : 'Archived')}
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="residentOutline"
+                        className="h-7 px-3 text-xs shrink-0"
+                        onClick={() => void handleToggleStreetArchive(st)}
+                      >
+                        {st.isActive ? (locale === 'fil' ? 'I-archive' : 'Archive') : (locale === 'fil' ? 'Ibalik' : 'Restore')}
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-gray-400 text-xs">
+                    {locale === 'fil' ? 'Walang kalsada.' : 'No streets configured.'}
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </SectionCard>
 
-          <SectionCard title={locale === 'fil' ? 'Pamamahala ng Relasyon' : 'Manage Relationship Options'}>
+          <SectionCard
+            title={locale === 'fil' ? `Pamamahala ng Relasyon (${relationships.length})` : `Manage Relationship Options (${relationships.length})`}
+            description={locale === 'fil' ? 'Mga opsyon sa relasyon sa respondent sa blotter reporting intake form.' : 'Options for respondent relationship on blotter intake form.'}
+          >
             <div className="grid gap-3">
-              <p className="text-xs text-gray-500">{locale === 'fil' ? 'Opsyon sa relasyon sa Incident form.' : 'Relationship options for the Incident intake form.'}</p>
               <div className="flex gap-2">
-                <Input value={newRelName} onChange={(e) => setNewRelName(e.target.value)} placeholder={locale === 'fil' ? 'Bagong Relasyon' : 'New Relationship'} className="text-xs" />
-                <Button type="button" variant="resident" size="sm" disabled={Boolean(relAction) || !newRelName.trim()} className="whitespace-nowrap text-xs px-4"
-                  onClick={async () => { setRelAction('adding'); try { await upsertIncidentRelationship({ name: newRelName.trim() }); setNewRelName(''); } finally { setRelAction(null); } }}>
+                <Input
+                  value={newRelName}
+                  onChange={(e) => setNewRelName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void handleAddRelationship();
+                    }
+                  }}
+                  placeholder={locale === 'fil' ? 'Relasyon (hal. Katrabaho)' : 'Relationship (e.g. Co-worker)'}
+                  className="text-xs"
+                />
+                <Button
+                  type="button"
+                  variant="resident"
+                  size="sm"
+                  disabled={Boolean(relAction) || !newRelName.trim()}
+                  className="whitespace-nowrap text-xs px-4"
+                  onClick={() => void handleAddRelationship()}
+                >
                   {relAction === 'adding' ? '...' : locale === 'fil' ? 'Idagdag' : 'Add'}
                 </Button>
               </div>
-              <div className="max-h-[200px] overflow-y-auto divide-y rounded-lg border text-xs bg-white">
-                {relationships.map((rel) => (
-                  <div key={rel.id} className="flex items-center justify-between p-3">
-                    <span className={rel.isActive ? 'font-medium text-gray-900' : 'line-through text-gray-400'}>{rel.name}</span>
-                    <Button type="button" size="sm" variant="residentOutline" className="h-7 px-3 text-xs" onClick={() => void archiveIncidentRelationship(rel.id)}>
-                      {rel.isActive ? 'Archive' : 'Restore'}
-                    </Button>
+              <div className="max-h-[240px] overflow-y-auto divide-y rounded-lg border text-xs bg-white">
+                {relationships.length ? (
+                  relationships.map((rel) => (
+                    <div key={rel.id} className="flex items-center justify-between p-3 hover:bg-gray-50/70 transition-colors">
+                      <div className="flex items-center gap-2 min-w-0 pr-2">
+                        <Users size={13} className={rel.isActive ? 'text-emerald-600 shrink-0' : 'text-gray-400 shrink-0'} />
+                        <span className={rel.isActive ? 'font-medium text-gray-900 truncate' : 'line-through text-gray-400 truncate'}>{rel.name}</span>
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold ${rel.isActive ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-500 border border-gray-200'}`}>
+                          {rel.isActive ? (locale === 'fil' ? 'Aktibo' : 'Active') : (locale === 'fil' ? 'Naka-archive' : 'Archived')}
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="residentOutline"
+                        className="h-7 px-3 text-xs shrink-0"
+                        onClick={() => void handleToggleRelArchive(rel)}
+                      >
+                        {rel.isActive ? (locale === 'fil' ? 'I-archive' : 'Archive') : (locale === 'fil' ? 'Ibalik' : 'Restore')}
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-gray-400 text-xs">
+                    {locale === 'fil' ? 'Walang relasyon.' : 'No relationship options configured.'}
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </SectionCard>
