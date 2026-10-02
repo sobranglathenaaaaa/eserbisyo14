@@ -95,10 +95,10 @@ const rolePageCopy: Record<string, RolePageCopy> = {
     },
   },
   'admin/incidents': {
-    title: { en: 'Incident Reports', fil: 'Ulat ng Insidente' },
+    title: { en: 'Incidents & Concerns', fil: 'Insidente at mga Concern' },
     description: {
-      en: 'Review incident reports and update their status.',
-      fil: 'Suriin ang mga ulat ng insidente at i-update ang status.',
+      en: 'Review incident reports and community concerns, then update their status.',
+      fil: 'Suriin ang mga ulat ng insidente at concern ng komunidad, at i-update ang status.',
     },
     guide: {
       title: { en: 'Start here', fil: 'Simula dito' },
@@ -222,10 +222,10 @@ const rolePageCopy: Record<string, RolePageCopy> = {
     },
   },
   'staff/incidents': {
-    title: { en: 'Incident Reports', fil: 'Incident Reports' },
+    title: { en: 'Incidents & Concerns', fil: 'Mga Insidente at Concern' },
     description: {
-      en: 'Review incident reports from residents and keep the queue moving.',
-      fil: 'Suriin ang incident reports ng residents at panatilihing umaandar ang pila.',
+      en: 'Review incident reports and community concerns, then keep the queue moving.',
+      fil: 'Suriin ang mga ulat ng insidente at concern ng komunidad.',
     },
     guide: {
       title: { en: 'Start here', fil: 'Simula dito' },

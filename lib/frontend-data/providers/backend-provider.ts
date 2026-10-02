@@ -296,15 +296,40 @@ async function safeAuthGetAccessToken(supabase: ReturnType<typeof getSupabaseBro
   return null;
 }
 
+async function refreshAccessTokenFromServer(): Promise<string | null> {
+  const response = await fetch('/api/v1/auth/refresh', {
+    method: 'POST',
+    credentials: 'same-origin',
+  });
+
+  if (!response.ok) return null;
+
+  const payload = (await response.json().catch(() => null)) as
+    | { success?: true; data?: { accessToken?: string } }
+    | null;
+  return payload?.success && typeof payload.data?.accessToken === 'string' ? payload.data.accessToken : null;
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit & { skipAuth?: boolean }): Promise<T> {
   const supabase = getSupabaseBrowserClient();
-  const token = init?.skipAuth ? null : await safeAuthGetAccessToken(supabase);
+  let token = init?.skipAuth ? null : await safeAuthGetAccessToken(supabase);
   const headers = new Headers(init?.headers);
   if (!(init?.body instanceof FormData) && !headers.has('content-type')) {
     headers.set('content-type', 'application/json');
   }
   if (token) headers.set('authorization', `Bearer ${token}`);
-  const response = await fetch(path, { ...init, headers });
+  let response = await fetch(path, { ...init, headers });
+
+  // The server keeps the session in httpOnly cookies, so recover when the
+  // browser Supabase session is stale or temporarily unavailable.
+  if (response.status === 401 && !init?.skipAuth && !(init?.body instanceof ReadableStream)) {
+    const refreshedToken = await refreshAccessTokenFromServer();
+    if (refreshedToken) {
+      token = refreshedToken;
+      headers.set('authorization', `Bearer ${token}`);
+      response = await fetch(path, { ...init, headers });
+    }
+  }
 
   let payload: ApiSuccessPayload<T> | ApiErrorPayload | null = null;
   let fallbackText: string | null = null;

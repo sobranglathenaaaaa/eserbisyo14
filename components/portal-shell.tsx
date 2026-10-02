@@ -233,6 +233,17 @@ const navConfig: Record<UserRole, NavSection[]> = {
       ],
     },
     {
+      id: 'staff-history-monitoring',
+      label: { en: 'History & Monitoring', fil: 'History at Monitoring' },
+      items: [
+        {
+          href: '/staff/request-history',
+          label: { en: 'Request History', fil: 'History ng mga Kahilingan' },
+          hint: { en: 'View resident service history', fil: 'Tingnan ang service history ng mga residente' },
+        },
+      ],
+    },
+    {
       id: 'staff-legal',
       label: { en: 'Legal', fil: 'Legal' },
       items: [
@@ -283,8 +294,8 @@ const navConfig: Record<UserRole, NavSection[]> = {
         // Reservations are processed by staff; admin does not have a reservations page here.
         {
           href: '/admin/incidents',
-          label: { en: 'Incident Reports', fil: 'Ulat ng Insidente' },
-          hint: { en: 'Review reports', fil: 'Suriin ang ulat' },
+          label: { en: 'Incidents & Concerns', fil: 'Mga Insidente at Concern' },
+          hint: { en: 'Review incidents and community concerns', fil: 'Suriin ang mga insidente at concern ng komunidad' },
         },
       ],
     },
