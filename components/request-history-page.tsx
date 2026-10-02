@@ -2,7 +2,7 @@
 
 import { Suspense, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { EmptyState, SectionCard, StatusBadge, statusToneFromState } from '@/components/portal-ui';
+import { SectionCard, StatusBadge, statusToneFromState } from '@/components/portal-ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -142,18 +142,20 @@ function RequestHistoryContent({ role }: { role: 'admin' | 'staff' }) {
     return counts;
   }, [history]);
 
+  const statusOptions = activeCategory === 'all' ? [] : STATUS_OPTIONS[activeCategory] ?? [];
+  const activeStatusFilter = statusOptions.includes(statusFilter) ? statusFilter : 'all';
+
   const visibleItems = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
     return history
       .filter((item) => activeCategory === 'all' || item.category === activeCategory)
-      .filter((item) => statusFilter === 'all' || item.status === statusFilter)
+      .filter((item) => activeStatusFilter === 'all' || item.status === activeStatusFilter)
       .filter((item) => !query || [item.residentName, item.record, item.detail].some((value) => value.toLocaleLowerCase().includes(query)));
-  }, [activeCategory, history, search, statusFilter]);
+  }, [activeCategory, activeStatusFilter, history, search]);
 
   const totalPages = Math.max(1, Math.ceil(visibleItems.length / pageSize));
   const page = Math.min(currentPage, totalPages);
   const pageItems = visibleItems.slice((page - 1) * pageSize, page * pageSize);
-  const statusOptions = activeCategory === 'all' ? [] : STATUS_OPTIONS[activeCategory] ?? [];
 
   const setCategory = (category: HistoryCategory) => {
     setCurrentPage(1);
@@ -202,7 +204,7 @@ function RequestHistoryContent({ role }: { role: 'admin' | 'staff' }) {
         description={locale === 'fil' ? 'Ayos mula sa pinakabagong update.' : 'Sorted by most recent update.'}
         actions={statusOptions.length ? (
           <Select
-            value={statusFilter}
+            value={activeStatusFilter}
             onChange={(event) => { setStatusFilter(event.target.value); setCurrentPage(1); }}
             aria-label={locale === 'fil' ? 'Salain ayon sa status' : 'Filter by status'}
             className="h-9 w-[190px] text-xs"
@@ -220,40 +222,45 @@ function RequestHistoryContent({ role }: { role: 'admin' | 'staff' }) {
           className="mb-1 sm:max-w-sm"
         />
 
-        {!visibleItems.length ? (
-          <EmptyState
-            title={locale === 'fil' ? 'Walang history sa kategoryang ito' : 'No history in this category'}
-            description={locale === 'fil' ? 'Subukan ang ibang kategorya o status filter.' : 'Try another category or status filter.'}
-          />
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-center">{locale === 'fil' ? 'Pangalan ng residente' : 'Resident name'}</TableHead>
-                  <TableHead className="text-center">{locale === 'fil' ? 'Record' : 'Record'}</TableHead>
-                  <TableHead className="text-center">{locale === 'fil' ? 'Kategorya' : 'Category'}</TableHead>
-                  <TableHead className="text-center">{locale === 'fil' ? 'Status' : 'Status'}</TableHead>
-                  <TableHead className="text-center">{locale === 'fil' ? 'Na-update' : 'Updated'}</TableHead>
+        <div className="overflow-x-auto">
+          <Table className="table-fixed">
+            <TableHeader>
+              <TableRow className="h-11">
+                <TableHead className="w-[20%] text-center">{locale === 'fil' ? 'Pangalan ng residente' : 'Resident name'}</TableHead>
+                <TableHead className="w-[27%] text-center">{locale === 'fil' ? 'Record' : 'Record'}</TableHead>
+                <TableHead className="w-[20%] text-center">{locale === 'fil' ? 'Kategorya' : 'Category'}</TableHead>
+                <TableHead className="w-[18%] text-center">{locale === 'fil' ? 'Status' : 'Status'}</TableHead>
+                <TableHead className="w-[15%] text-center">{locale === 'fil' ? 'Na-update' : 'Updated'}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pageItems.map((item) => (
+                <TableRow key={item.id} className="h-14">
+                  <TableCell className="truncate text-center font-medium" title={item.residentName}>{item.residentName}</TableCell>
+                  <TableCell className="text-center">
+                    <p className="truncate font-medium" title={item.record}>{item.record}</p>
+                    {item.detail ? <p className="truncate text-xs font-normal text-[color:var(--portal-ink-500)]" title={item.detail}>{item.detail}</p> : null}
+                  </TableCell>
+                  <TableCell className="truncate text-center" title={categoryLabel(item.category, locale)}>{categoryLabel(item.category, locale)}</TableCell>
+                  <TableCell className="text-center"><StatusBadge tone={statusToneFromState(item.status)}>{getStatusLabel(item.status, locale, item.category)}</StatusBadge></TableCell>
+                  <TableCell className="whitespace-nowrap text-center">{formatDateTime(item.updatedAt, locale)}</TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pageItems.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="text-center font-medium">{item.residentName}</TableCell>
-                    <TableCell className="text-center">
-                      <p className="font-medium">{item.record}</p>
-                      {item.detail ? <p className="mx-auto max-w-[320px] truncate text-xs font-normal text-[color:var(--portal-ink-500)]" title={item.detail}>{item.detail}</p> : null}
-                    </TableCell>
-                    <TableCell className="text-center">{categoryLabel(item.category, locale)}</TableCell>
-                    <TableCell className="text-center"><StatusBadge tone={statusToneFromState(item.status)}>{getStatusLabel(item.status, locale, item.category)}</StatusBadge></TableCell>
-                    <TableCell className="text-center">{formatDateTime(item.updatedAt, locale)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+              ))}
+              {visibleItems.length === 0 ? (
+                <TableRow className="h-14">
+                  <TableCell colSpan={5} className="h-14 p-3 text-center text-sm text-[color:var(--portal-ink-500)]">
+                    {locale === 'fil' ? 'Walang history sa kategorya o status na ito.' : 'No history matches this category or status.'}
+                  </TableCell>
+                </TableRow>
+              ) : null}
+              {Array.from({ length: Math.max(0, pageSize - pageItems.length - (visibleItems.length === 0 ? 1 : 0)) }).map((_, index) => (
+                <TableRow key={`placeholder-${index}`} className="h-14" aria-hidden="true">
+                  <TableCell colSpan={5} className="h-14 p-0" />
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
 
         {visibleItems.length > 0 ? (
           <div className="flex flex-wrap items-center justify-between gap-3">
