@@ -29,6 +29,73 @@ function escapeHtml(input: string) {
     .replace(/'/g, '&#39;');
 }
 
+function buildPrintSheetHtml(html: string, copies: 2 | 4) {
+  const bodyMatch = html.match(/<body>([\s\S]*?)<\/body>/i);
+  if (!bodyMatch) return html;
+
+  const formMarkup = bodyMatch[1].trim();
+  const fourUpBody = `
+  <div class="print-grid copies-${copies}">
+    ${Array.from({ length: copies }, () => `<div class="form-slot">${formMarkup}</div>`).join('')}
+  </div>`;
+  const fourUpStyles = `
+  <style>
+    @page { size: A4 portrait; margin: 8mm; }
+    html, body { margin: 0; padding: 0; }
+    body { width: 100%; }
+    .print-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-rows: repeat(2, minmax(0, 1fr));
+      gap: 4mm;
+      width: 100%;
+      height: calc(297mm - 16mm);
+      box-sizing: border-box;
+    }
+    .print-grid.copies-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-rows: minmax(0, 1fr);
+    }
+    .form-slot {
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      position: relative;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .form-slot > .sheet {
+      min-height: 0 !important;
+      transform-origin: top left;
+      box-sizing: border-box;
+    }
+  </style>`;
+  const fitScript = `
+  <script>
+    (() => {
+      const fitForms = () => {
+        document.querySelectorAll('.form-slot').forEach((slot) => {
+          const sheet = slot.querySelector('.sheet');
+          if (!sheet) return;
+          sheet.style.transform = 'none';
+          sheet.style.width = '';
+          sheet.style.height = '';
+          const widthScale = slot.clientWidth / sheet.scrollWidth;
+          const heightScale = slot.clientHeight / sheet.scrollHeight;
+          const scale = Math.min(1, widthScale, heightScale);
+          sheet.style.transform = 'scale(' + scale + ')';
+        });
+      };
+      window.addEventListener('load', fitForms);
+      window.addEventListener('beforeprint', fitForms);
+    })();
+  </script>`;
+
+  return html
+    .replace(/<\/head>/i, `${fourUpStyles}${fitScript}</head>`)
+    .replace(bodyMatch[0], `<body>${fourUpBody}</body>`);
+}
+
 export function buildDynamicIntakeFormHtml(template: {
   name: string;
   intakeFields: Array<{ key: string; label: string; required?: boolean }>;
@@ -96,11 +163,16 @@ export function buildDynamicIntakeFormHtml(template: {
 }
 
 export function buildOcrIntakeFormHtml(templateKey: string, dynamicTemplate?: OcrTemplateDefinition | { name: string; intakeFields: Array<{ key: string; label: string; required?: boolean }> }) {
+  let html: string;
+  let copies: 2 | 4 = 4;
   if (INTAKE_FORM_BUILDERS[templateKey]) {
-    return INTAKE_FORM_BUILDERS[templateKey]();
+    html = INTAKE_FORM_BUILDERS[templateKey]();
+    copies = templateKey === BARANGAY_CERTIFICATE_TEMPLATE_KEY ? 2 : 4;
+  } else if (dynamicTemplate) {
+    html = buildDynamicIntakeFormHtml(dynamicTemplate);
+    copies = 2;
+  } else {
+    html = buildIndigencyIntakeFormHtml();
   }
-  if (dynamicTemplate) {
-    return buildDynamicIntakeFormHtml(dynamicTemplate);
-  }
-  return buildIndigencyIntakeFormHtml();
+  return buildPrintSheetHtml(html, copies);
 }
