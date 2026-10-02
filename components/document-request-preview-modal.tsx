@@ -207,9 +207,12 @@ export default function DocumentRequestPreviewModal({
     const dynamicWatermarkHtml = `<img src="/images/indigency-template/barangay-progreso-seal.jpeg" class="doc-watermark" style="position:absolute;left:50%;top:50%;width:560px;max-width:88%;transform:translate(-50%, -50%);opacity:0.12;filter:contrast(115%);pointer-events:none;z-index:1;user-select:none;-webkit-user-select:none;" alt="Barangay Seal Watermark" />`;
 
     const currentDocKey = docTypeKey as string;
+    const reqTypeLabelLower = (request.selectedTypeLabel || request.typeLabel || '').trim().toLowerCase();
     const matchingCustomTemplate = (documentTemplates || []).find((t) => {
+      const nameLower = (t.name || '').trim().toLowerCase();
+      if (reqTypeLabelLower && (nameLower === reqTypeLabelLower || reqTypeLabelLower.includes(nameLower) || nameLower.includes(reqTypeLabelLower))) return true;
+      if (t.id === request.typeId) return true;
       if (t.documentType === currentDocKey) return true;
-      const nameLower = (t.name || '').toLowerCase();
       if ((currentDocKey === 'certificate_indigency' || currentDocKey === 'barangay_certification') && (nameLower.includes('indigency') || nameLower.includes('barangay') || nameLower.includes('clearance') || nameLower.includes('certification'))) return true;
       if (currentDocKey === 'transient_employees' && (nameLower.includes('transient') || nameLower.includes('worker'))) return true;
       if ((currentDocKey === 'lupon_tagapamayapa' || currentDocKey === 'lupon_summons') && (nameLower.includes('lupon') || nameLower.includes('summons') || nameLower.includes('cfa'))) return true;
@@ -221,6 +224,7 @@ export default function DocumentRequestPreviewModal({
       if (currentDocKey === 'good_moral' && nameLower.includes('moral')) return true;
       return false;
     });
+
 
     if (matchingCustomTemplate && (matchingCustomTemplate.htmlBody || matchingCustomTemplate.body)) {
       let customHtml = matchingCustomTemplate.htmlBody || matchingCustomTemplate.body;

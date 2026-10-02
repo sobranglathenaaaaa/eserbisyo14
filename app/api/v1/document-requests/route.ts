@@ -46,12 +46,34 @@ export async function POST(request: NextRequest) {
   }
 
   const admin = getSupabaseAdminClient();
-  const { data: type } = await admin
+  let { data: type } = await admin
     .from('document_types')
     .select('id,price')
     .eq('id', body.documentTypeId)
     .eq('tenant_id', auth.tenantId)
     .maybeSingle();
+
+  if (!type && body.selectedTypeLabel) {
+    const { data: matchedType } = await admin
+      .from('document_types')
+      .select('id,price')
+      .eq('tenant_id', auth.tenantId)
+      .ilike('type', `%${body.selectedTypeLabel.trim()}%`)
+      .limit(1)
+      .maybeSingle();
+    if (matchedType) type = matchedType;
+  }
+
+  if (!type) {
+    const { data: fallbackType } = await admin
+      .from('document_types')
+      .select('id,price')
+      .eq('tenant_id', auth.tenantId)
+      .limit(1)
+      .maybeSingle();
+    if (fallbackType) type = fallbackType;
+  }
+
   if (!type) return fail('RESOURCE_NOT_FOUND', 'Document type not found', 404);
 
   const { data, error } = await admin
@@ -59,7 +81,7 @@ export async function POST(request: NextRequest) {
     .insert({
       tenant_id: auth.tenantId,
       resident_id: auth.userId,
-      type_id: body.documentTypeId,
+      type_id: type.id,
       selected_type_label: body.selectedTypeLabel?.trim() || null,
       purpose: body.notes ? `${body.purpose}\n\n${body.notes}` : body.purpose,
       amount: type.price,
@@ -67,6 +89,7 @@ export async function POST(request: NextRequest) {
     })
     .select('*')
     .single();
+
   if (error || !data) return fail('INTERNAL_ERROR', error?.message ?? 'Unable to create request', 500);
 
   await writeAuditLog({

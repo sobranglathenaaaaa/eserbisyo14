@@ -18,6 +18,12 @@ import { DocumentRequestSummaryModal } from '@/features/resident/view/document-r
 import { getRolePageCopy, resolveRoleCopy, resolveSteps } from '@/lib/content/role-pages';
 import { getSupabaseBrowserClient, getSupabaseSessionSafely } from '@/lib/supabase/client';
 import { useBodyScrollLock } from '@/hooks/use-body-scroll-lock';
+import {
+  OFFICIAL_DOCUMENT_CATEGORIES,
+  DEFAULT_OFFICIAL_TEMPLATES,
+  getCategoryForDocType,
+  getCategoryLabel,
+} from '@/lib/documents/document-catalog-constants';
 
 const DRAFT_KEY = 'eserbisyo.draft.document-request';
 
@@ -76,7 +82,7 @@ export default function ResidentDocumentRequestsPage() {
   const pageCopy = getRolePageCopy('resident/document-requests');
   const [selectedOptionId, setSelectedOptionId] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [documentTypes, setDocumentTypes] = useState<DocumentTypeOption[]>([]);
+  const [dbTypes, setDbTypes] = useState<RawDocumentType[]>([]);
   const [purpose, setPurpose] = useState('');
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
@@ -114,46 +120,76 @@ export default function ResidentDocumentRequestsPage() {
       const payload = (await response.json().catch(() => null)) as
         | { success: true; data: { documentTypes: RawDocumentType[] } }
         | null;
-      const items = payload?.success ? payload.data.documentTypes : [];
-      const dedupedRaw = Array.from(
-        items
-          .reduce((map, item) => {
-            const key = `${item.category.toLowerCase()}|${item.type.toLowerCase()}|${item.price}`;
-            if (!map.has(key)) map.set(key, item);
-            return map;
-          }, new Map<string, RawDocumentType>())
-          .values()
-      );
-      const expanded = dedupedRaw.flatMap((item) => {
-        const parts = item.type
-          .split('/')
-          .map((part) => part.trim())
-          .filter(Boolean);
-        if (parts.length <= 1) {
-          return [
-            {
-              optionId: item.id,
-              backendId: item.id,
-              category: item.category,
-              type: item.type,
-              price: item.price,
-              pricing_note: item.pricing_note,
-            },
-          ];
-        }
-
-        return parts.map((part, index) => ({
-          optionId: `${item.id}::${index}`,
-          backendId: item.id,
-          category: item.category,
-          type: part,
-          price: item.price,
-          pricing_note: item.pricing_note,
-        }));
-      });
-      setDocumentTypes(expanded);
+      if (payload?.success && Array.isArray(payload.data.documentTypes)) {
+        setDbTypes(payload.data.documentTypes);
+      }
     })();
   }, []);
+
+  // Dynamically build document types and templates connected to Admin Document Templates (state.documentTemplates)
+  const documentTypes = useMemo<DocumentTypeOption[]>(() => {
+    const customTemplates = (state.documentTemplates || []).filter((t) => t.isActive !== false);
+    const options: DocumentTypeOption[] = [];
+    const seenOptionKeys = new Set<string>();
+
+    // 1. Process custom / active templates from Admin (state.documentTemplates)
+    customTemplates.forEach((tpl) => {
+      const categoryId =
+        tpl.documentType && OFFICIAL_DOCUMENT_CATEGORIES.some((c) => c.id === tpl.documentType)
+          ? tpl.documentType
+          : getCategoryForDocType(tpl.documentType, tpl.name);
+      const categoryLabel = getCategoryLabel(categoryId);
+      const matchingDbType =
+        dbTypes.find(
+          (db) => db.category.toLowerCase() === categoryLabel.toLowerCase() && db.type.toLowerCase() === tpl.name.toLowerCase()
+        ) ||
+        dbTypes.find(
+          (db) => db.category.toLowerCase() === categoryLabel.toLowerCase()
+        ) ||
+        dbTypes[0];
+
+      const optionKey = `${categoryLabel.toLowerCase()}|${tpl.name.toLowerCase()}`;
+      if (!seenOptionKeys.has(optionKey)) {
+        seenOptionKeys.add(optionKey);
+        options.push({
+          optionId: tpl.id,
+          backendId: matchingDbType?.id || tpl.id,
+          category: categoryLabel,
+          type: tpl.name,
+          price: matchingDbType?.price ?? 0,
+          pricing_note: matchingDbType?.pricing_note,
+        });
+      }
+    });
+
+    // 2. Include default official templates for all official categories if not already added
+    DEFAULT_OFFICIAL_TEMPLATES.forEach((defTpl) => {
+      const categoryLabel = getCategoryLabel(defTpl.categoryId);
+      const optionKey = `${categoryLabel.toLowerCase()}|${defTpl.name.toLowerCase()}`;
+      if (!seenOptionKeys.has(optionKey)) {
+        seenOptionKeys.add(optionKey);
+        const matchingDbType =
+          dbTypes.find(
+            (db) => db.category.toLowerCase() === categoryLabel.toLowerCase() && db.type.toLowerCase() === defTpl.name.toLowerCase()
+          ) ||
+          dbTypes.find(
+            (db) => db.category.toLowerCase() === categoryLabel.toLowerCase()
+          ) ||
+          dbTypes[0];
+
+        options.push({
+          optionId: defTpl.id,
+          backendId: matchingDbType?.id || defTpl.id,
+          category: categoryLabel,
+          type: defTpl.name,
+          price: matchingDbType?.price ?? defTpl.price,
+          pricing_note: matchingDbType?.pricing_note ?? defTpl.pricingNote,
+        });
+      }
+    });
+
+    return options;
+  }, [state.documentTemplates, dbTypes]);
 
   useEffect(() => {
     const raw = window.localStorage.getItem(DRAFT_KEY);
@@ -200,7 +236,12 @@ export default function ResidentDocumentRequestsPage() {
     }
   }, [myDocs]);
 
-  const categories = useMemo(() => Array.from(new Set(documentTypes.map((item) => item.category))), [documentTypes]);
+  // Clean, strictly unique 7 Official Document Categories in exact order
+  const categories = useMemo(() => {
+    return OFFICIAL_DOCUMENT_CATEGORIES.map((c) => c.labelEn);
+  }, []);
+
+
   const typesByCategory = useMemo(
     () =>
       documentTypes.reduce<Record<string, DocumentTypeOption[]>>((acc, item) => {
@@ -243,6 +284,7 @@ export default function ResidentDocumentRequestsPage() {
   const selected = documentTypes.find((item) => item.optionId === selectedOptionId);
   const summaryRequest = myRequests.find((item) => item.id === summaryRequestId) ?? null;
   const selectedDoc = myDocs.find((item) => item.id === selectedDocId) ?? myDocs[0] ?? null;
+
 
   
 

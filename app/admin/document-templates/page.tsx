@@ -44,40 +44,12 @@ import { getRolePageCopy, resolveRoleCopy, resolveSteps } from '@/lib/content/ro
 import { deleteDocumentTemplate, upsertDocumentTemplate } from '@/lib/frontend-data/store';
 import { useAppState } from '@/lib/frontend-data/use-app-state';
 import type { DocumentTemplate } from '@/lib/types/models';
+import {
+  OFFICIAL_DOCUMENT_CATEGORIES as DOCUMENT_TYPES,
+  DEFAULT_OFFICIAL_TEMPLATES,
+  getCategoryForDocType,
+} from '@/lib/documents/document-catalog-constants';
 
-// Clean 7 Official Document Categories Catalog
-const DOCUMENT_TYPES = [
-  { id: 'barangay_certification', labelEn: 'Barangay Certification', labelFil: 'Barangay Certification' },
-  { id: 'transient_employees', labelEn: 'Transient Employees & Worker Certification', labelFil: 'Transient Employees & Worker Certification' },
-  { id: 'lupon_tagapamayapa', labelEn: 'Lupon ng mga Tagapamayapa', labelFil: 'Lupon ng mga Tagapamayapa' },
-  { id: 'business_clearance', labelEn: 'Business Clearance (New & Renewal)', labelFil: 'Business Clearance (New & Renewal)' },
-  { id: 'construction_clearances', labelEn: 'Construction Clearances', labelFil: 'Construction Clearances' },
-  { id: 'delivery_hauling_clearances', labelEn: 'Delivery & Hauling Clearances', labelFil: 'Delivery & Hauling Clearances' },
-  { id: 'special_commercial_permits', labelEn: 'Special & Commercial Permits', labelFil: 'Special & Commercial Permits' },
-];
-
-function getCategoryForDocType(docType?: string | null, name?: string | null): string {
-  const combined = `${docType || ''} ${name || ''}`.toLowerCase();
-  if (combined.includes('transient') || combined.includes('worker') || combined.includes('kasambahay') || combined.includes('household') || combined.includes('company employee')) {
-    return 'transient_employees';
-  }
-  if (combined.includes('lupon') || combined.includes('summons') || combined.includes('cfa') || combined.includes('file action') || combined.includes('tagapamayapa') || combined.includes('patawag')) {
-    return 'lupon_tagapamayapa';
-  }
-  if (combined.includes('business') || combined.includes('negosyo') || combined.includes('trade') || combined.includes('micro') || combined.includes('small business')) {
-    return 'business_clearance';
-  }
-  if (combined.includes('construction') || combined.includes('occupancy') || combined.includes('renovation') || combined.includes('expansion') || combined.includes('fencing') || combined.includes('excavation') || combined.includes('demolition') || combined.includes('pagpapatayo') || combined.includes('building')) {
-    return 'construction_clearances';
-  }
-  if (combined.includes('delivery') || combined.includes('hauling') || combined.includes('concrete') || combined.includes('cement') || combined.includes('debris') || combined.includes('filling materials') || combined.includes('equipment')) {
-    return 'delivery_hauling_clearances';
-  }
-  if (combined.includes('special') || combined.includes('commercial') || combined.includes('shooting') || combined.includes('flyer') || combined.includes('sampler') || combined.includes('wire') || combined.includes('cable')) {
-    return 'special_commercial_permits';
-  }
-  return 'barangay_certification';
-}
 
 // Dynamic System Variables Catalog (Fully Dynamic - NO hardcoded strings!)
 const SYSTEM_DYNAMIC_TAGS = [
@@ -168,177 +140,372 @@ function buildDefaultHtmlLayout(
   let docTitleUpper = 'BARANGAY CLEARANCE';
   let bodyWordingHtml = '';
 
-  switch (docTypeKey) {
-    case 'transient_employees':
-      docTitleUpper = 'TRANSIENT WORKER CERTIFICATION';
+  switch (true) {
+    // 1. Barangay Certification Sub-Types
+    case docTypeKey.includes('school_req') || docTypeKey.includes('school'):
+      docTitleUpper = 'BARANGAY CERTIFICATION';
       bodyWordingHtml = `
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  This is to certify that <u style="font-weight:bold;">{{resident_name}}</u> is an authorized transient employee / worker residing/stationed at <u style="font-weight:bold;">{{resident_address}}</u> within the jurisdiction of {{barangay_name}}, {{city}}.
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  This is to certify that <u style="font-weight:bold;">{{resident_name}}</u>, of legal age, Filipino, whose residence is at <u style="font-weight:bold;">{{resident_address}}</u>, is a bona fide resident of {{barangay_name}}, {{city}}.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  Based on records and verification, the above-named individual is a law-abiding citizen with good moral standing in this community.
 </p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  RECORD CHECK IN THIS OFFICE SHOWS THAT THE ABOVE-NAMED INDIVIDUAL HAS NO DEROGATORY RECORD IN THIS BARANGAY AS OF THIS DATE.
+  This certification is issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">SCHOOL REQUIREMENT / ENROLLMENT / SCHOLARSHIP APPLICATION</u> (<u style="font-weight:bold;">{{purpose}}</u>).
 </p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
-  This certification is issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">{{purpose}}</u>.
-</p>
-<p style="font-size:14.5px;margin-top:28px;margin-bottom:36px;color:#000;">
-  Issued this <u style="font-weight:bold;">{{date_issued}}</u>.
+<p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
 </p>
 `;
       break;
 
-    case 'delivery_hauling_clearances':
-      docTitleUpper = 'DELIVERY & HAULING CLEARANCE';
-      bodyWordingHtml = `
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  Barangay clearance is hereby granted to <u style="font-weight:bold;">{{resident_name}}</u> for delivery / hauling operations at <u style="font-weight:bold;">{{resident_address}}</u>, {{barangay_name}}, {{city}}.
-</p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  This clearance covers hauling/transportation of materials/equipment as specified: <u style="font-weight:bold;">{{purpose}}</u>.
-</p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
-  Subject to strict adherence to barangay traffic, road safety, and waste disposal guidelines.
-</p>
-<p style="font-size:14.5px;margin-top:28px;margin-bottom:36px;color:#000;">
-  Issued this <u style="font-weight:bold;">{{date_issued}}</u>.
-</p>
-`;
-      break;
-
-    case 'special_commercial_permits':
-      docTitleUpper = 'SPECIAL & COMMERCIAL PERMIT';
-      bodyWordingHtml = `
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  Special barangay clearance/permit is hereby granted to <u style="font-weight:bold;">{{resident_name}}</u> for activity/operations at <u style="font-weight:bold;">{{resident_address}}</u>, {{barangay_name}}, {{city}}.
-</p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  This permit is valid for the specific purpose of: <u style="font-weight:bold;">{{purpose}}</u>.
-</p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
-  Subject to compliance with public safety, noise regulations, and existing barangay ordinances.
-</p>
-<p style="font-size:14.5px;margin-top:28px;margin-bottom:36px;color:#000;">
-  Issued this <u style="font-weight:bold;">{{date_issued}}</u>.
-</p>
-`;
-      break;
-
-    case 'certificate_residency':
-      docTitleUpper = 'CERTIFICATE OF RESIDENCY';
-      bodyWordingHtml = `
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  This is to certify that <u style="font-weight:bold;">{{resident_name}}</u> whose residence at <u style="font-weight:bold;">{{resident_address}}</u> is a verified permanent resident of {{barangay_name}}, {{city}}.
-</p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  The barangay also certifies that he/she is a law-abiding citizen of good standing in this community.
-</p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
-  This certification is being issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">{{purpose}}</u>.
-</p>
-<p style="font-size:14.5px;margin-top:28px;margin-bottom:36px;color:#000;">
-  Issued this <u style="font-weight:bold;">{{date_issued}}</u>.
-</p>
-`;
-      break;
-
-    case 'good_moral':
-      docTitleUpper = 'CERTIFICATE OF GOOD MORAL CHARACTER';
-      bodyWordingHtml = `
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  This is to certify that <u style="font-weight:bold;">{{resident_name}}</u> residing at <u style="font-weight:bold;">{{resident_address}}</u> is personally known to the undersigned officials as a person of good moral character.
-</p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  He/She has no record of involvement in any unlawful activities in this barangay.
-</p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
-  This certification is being issued upon request for <u style="font-weight:bold;">{{purpose}}</u>.
-</p>
-<p style="font-size:14.5px;margin-top:28px;margin-bottom:36px;color:#000;">
-  Issued this <u style="font-weight:bold;">{{date_issued}}</u>.
-</p>
-`;
-      break;
-
-    case 'business_clearance':
-    case 'business_permit':
-      docTitleUpper = 'BARANGAY BUSINESS CLEARANCE';
-      bodyWordingHtml = `
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  Barangay clearance is hereby granted to <u style="font-weight:bold;">{{resident_name}}</u> to operate business under registered trade name located at <u style="font-weight:bold;">{{resident_address}}</u>, {{barangay_name}}, {{city}}.
-</p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
-  Subject to compliance with all existing barangay ordinances and municipal health laws.
-</p>
-<p style="font-size:14.5px;margin-top:28px;margin-bottom:36px;color:#000;">
-  Issued this <u style="font-weight:bold;">{{date_issued}}</u> for <u style="font-weight:bold;">{{purpose}}</u>.
-</p>
-`;
-      break;
-
-    case 'construction_clearances':
-    case 'construction_permit':
-      docTitleUpper = 'BARANGAY CONSTRUCTION CLEARANCE';
-      bodyWordingHtml = `
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  Barangay construction clearance is hereby granted to <u style="font-weight:bold;">{{resident_name}}</u> with project address at <u style="font-weight:bold;">{{resident_address}}</u>, {{barangay_name}}, {{city}}.
-</p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  This clearance covers the proposed construction, renovation, or building activities specified for: <u style="font-weight:bold;">{{purpose}}</u>.
-</p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
-  Subject to strict compliance with the National Building Code of the Philippines, environmental safety standards, and all existing barangay and municipal ordinances.
-</p>
-<p style="font-size:14.5px;margin-top:28px;margin-bottom:36px;color:#000;">
-  Issued this <u style="font-weight:bold;">{{date_issued}}</u>.
-</p>
-`;
-      break;
-
-    case 'lupon_tagapamayapa':
-    case 'lupon_summons':
-      docTitleUpper = 'PATAWAG / SUMMONS (KP FORM #9)';
-      bodyWordingHtml = `
-<p style="font-size:14px;font-weight:bold;margin-bottom:16px;color:#000;">TO RESPONDENT: <u style="font-weight:bold;">{{resident_name}}</u></p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  You are hereby summoned to appear before me personally at the Barangay Hall on <u style="font-weight:bold;">{{date_issued}}</u> for a mediation/conciliation hearing regarding complaint filed against you for: <u style="font-weight:bold;">{{purpose}}</u>.
-</p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
-  Fail not, or else face prejudice and legal action in court according to law.
-</p>
-`;
-      break;
-
-    case 'certificate_indigency':
+    case docTypeKey.includes('indigency'):
       docTitleUpper = 'CERTIFICATE OF INDIGENCY';
       bodyWordingHtml = `
-<p style="font-size:15.5px;line-height:2.1;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+<p style="font-size:15px;line-height:2.1;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
   This is to certify that <u style="font-weight:bold;">{{resident_name}}</u> whose residence at <u style="font-weight:bold;">{{resident_address}}</u> is within the jurisdiction of {{barangay_name}}, {{city}} and belongs to the indigent families of this barangay. The barangay also certifies that their daily income is barely enough to meet their day-to-day needs.
 </p>
-<p style="font-size:15.5px;line-height:2.1;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  This certification is being issued upon the request of Mr./Mrs./Ms. <u style="font-weight:bold;">{{resident_name}}</u> for whatever legal purpose it may serve him/her.
+<p style="font-size:15px;line-height:2.1;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  This certification is being issued upon the request of Mr./Mrs./Ms. <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">{{purpose}}</u> (Financial, Medical, Educational, or Burial Assistance).
 </p>
-<p style="font-size:15.5px;margin-top:26px;margin-bottom:32px;color:#000;text-align:center;">
-  Issued this <u style="font-weight:bold;">{{date_issued}}</u>.
+<p style="font-size:15px;margin-top:26px;margin-bottom:32px;color:#000;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
 </p>
 `;
       break;
 
-    case 'barangay_certificate':
-    case 'barangay_certification':
+    case docTypeKey.includes('pwd_senior') || docTypeKey.includes('senior') || docTypeKey.includes('pwd'):
+      docTitleUpper = 'BARANGAY CERTIFICATION';
+      bodyWordingHtml = `
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  This is to certify that <u style="font-weight:bold;">{{resident_name}}</u>, whose residence at <u style="font-weight:bold;">{{resident_address}}</u>, is a bona fide and verified resident of {{barangay_name}}, {{city}}.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  This office further certifies that the subject individual is eligible for registration and issuance of privileges under Republic Act No. 7277 / Republic Act No. 9994.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  Issued upon request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">PWD / SENIOR CITIZEN APPLICATION</u> (<u style="font-weight:bold;">{{purpose}}</u>).
+</p>
+<p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
+</p>
+`;
+      break;
+
+    case docTypeKey.includes('health_card') || docTypeKey.includes('health'):
+      docTitleUpper = 'BARANGAY CERTIFICATION';
+      bodyWordingHtml = `
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  This is to certify that <u style="font-weight:bold;">{{resident_name}}</u> residing at <u style="font-weight:bold;">{{resident_address}}</u> is a bona fide resident of {{barangay_name}}, {{city}}.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  He/She has undergone residency verification and has no derogatory record on file with this office.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  This certification is issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">HEALTH CARD APPLICATION / MEDICAL PROCESSING</u> (<u style="font-weight:bold;">{{purpose}}</u>).
+</p>
+<p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
+</p>
+`;
+      break;
+
+    case docTypeKey.includes('death_cert') || docTypeKey.includes('death'):
+      docTitleUpper = 'BARANGAY DEATH CERTIFICATION';
+      bodyWordingHtml = `
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  This is to certify that the late <u style="font-weight:bold;">{{resident_name}}</u>, during his/her lifetime, was a permanent resident of <u style="font-weight:bold;">{{resident_address}}</u> within {{barangay_name}}, {{city}}.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  This further certifies that the subject individual passed away on <u style="font-weight:bold;">{{date_issued}}</u>.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  This certification is being issued upon the request of his/her next-of-kin for <u style="font-weight:bold;">{{purpose}}</u>.
+</p>
+<p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
+</p>
+`;
+      break;
+
+    case docTypeKey.includes('employment'):
+      docTitleUpper = 'BARANGAY CERTIFICATION';
+      bodyWordingHtml = `
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  This is to certify that <u style="font-weight:bold;">{{resident_name}}</u> whose residence at <u style="font-weight:bold;">{{resident_address}}</u> is within the jurisdiction of {{barangay_name}}, {{city}}.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  RECORD CHECK IN THIS OFFICE SHOWS THAT THE ABOVE-NAMED INDIVIDUAL HAS NO DEROGATORY AND/OR PENDING CRIMINAL RECORD FILED AGAINST HIM/HER AS OF THIS DATE.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  This certification is being issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">LOCAL EMPLOYMENT / PRE-EMPLOYMENT REQUIREMENTS</u> (<u style="font-weight:bold;">{{purpose}}</u>).
+</p>
+<p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
+</p>
+`;
+      break;
+
+    case docTypeKey.includes('police_nbi') || docTypeKey.includes('court'):
+      docTitleUpper = 'BARANGAY CLEARANCE';
+      bodyWordingHtml = `
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  This is to certify that <u style="font-weight:bold;">{{resident_name}}</u> whose residence is at <u style="font-weight:bold;">{{resident_address}}</u> is a bona fide resident of {{barangay_name}}, {{city}}.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  RECORD CHECK SHOWS THAT HE/SHE HAS NO DEROGATORY RECORD ON FILE AS OF THIS DATE AND IS A LAW-ABIDING CITIZEN.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  Issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">SECURING POLICE, NBI, OR COURT CLEARANCE</u> (<u style="font-weight:bold;">{{purpose}}</u>).
+</p>
+<p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
+</p>
+`;
+      break;
+
+    case docTypeKey.includes('passport_visa') || docTypeKey.includes('passport') || docTypeKey.includes('postal'):
+      docTitleUpper = 'BARANGAY CERTIFICATION';
+      bodyWordingHtml = `
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  This is to certify that <u style="font-weight:bold;">{{resident_name}}</u> residing at <u style="font-weight:bold;">{{resident_address}}</u> is a bona fide resident of {{barangay_name}}, {{city}}.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  The undersigned officials attest that the bearer is a person of good moral character and has no derogatory record on file.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  Issued upon request for <u style="font-weight:bold;">PASSPORT / POSTAL ID / VISA APPLICATION</u> (<u style="font-weight:bold;">{{purpose}}</u>).
+</p>
+<p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
+</p>
+`;
+      break;
+
+    case docTypeKey.includes('overseas_visa') || docTypeKey.includes('overseas') || docTypeKey.includes('visa'):
+      docTitleUpper = 'BARANGAY CERTIFICATION';
+      bodyWordingHtml = `
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  This is to certify that <u style="font-weight:bold;">{{resident_name}}</u> residing at <u style="font-weight:bold;">{{resident_address}}</u> is a bona fide resident of {{barangay_name}}, {{city}}.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  He/She is verified to have no derogatory record in this barangay and is of good moral standing.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  Issued upon request for <u style="font-weight:bold;">OVERSEAS EMPLOYMENT (OFW) / VISA EXTENSION</u> (<u style="font-weight:bold;">{{purpose}}</u>).
+</p>
+<p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
+</p>
+`;
+      break;
+
+    case docTypeKey.includes('no_operation'):
+      docTitleUpper = 'CERTIFICATE OF NO OPERATION';
+      bodyWordingHtml = `
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  This is to certify that according to the records and ocular inspection conducted by this office, the business entity registered under the name of <u style="font-weight:bold;">{{resident_name}}</u> with business address located at <u style="font-weight:bold;">{{resident_address}}</u>, {{barangay_name}}, {{city}}, is <u style="font-weight:bold;">NOT IN OPERATION / HAS CEASED OPERATIONS</u>.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  This certification is being issued upon request for <u style="font-weight:bold;">{{purpose}}</u> (Business Closure / Tax Assessment / Government Agency compliance).
+</p>
+<p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
+</p>
+`;
+      break;
+
+    // 2. Transient Employees & Worker Certification
+    case docTypeKey.includes('transient') || docTypeKey.includes('kasambahay') || docTypeKey.includes('worker'):
+      docTitleUpper = 'TRANSIENT WORKER CERTIFICATION';
+      bodyWordingHtml = `
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  This is to certify that <u style="font-weight:bold;">{{resident_name}}</u> is an authorized transient employee / worker residing/stationed at <u style="font-weight:bold;">{{resident_address}}</u> within the jurisdiction of {{barangay_name}}, {{city}}.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  RECORD CHECK IN THIS OFFICE SHOWS THAT THE ABOVE-NAMED INDIVIDUAL HAS NO DEROGATORY RECORD IN THIS BARANGAY AS OF THIS DATE.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  This certification is issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">{{purpose}}</u>.
+</p>
+<p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
+</p>
+`;
+      break;
+
+    // 3. Lupon ng mga Tagapamayapa (Summons / CFA)
+    case docTypeKey.includes('cfa') || docTypeKey.includes('file_action'):
+      docTitleUpper = 'CERTIFICATE TO FILE ACTION';
+      bodyWordingHtml = `
+<p style="font-size:13px;font-weight:bold;margin-bottom:12px;color:#000;">KP FORM NO. 20 - OFFICE OF THE LUPONG TAGAPAMAYAPA</p>
+<p style="font-size:14px;line-height:2.0;text-indent:42px;margin-bottom:20px;text-align:justify;color:#000;">
+  This is to certify that the dispute involving complainant and respondent <u style="font-weight:bold;">{{resident_name}}</u> regarding <u style="font-weight:bold;">{{purpose}}</u> underwent conciliation proceedings before the Barangay Lupon.
+</p>
+<p style="font-size:14px;line-height:2.0;text-indent:42px;margin-bottom:20px;text-align:justify;color:#000;">
+  That personal confrontation between parties failed to reach an amicable settlement. Therefore, the corresponding complaint for the dispute may now be filed in Court / competent government tribunal.
+</p>
+<p style="font-size:14px;margin-top:24px;margin-bottom:28px;color:#000;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
+</p>
+`;
+      break;
+
+    case docTypeKey.includes('lupon') || docTypeKey.includes('summons') || docTypeKey.includes('patawag'):
+      docTitleUpper = 'PATAWAG / SUMMONS (KP FORM #9)';
+      bodyWordingHtml = `
+<p style="font-size:14px;font-weight:bold;margin-bottom:14px;color:#000;">TO RESPONDENT: <u style="font-weight:bold;">{{resident_name}}</u></p>
+<p style="font-size:14px;line-height:2.1;text-indent:42px;margin-bottom:22px;text-align:justify;color:#000;">
+  You are hereby summoned to appear before me personally at the Barangay Hall on <u style="font-weight:bold;">{{date_issued}}</u> for a mediation/conciliation hearing regarding complaint filed against you for: <u style="font-weight:bold;">{{purpose}}</u>.
+</p>
+<p style="font-size:14px;line-height:2.1;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  Fail not, or else face prejudice and legal action in court according to the provisions of Katarungang Pambarangay Law (RA 7160).
+</p>
+`;
+      break;
+
+    // 4. Business Clearance
+    case docTypeKey.includes('business'):
+      docTitleUpper = 'BARANGAY BUSINESS CLEARANCE';
+      bodyWordingHtml = `
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  Barangay clearance is hereby granted to <u style="font-weight:bold;">{{resident_name}}</u> to operate business under registered trade name located at <u style="font-weight:bold;">{{resident_address}}</u>, {{barangay_name}}, {{city}}.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  This clearance covers: <u style="font-weight:bold;">{{purpose}}</u>.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  Subject to compliance with all existing barangay ordinances, municipal health and zoning laws.
+</p>
+<p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
+</p>
+`;
+      break;
+
+    // 5. Construction Clearances
+    case docTypeKey.includes('construction') ||
+      docTypeKey.includes('occupancy') ||
+      docTypeKey.includes('renovation') ||
+      docTypeKey.includes('expansion') ||
+      docTypeKey.includes('fencing') ||
+      docTypeKey.includes('utilities') ||
+      docTypeKey.includes('excavation') ||
+      docTypeKey.includes('demolition'):
+      docTitleUpper = 'BARANGAY CONSTRUCTION CLEARANCE';
+      bodyWordingHtml = `
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  Barangay construction clearance is hereby granted to <u style="font-weight:bold;">{{resident_name}}</u> with project address located at <u style="font-weight:bold;">{{resident_address}}</u>, {{barangay_name}}, {{city}}.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  This clearance covers proposed project activities specified for: <u style="font-weight:bold;">{{purpose}}</u>.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  Subject to strict compliance with the National Building Code of the Philippines, environmental safety standards, and all existing barangay ordinances.
+</p>
+<p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
+</p>
+`;
+      break;
+
+    // 6. Delivery & Hauling Clearances
+    case docTypeKey.includes('delivery') ||
+      docTypeKey.includes('hauling') ||
+      docTypeKey.includes('mixer') ||
+      docTypeKey.includes('debris') ||
+      docTypeKey.includes('sand_gravel') ||
+      docTypeKey.includes('heavy_equipment'):
+      docTitleUpper = 'DELIVERY & HAULING CLEARANCE';
+      bodyWordingHtml = `
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  Barangay clearance is hereby granted to <u style="font-weight:bold;">{{resident_name}}</u> for delivery / hauling operations at <u style="font-weight:bold;">{{resident_address}}</u>, {{barangay_name}}, {{city}}.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  This clearance covers hauling/transportation of materials/equipment as specified: <u style="font-weight:bold;">{{purpose}}</u>.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  Subject to strict adherence to barangay traffic, road safety, and waste disposal guidelines.
+</p>
+<p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
+</p>
+`;
+      break;
+
+    // 7. Special & Commercial Permits
+    case docTypeKey.includes('special') ||
+      docTypeKey.includes('shooting') ||
+      docTypeKey.includes('cables') ||
+      docTypeKey.includes('flyers'):
+      docTitleUpper = 'SPECIAL & COMMERCIAL PERMIT';
+      bodyWordingHtml = `
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  Special barangay clearance/permit is hereby granted to <u style="font-weight:bold;">{{resident_name}}</u> for activity/operations at <u style="font-weight:bold;">{{resident_address}}</u>, {{barangay_name}}, {{city}}.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  This permit is valid for the specific purpose of: <u style="font-weight:bold;">{{purpose}}</u>.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  Subject to compliance with public safety, noise regulations, and existing barangay ordinances.
+</p>
+<p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
+</p>
+`;
+      break;
+
+    case docTypeKey.includes('residency'):
+      docTitleUpper = 'CERTIFICATE OF RESIDENCY';
+      bodyWordingHtml = `
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  This is to certify that <u style="font-weight:bold;">{{resident_name}}</u> whose residence at <u style="font-weight:bold;">{{resident_address}}</u> is a verified permanent resident of {{barangay_name}}, {{city}}.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  The barangay also certifies that he/she is a law-abiding citizen of good standing in this community.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  This certification is being issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">{{purpose}}</u>.
+</p>
+<p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
+</p>
+`;
+      break;
+
+    case docTypeKey.includes('good_moral'):
+      docTitleUpper = 'CERTIFICATE OF GOOD MORAL CHARACTER';
+      bodyWordingHtml = `
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  This is to certify that <u style="font-weight:bold;">{{resident_name}}</u> residing at <u style="font-weight:bold;">{{resident_address}}</u> is personally known to the undersigned officials as a person of good moral character.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
+  He/She has no record of involvement in any unlawful activities in this barangay.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  This certification is being issued upon request for <u style="font-weight:bold;">{{purpose}}</u>.
+</p>
+<p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
+</p>
+`;
+      break;
+
     default:
       docTitleUpper = 'BARANGAY CLEARANCE';
       bodyWordingHtml = `
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
   This is to certify that <u style="font-weight:bold;">{{resident_name}}</u> whose residence at <u style="font-weight:bold;">{{resident_address}}</u> is within the jurisdiction of {{barangay_name}}, {{city}}.
 </p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
   RECORD CHECK IN THIS OFFICE SHOWS THAT THE ABOVE-NAMED INDIVIDUAL HAS NO DEROGATORY AND/OR PENDING CRIMINAL RECORD FILED AGAINST HIM/HER AS OF THIS DATE.
 </p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
   This certification is being issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">{{purpose}}</u>.
 </p>
-<p style="font-size:14.5px;margin-top:28px;margin-bottom:36px;color:#000;">
-  Issued this <u style="font-weight:bold;">{{date_issued}}</u>.
+<p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
 </p>
 `;
       break;
@@ -544,8 +711,32 @@ export default function AdminDocumentTemplatesPage() {
 
   // Dynamic Templates List directly from System State
   const templatesList = useMemo(() => {
-    return state.documentTemplates || [];
+    const customTemplates = state.documentTemplates || [];
+    const merged: DocumentTemplate[] = [...customTemplates];
+    DEFAULT_OFFICIAL_TEMPLATES.forEach((defTpl) => {
+      const exists = customTemplates.some(
+        (t) =>
+          t.id === defTpl.id ||
+          t.name.toLowerCase() === defTpl.name.toLowerCase() ||
+          (t.documentType === defTpl.categoryId && t.name.toLowerCase().includes(defTpl.name.toLowerCase()))
+      );
+      if (!exists) {
+        merged.push({
+          id: defTpl.id,
+          name: defTpl.name,
+          body: '',
+          dynamicFields: ['resident_name', 'resident_address', 'purpose', 'date_issued', 'punong_barangay'],
+          updatedAt: new Date().toISOString(),
+          updatedBy: 'System',
+          documentType: defTpl.categoryId,
+          sourceType: 'custom',
+          isActive: true,
+        });
+      }
+    });
+    return merged;
   }, [state.documentTemplates]);
+
 
   // Main Category Navigation: 'library' | 'barangay_officials'
   const [mainTab, setMainTab] = useState<'library' | 'barangay_officials'>('library');
