@@ -648,12 +648,11 @@ export default function DocumentRequestPreviewModal({
           <div className="flex items-center gap-2">
             <Button
               type="button"
-              variant="secondary"
               size="sm"
               onClick={handlePrint}
-              className="gap-1.5 text-xs text-slate-700 bg-slate-100 hover:bg-slate-200"
+              className="gap-1.5 border-2 border-[color:#1b6b46] bg-white text-xs text-[color:#144b32] shadow-[0_2px_10px_rgba(20,75,50,0.08)] hover:bg-[#f3faf6]"
             >
-              <Printer className="h-3.5 w-3.5 text-slate-600" />
+              <Printer className="h-3.5 w-3.5 text-[color:#1b6b46]" />
               {locale === 'fil' ? 'I-print / PDF' : 'Print / PDF'}
             </Button>
 
@@ -687,6 +686,7 @@ export default function DocumentRequestPreviewModal({
               size="sm"
               onClick={() => onOpenChange(false)}
               className="h-8 w-8 p-0 text-slate-400 hover:text-slate-700"
+              aria-label={locale === 'fil' ? 'Isara' : 'Close'}
             >
               <X className="h-4 w-4" />
             </Button>
@@ -722,16 +722,6 @@ export default function DocumentRequestPreviewModal({
           </p>
 
           <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-              className="text-xs"
-            >
-              {locale === 'fil' ? 'Isara' : 'Close'}
-            </Button>
-
             {request.status === 'approved' && onMarkReadyForPickup && (
               <Button
                 type="button"
