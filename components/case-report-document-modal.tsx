@@ -64,9 +64,9 @@ export default function CaseReportDocumentModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto rounded-2xl border border-gray-200 bg-gray-100 p-0 shadow-2xl">
         {/* Top Control Bar */}
-        <div className="sticky top-0 z-20 flex items-center justify-between border-b bg-[#123726] px-6 py-3 text-white shadow-md">
+        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-700 bg-gray-800 px-6 py-3 text-white shadow-md">
           <div className="flex items-center gap-2">
-            <FileText size={18} className="text-emerald-300" />
+            <FileText size={18} className="text-gray-300" />
             <h3 className="font-semibold text-sm">
               {locale === 'fil' ? 'Opisyal na Dokumento ng Kaso' : 'Official Case Report Document'}
             </h3>
@@ -89,7 +89,7 @@ export default function CaseReportDocumentModal({
               variant="resident"
               onClick={handleDownloadPdf}
               disabled={isExporting}
-              className="h-8 gap-1.5 text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="h-8 gap-1.5 text-xs font-medium bg-gray-600 text-white hover:bg-gray-500"
             >
               <Download size={14} />
               {isExporting ? (locale === 'fil' ? 'Inihahanda...' : 'Generating...') : locale === 'fil' ? 'I-download PDF' : 'Download PDF'}
