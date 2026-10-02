@@ -2130,7 +2130,8 @@ export const backendProvider: DataProvider = {
       overrideSettings: payload.overrideSettings,
       isActive: payload.isActive ?? true,
     };
-    const encodedBody = `${payload.body.trim()}\n\n<!-- TEMPLATE_META:${JSON.stringify(metaObj)} -->`;
+    const templateBody = (payload.htmlBody || payload.body || '').trim();
+    const encodedBody = `${templateBody}\n\n<!-- TEMPLATE_META:${JSON.stringify(metaObj)} -->`;
 
     if (payload.id) {
       await supabase

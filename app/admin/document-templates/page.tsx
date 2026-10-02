@@ -44,15 +44,39 @@ import { deleteDocumentTemplate, upsertDocumentTemplate } from '@/lib/frontend-d
 import { useAppState } from '@/lib/frontend-data/use-app-state';
 import type { DocumentTemplate } from '@/lib/types/models';
 
-// Clean Document Types Catalog
+// Clean 7 Official Document Categories Catalog
 const DOCUMENT_TYPES = [
-  { id: 'certificate_indigency', labelEn: 'Certificate of Indigency', labelFil: 'Katibayan ng Kapalaran / Indigency' },
-  { id: 'barangay_certificate', labelEn: 'Barangay Clearance', labelFil: 'Klarans ng Barangay' },
-  { id: 'certificate_residency', labelEn: 'Certificate of Residency', labelFil: 'Katibayan ng Pagkahukom / Tirahan' },
-  { id: 'good_moral', labelEn: 'Certificate of Good Moral Character', labelFil: 'Katibayan ng Mabuting Asal' },
-  { id: 'business_permit', labelEn: 'Business Clearance', labelFil: 'Klarans ng Negosyo' },
-  { id: 'lupon_summons', labelEn: 'Lupon Tagapamayapa Summons (KP #9)', labelFil: 'Patawag ng Lupon Tagapamayapa' },
+  { id: 'barangay_certification', labelEn: 'Barangay Certification', labelFil: 'Barangay Certification' },
+  { id: 'transient_employees', labelEn: 'Transient Employees & Worker Certification', labelFil: 'Transient Employees & Worker Certification' },
+  { id: 'lupon_tagapamayapa', labelEn: 'Lupon ng mga Tagapamayapa', labelFil: 'Lupon ng mga Tagapamayapa' },
+  { id: 'business_clearance', labelEn: 'Business Clearance (New & Renewal)', labelFil: 'Business Clearance (New & Renewal)' },
+  { id: 'construction_clearances', labelEn: 'Construction Clearances', labelFil: 'Construction Clearances' },
+  { id: 'delivery_hauling_clearances', labelEn: 'Delivery & Hauling Clearances', labelFil: 'Delivery & Hauling Clearances' },
+  { id: 'special_commercial_permits', labelEn: 'Special & Commercial Permits', labelFil: 'Special & Commercial Permits' },
 ];
+
+function getCategoryForDocType(docType?: string | null, name?: string | null): string {
+  const combined = `${docType || ''} ${name || ''}`.toLowerCase();
+  if (combined.includes('transient') || combined.includes('worker') || combined.includes('kasambahay') || combined.includes('household') || combined.includes('company employee')) {
+    return 'transient_employees';
+  }
+  if (combined.includes('lupon') || combined.includes('summons') || combined.includes('cfa') || combined.includes('file action') || combined.includes('tagapamayapa') || combined.includes('patawag')) {
+    return 'lupon_tagapamayapa';
+  }
+  if (combined.includes('business') || combined.includes('negosyo') || combined.includes('trade') || combined.includes('micro') || combined.includes('small business')) {
+    return 'business_clearance';
+  }
+  if (combined.includes('construction') || combined.includes('occupancy') || combined.includes('renovation') || combined.includes('expansion') || combined.includes('fencing') || combined.includes('excavation') || combined.includes('demolition') || combined.includes('pagpapatayo') || combined.includes('building')) {
+    return 'construction_clearances';
+  }
+  if (combined.includes('delivery') || combined.includes('hauling') || combined.includes('concrete') || combined.includes('cement') || combined.includes('debris') || combined.includes('filling materials') || combined.includes('equipment')) {
+    return 'delivery_hauling_clearances';
+  }
+  if (combined.includes('special') || combined.includes('commercial') || combined.includes('shooting') || combined.includes('flyer') || combined.includes('sampler') || combined.includes('wire') || combined.includes('cable')) {
+    return 'special_commercial_permits';
+  }
+  return 'barangay_certification';
+}
 
 // Dynamic System Variables Catalog (Fully Dynamic - NO hardcoded strings!)
 const SYSTEM_DYNAMIC_TAGS = [
@@ -140,21 +164,57 @@ function buildDefaultHtmlLayout(
 `;
   }
 
-  let docTitleUpper = 'CERTIFICATE OF INDIGENCY';
+  let docTitleUpper = 'BARANGAY CLEARANCE';
   let bodyWordingHtml = '';
 
   switch (docTypeKey) {
-    case 'barangay_certificate':
-      docTitleUpper = 'BARANGAY CLEARANCE';
+    case 'transient_employees':
+      docTitleUpper = 'TRANSIENT WORKER CERTIFICATION';
       bodyWordingHtml = `
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  This is to certify that <u style="font-weight:bold;">{{resident_name}}</u> whose residence at <u style="font-weight:bold;">{{resident_address}}</u> is within the jurisdiction of {{barangay_name}}, {{city}}.
+  This is to certify that <u style="font-weight:bold;">{{resident_name}}</u> is an authorized transient employee / worker residing/stationed at <u style="font-weight:bold;">{{resident_address}}</u> within the jurisdiction of {{barangay_name}}, {{city}}.
 </p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  RECORD CHECK IN THIS OFFICE SHOWS THAT THE ABOVE-NAMED INDIVIDUAL HAS NO DEROGATORY AND/OR PENDING CRIMINAL RECORD FILED AGAINST HIM/HER AS OF THIS DATE.
+  RECORD CHECK IN THIS OFFICE SHOWS THAT THE ABOVE-NAMED INDIVIDUAL HAS NO DEROGATORY RECORD IN THIS BARANGAY AS OF THIS DATE.
 </p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
-  This certification is being issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">{{purpose}}</u>.
+  This certification is issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">{{purpose}}</u>.
+</p>
+<p style="font-size:14.5px;margin-top:28px;margin-bottom:36px;color:#000;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u>.
+</p>
+`;
+      break;
+
+    case 'delivery_hauling_clearances':
+      docTitleUpper = 'DELIVERY & HAULING CLEARANCE';
+      bodyWordingHtml = `
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  Barangay clearance is hereby granted to <u style="font-weight:bold;">{{resident_name}}</u> for delivery / hauling operations at <u style="font-weight:bold;">{{resident_address}}</u>, {{barangay_name}}, {{city}}.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  This clearance covers hauling/transportation of materials/equipment as specified: <u style="font-weight:bold;">{{purpose}}</u>.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
+  Subject to strict adherence to barangay traffic, road safety, and waste disposal guidelines.
+</p>
+<p style="font-size:14.5px;margin-top:28px;margin-bottom:36px;color:#000;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u>.
+</p>
+`;
+      break;
+
+    case 'special_commercial_permits':
+      docTitleUpper = 'SPECIAL & COMMERCIAL PERMIT';
+      bodyWordingHtml = `
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  Special barangay clearance/permit is hereby granted to <u style="font-weight:bold;">{{resident_name}}</u> for activity/operations at <u style="font-weight:bold;">{{resident_address}}</u>, {{barangay_name}}, {{city}}.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  This permit is valid for the specific purpose of: <u style="font-weight:bold;">{{purpose}}</u>.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
+  Subject to compliance with public safety, noise regulations, and existing barangay ordinances.
 </p>
 <p style="font-size:14.5px;margin-top:28px;margin-bottom:36px;color:#000;">
   Issued this <u style="font-weight:bold;">{{date_issued}}</u>.
@@ -198,6 +258,7 @@ function buildDefaultHtmlLayout(
 `;
       break;
 
+    case 'business_clearance':
     case 'business_permit':
       docTitleUpper = 'BARANGAY BUSINESS CLEARANCE';
       bodyWordingHtml = `
@@ -213,12 +274,32 @@ function buildDefaultHtmlLayout(
 `;
       break;
 
+    case 'construction_clearances':
+    case 'construction_permit':
+      docTitleUpper = 'BARANGAY CONSTRUCTION CLEARANCE';
+      bodyWordingHtml = `
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  Barangay construction clearance is hereby granted to <u style="font-weight:bold;">{{resident_name}}</u> with project address at <u style="font-weight:bold;">{{resident_address}}</u>, {{barangay_name}}, {{city}}.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  This clearance covers the proposed construction, renovation, or building activities specified for: <u style="font-weight:bold;">{{purpose}}</u>.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
+  Subject to strict compliance with the National Building Code of the Philippines, environmental safety standards, and all existing barangay and municipal ordinances.
+</p>
+<p style="font-size:14.5px;margin-top:28px;margin-bottom:36px;color:#000;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u>.
+</p>
+`;
+      break;
+
+    case 'lupon_tagapamayapa':
     case 'lupon_summons':
       docTitleUpper = 'PATAWAG / SUMMONS (KP FORM #9)';
       bodyWordingHtml = `
 <p style="font-size:14px;font-weight:bold;margin-bottom:16px;color:#000;">TO RESPONDENT: <u style="font-weight:bold;">{{resident_name}}</u></p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  You are hereby summoned to appear before me personally at the Barangay Hall on <u style="font-weight:bold;">{{date_issued}}</u> for a mediation/conciliation hearing regarding complaint filed against you.
+  You are hereby summoned to appear before me personally at the Barangay Hall on <u style="font-weight:bold;">{{date_issued}}</u> for a mediation/conciliation hearing regarding complaint filed against you for: <u style="font-weight:bold;">{{purpose}}</u>.
 </p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
   Fail not, or else face prejudice and legal action in court according to law.
@@ -227,7 +308,6 @@ function buildDefaultHtmlLayout(
       break;
 
     case 'certificate_indigency':
-    default:
       docTitleUpper = 'CERTIFICATE OF INDIGENCY';
       bodyWordingHtml = `
 <p style="font-size:15.5px;line-height:2.1;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
@@ -237,6 +317,26 @@ function buildDefaultHtmlLayout(
   This certification is being issued upon the request of Mr./Mrs./Ms. <u style="font-weight:bold;">{{resident_name}}</u> for whatever legal purpose it may serve him/her.
 </p>
 <p style="font-size:15.5px;margin-top:26px;margin-bottom:32px;color:#000;text-align:center;">
+  Issued this <u style="font-weight:bold;">{{date_issued}}</u>.
+</p>
+`;
+      break;
+
+    case 'barangay_certificate':
+    case 'barangay_certification':
+    default:
+      docTitleUpper = 'BARANGAY CLEARANCE';
+      bodyWordingHtml = `
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  This is to certify that <u style="font-weight:bold;">{{resident_name}}</u> whose residence at <u style="font-weight:bold;">{{resident_address}}</u> is within the jurisdiction of {{barangay_name}}, {{city}}.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
+  RECORD CHECK IN THIS OFFICE SHOWS THAT THE ABOVE-NAMED INDIVIDUAL HAS NO DEROGATORY AND/OR PENDING CRIMINAL RECORD FILED AGAINST HIM/HER AS OF THIS DATE.
+</p>
+<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
+  This certification is being issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">{{purpose}}</u>.
+</p>
+<p style="font-size:14.5px;margin-top:28px;margin-bottom:36px;color:#000;">
   Issued this <u style="font-weight:bold;">{{date_issued}}</u>.
 </p>
 `;
@@ -461,10 +561,14 @@ export default function AdminDocumentTemplatesPage() {
   // Upload Wizard State
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadedFilePreviewUrl, setUploadedFilePreviewUrl] = useState<string | null>(null);
-  const [wizardDocType, setWizardDocType] = useState('certificate_indigency');
+  const [wizardDocType, setWizardDocType] = useState('barangay_certification');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [analysisStatusText, setAnalysisStatusText] = useState('');
+  const [overwriteModal, setOverwriteModal] = useState<{
+    isOpen: boolean;
+    existingTemplate: DocumentTemplate;
+  } | null>(null);
 
   // Template Editor State
   const [editorName, setEditorName] = useState('');
@@ -531,9 +635,10 @@ export default function AdminDocumentTemplatesPage() {
     return templatesList.filter((item) => {
       const q = searchQuery.toLowerCase();
       const matchesSearch = item.name.toLowerCase().includes(q) || (item.originalFileName || '').toLowerCase().includes(q);
-      const matchesType = typeFilter === 'all' || item.documentType === typeFilter;
+      const category = getCategoryForDocType(item.documentType, item.name);
+      const matchesType = typeFilter === 'all' || item.documentType === typeFilter || category === typeFilter;
 
-      const isKnownDocType = DOCUMENT_TYPES.some((dt) => dt.id === item.documentType);
+      const isKnownDocType = DOCUMENT_TYPES.some((dt) => dt.id === item.documentType || dt.id === category);
       const isOverwritten = item.sourceType === 'uploaded' || !isKnownDocType || item.name.toLowerCase().includes('update');
 
       let matchesStatus = true;
@@ -889,12 +994,34 @@ export default function AdminDocumentTemplatesPage() {
     }
   };
 
-  // Trigger Non-Blocking Template Upload Analysis
+  // Trigger Template Upload Analysis (Checking for Overrides)
   const handleStartAnalysis = async () => {
     if (!uploadedFile) {
       setFeedback({ tone: 'error', text: 'Please select a document file (.docx / .pdf / image) to upload from File Explorer.' });
       return;
     }
+
+    // Check if a template for this category already exists
+    const existing = templatesList.find(
+      (t) => t.documentType === wizardDocType || getCategoryForDocType(t.documentType, t.name) === wizardDocType
+    );
+
+    if (existing) {
+      // Prompt user whether to override or create as new
+      setOverwriteModal({
+        isOpen: true,
+        existingTemplate: existing,
+      });
+      return;
+    }
+
+    // Proceed directly if no existing template found
+    await runAnalysis(null);
+  };
+
+  // Execute Analysis with specified target ID (null for new, existing ID for override)
+  const runAnalysis = async (targetTemplateId: string | null, customTemplateName?: string) => {
+    if (!uploadedFile) return;
 
     setIsAnalyzing(true);
     setAnalysisProgress(10);
@@ -973,7 +1100,8 @@ export default function AdminDocumentTemplatesPage() {
       const docTypeObj = DOCUMENT_TYPES.find((d) => d.id === wizardDocType);
       const docLabel = docTypeObj?.labelEn || 'Barangay Document';
 
-      setEditorName(`${docLabel} Template`);
+      setSelectedTemplateId(targetTemplateId);
+      setEditorName(customTemplateName || `${docLabel} Template`);
       setEditorDocType(wizardDocType);
       setEditorSourceType('uploaded');
       setEditorFileName(uploadedFile.name);
@@ -1002,7 +1130,9 @@ export default function AdminDocumentTemplatesPage() {
       setViewMode('editor');
       setFeedback({
         tone: 'success',
-        text: `Document "${uploadedFile.name}" analyzed successfully! Exact layout for ${docLabel} loaded into paper canvas.`,
+        text: targetTemplateId
+          ? `Document "${uploadedFile.name}" analyzed successfully! Template for ${docLabel} will override the existing configuration upon saving.`
+          : `Document "${uploadedFile.name}" analyzed successfully! New layout for ${docLabel} loaded into paper canvas.`,
       });
     } catch (err) {
       console.error('Error during template analysis:', err);
@@ -1856,11 +1986,11 @@ export default function AdminDocumentTemplatesPage() {
             title="BARANGAY & OFFICIAL INFORMATION"
             description="Configure official barangay details, contact info, 3-seal logo media, and council members referenced dynamically across all document templates."
           >
-            {/* PART 1: BARANGAY GENERAL & CONTACT DETAILS */}
+            {/* PART: BARANGAY GENERAL & CONTACT DETAILS */}
             <div className="mb-6 rounded-[var(--portal-radius-md)] border border-slate-200 bg-slate-50 p-4">
               <h4 className="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
                 <Building2 className="h-4 w-4 text-blue-600" />
-                1. Barangay General & Contact Details
+                Barangay General & Contact Details
               </h4>
               <div className="grid gap-4 md:grid-cols-2">
                 <FieldLabel label="City / Municipality">
@@ -1907,14 +2037,14 @@ export default function AdminDocumentTemplatesPage() {
               </div>
             </div>
 
-            {/* PART 2: OFFICIAL SEAL LOGOS MANAGEMENT (BARANGAY, CITY & BAGONG PILIPINAS LOGOS) */}
+            {/* PART: OFFICIAL SEAL LOGOS MANAGEMENT */}
             <div className="mb-6 rounded-[var(--portal-radius-md)] border border-slate-200 bg-white p-4">
               <h4 className="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
                 <ImageIcon className="h-4 w-4 text-blue-600" />
-                2. Official Seal Logos
+                Official Seal Logos
               </h4>
               <div className="grid gap-4 md:grid-cols-3">
-                {/* 1. Barangay Seal */}
+                {/* Barangay Seal */}
                 <div className="rounded-[var(--portal-radius-md)] border border-slate-200 bg-slate-50 p-4 space-y-3">
                   <p className="font-bold text-slate-800 text-xs uppercase tracking-wider">Barangay Official Seal</p>
                   <div className="flex items-center gap-3">
@@ -1942,7 +2072,7 @@ export default function AdminDocumentTemplatesPage() {
                   </div>
                 </div>
 
-                {/* 2. City / Municipal Seal */}
+                {/* City / Municipal Seal */}
                 <div className="rounded-[var(--portal-radius-md)] border border-slate-200 bg-slate-50 p-4 space-y-3">
                   <p className="font-bold text-slate-800 text-xs uppercase tracking-wider">City / Municipal Seal</p>
                   <div className="flex items-center gap-3">
@@ -1970,7 +2100,7 @@ export default function AdminDocumentTemplatesPage() {
                   </div>
                 </div>
 
-                {/* 3. Country / Bagong Pilipinas Seal */}
+                {/* Country / Bagong Pilipinas Seal */}
                 <div className="rounded-[var(--portal-radius-md)] border border-slate-200 bg-slate-50 p-4 space-y-3">
                   <p className="font-bold text-slate-800 text-xs uppercase tracking-wider">Bagong Pilipinas / National Seal</p>
                   <div className="flex items-center gap-3">
@@ -2000,11 +2130,11 @@ export default function AdminDocumentTemplatesPage() {
               </div>
             </div>
 
-            {/* PART 3: KEY EXECUTIVE OFFICIALS */}
+            {/* PART: KEY EXECUTIVE OFFICIALS */}
             <div className="mb-6 rounded-[var(--portal-radius-md)] border border-slate-200 bg-white p-4">
               <h4 className="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
                 <Users className="h-4 w-4 text-blue-600" />
-                3. Key Executive Officials
+                Key Executive Officials
               </h4>
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="rounded-[var(--portal-radius-md)] border border-slate-200 bg-slate-50 p-4">
@@ -2039,13 +2169,13 @@ export default function AdminDocumentTemplatesPage() {
               </div>
             </div>
 
-            {/* PART 4: BARANGAY KAGAWAD ROSTER MANAGEMENT */}
+            {/* PART: BARANGAY KAGAWAD ROSTER MANAGEMENT */}
             <div className="rounded-[var(--portal-radius-md)] border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h4 className="font-bold text-slate-800 text-sm flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-blue-600" />
-                    4. Barangay Kagawad Roster & Committees
+                    Barangay Kagawad Roster & Committees
                   </h4>
                   <p className="text-xs text-slate-500">
                     Add, edit, or remove Kagawad members and their assigned committees for the dynamic 2-Column Sidebar Layout.
@@ -2107,6 +2237,64 @@ export default function AdminDocumentTemplatesPage() {
             </div>
           </SectionCard>
         </form>
+      )}
+
+      {/* Override Confirmation Modal on Template Upload */}
+      {overwriteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="grid h-10 w-10 place-items-center rounded-full bg-amber-100 text-amber-700 shrink-0">
+                <Settings className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">Override Existing Template?</h3>
+                <p className="text-xs text-slate-500">Mayroon nang naka-save na template para sa kategoryang ito.</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-700 mb-6 leading-relaxed">
+              Mayroon nang aktibong template para sa <strong className="text-slate-900">{DOCUMENT_TYPES.find(d => d.id === wizardDocType)?.labelEn}</strong> na pinangalanang <span className="font-semibold text-blue-700">"{overwriteModal.existingTemplate.name}"</span>.
+              <br /><br />
+              Nais mo ba itong <strong>i-override / palitan</strong> ang kasalukuyang template, o i-save bilang <strong>panibagong custom template</strong>?
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setOverwriteModal(null)}
+                className="w-full sm:w-auto px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 rounded-md hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  const docTypeObj = DOCUMENT_TYPES.find((d) => d.id === wizardDocType);
+                  const newName = `${docTypeObj?.labelEn || 'Custom'} Template (New)`;
+                  setOverwriteModal(null);
+                  runAnalysis(null, newName);
+                }}
+                className="w-full sm:w-auto text-xs"
+              >
+                Save as New Template
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  const existingId = overwriteModal.existingTemplate.id;
+                  const existingName = overwriteModal.existingTemplate.name;
+                  setOverwriteModal(null);
+                  runAnalysis(existingId, existingName);
+                }}
+                className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs gap-1.5"
+              >
+                Override Existing Template
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Global CSS for Print-Only Document Isolation */}

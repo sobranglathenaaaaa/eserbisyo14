@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { EmptyState, SectionCard, StatusBadge, statusToneFromState } from '@/components/portal-ui';
 import { Button } from '@/components/ui/button';
@@ -65,6 +65,14 @@ function getStatusLabel(status: string, locale: 'en' | 'fil', category?: History
 }
 
 export function RequestHistoryPage({ role }: { role: 'admin' | 'staff' }) {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-slate-500">Loading history...</div>}>
+      <RequestHistoryContent role={role} />
+    </Suspense>
+  );
+}
+
+function RequestHistoryContent({ role }: { role: 'admin' | 'staff' }) {
   const { state, locale } = useAppState();
   const pathname = usePathname();
   const router = useRouter();
