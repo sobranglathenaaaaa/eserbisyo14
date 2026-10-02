@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { StatusBadge, statusToneFromState } from '@/components/portal-ui';
 import { getRequestStatusLabel } from '@/lib/formatters';
+import { getRequestedPersonDetails } from '@/lib/documents/request-template-fields';
 import type { DocumentRequest, DocumentTemplate, User } from '@/lib/types/models';
 
 interface DocumentRequestPreviewModalProps {
@@ -46,8 +47,11 @@ export default function DocumentRequestPreviewModal({
   }, [request]);
 
   // Extract resident values
-  const residentName = fieldDraft.residentName || resident?.fullName || request?.residentName || 'N/A';
+  const requestedPerson = getRequestedPersonDetails(request?.purpose);
+  const residentName =
+    requestedPerson.fullName || fieldDraft.residentName || resident?.fullName || request?.residentName || 'N/A';
   const residentAddress =
+    requestedPerson.address ||
     fieldDraft.address ||
     fieldDraft.residenceAddress ||
     resident?.address ||

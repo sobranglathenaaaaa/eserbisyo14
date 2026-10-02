@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { X, Lock, FileText, CheckCircle2, Search, RotateCcw, MapPin, Users, ShieldAlert, HeartHandshake, Layers } from 'lucide-react';
+import { X, Lock, FileText, CheckCircle2, MapPin, Users, Filter } from 'lucide-react';
 import PortalShell from '../../../components/portal-shell';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -28,7 +28,6 @@ import CaseReportDocumentModal from '@/components/case-report-document-modal';
 // Types & helpers
 // ---------------------------------------------------------------------------
 
-type TrackFilter = 'all' | 'incident' | 'community_concern';
 type StageFilter = 'all' | 'pending' | 'hearings' | 'lupon' | 'cfa_pnp' | 'record_only' | 'resolved';
 
 type ModalTab = 'details' | 'action' | 'hearing' | 'lupon' | 'cfa_pnp';
@@ -55,12 +54,6 @@ function defaultTab(report: IncidentReport | null): ModalTab {
 const ENDED: ReportStatus[] = ['resolved', 'closed', 'cfa_issued', 'referred_to_pnp'];
 const isEnded = (s: ReportStatus) => ENDED.includes(s);
 
-const TRACK_OPTIONS: Array<{ value: TrackFilter; en: string; fil: string; icon?: string }> = [
-  { value: 'all',               en: 'All Cases & Concerns', fil: 'Lahat ng Kaso at Concern' },
-  { value: 'incident',          en: 'Incident Blotters',    fil: 'Incident Blotters' },
-  { value: 'community_concern', en: 'Community Concerns',   fil: 'Community Concerns' },
-];
-
 const STAGE_OPTIONS: Array<{ value: StageFilter; en: string; fil: string }> = [
   { value: 'all',         en: 'All Stages & Statuses', fil: 'Lahat ng Yugto at Katayuan' },
   { value: 'pending',     en: 'Pending Review',        fil: 'Naghihintay ng Review' },
@@ -81,9 +74,10 @@ export default function StaffIncidentsPage() {
 
   // List & Filters
   const [search,      setSearch]      = useState('');
-  const [trackFilter, setTrackFilter] = useState<TrackFilter>('all');
   const [stageFilter, setStageFilter] = useState<StageFilter>('all');
   const [selectedId,  setSelectedId]  = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   // Modal
   const [reviewOpen,        setReviewOpen]        = useState(false);
@@ -175,8 +169,14 @@ export default function StaffIncidentsPage() {
   };
 
   const handleToggleStreetArchive = async (st: { id: string; name: string; isActive: boolean }) => {
+    const action = st.isActive ? 'archiving' : 'restoring';
+    setStreetAction(`${st.id}:${action}`);
     try {
-      await archiveBarangayStreet(st.id);
+      if (st.isActive) {
+        await archiveBarangayStreet(st.id);
+      } else {
+        await upsertBarangayStreet({ id: st.id, name: st.name, isActive: true });
+      }
       setFeedback({
         tone: 'success',
         text: st.isActive
@@ -188,6 +188,8 @@ export default function StaffIncidentsPage() {
         tone: 'error',
         text: err instanceof Error ? err.message : 'Failed to update street status.',
       });
+    } finally {
+      setStreetAction(null);
     }
   };
 
@@ -213,8 +215,14 @@ export default function StaffIncidentsPage() {
   };
 
   const handleToggleRelArchive = async (rel: { id: string; name: string; isActive: boolean }) => {
+    const action = rel.isActive ? 'archiving' : 'restoring';
+    setRelAction(`${rel.id}:${action}`);
     try {
-      await archiveIncidentRelationship(rel.id);
+      if (rel.isActive) {
+        await archiveIncidentRelationship(rel.id);
+      } else {
+        await upsertIncidentRelationship({ id: rel.id, name: rel.name, isActive: true });
+      }
       setFeedback({
         tone: 'success',
         text: rel.isActive
@@ -226,6 +234,8 @@ export default function StaffIncidentsPage() {
         tone: 'error',
         text: err instanceof Error ? err.message : 'Failed to update relationship option status.',
       });
+    } finally {
+      setRelAction(null);
     }
   };
 
@@ -237,18 +247,8 @@ export default function StaffIncidentsPage() {
     [state.reports]
   );
 
-  const trackCounts = useMemo(() => ({
-    all: reports.length,
-    incident: reports.filter((r) => r.trackType === 'incident').length,
-    community_concern: reports.filter((r) => r.trackType === 'community_concern').length,
-  }), [reports]);
-
   const stageCounts = useMemo(() => {
-    const base = reports.filter((r) => {
-      if (trackFilter === 'incident') return r.trackType === 'incident';
-      if (trackFilter === 'community_concern') return r.trackType === 'community_concern';
-      return true;
-    });
+    const base = reports;
     return {
       all: base.length,
       pending: base.filter((r) => r.status === 'pending' || r.status === 'submitted').length,
@@ -258,16 +258,12 @@ export default function StaffIncidentsPage() {
       record_only: base.filter((r) => r.desiredAction === 'record_only').length,
       resolved: base.filter((r) => r.status === 'resolved' || r.status === 'closed').length,
     };
-  }, [reports, trackFilter]);
+  }, [reports]);
 
   const filteredReports = useMemo(() => {
     const q = search.trim().toLowerCase();
     return reports.filter((item) => {
-      // 1. Track filter
-      if (trackFilter === 'incident' && item.trackType !== 'incident') return false;
-      if (trackFilter === 'community_concern' && item.trackType !== 'community_concern') return false;
-
-      // 2. Stage/Status filter
+      // Stage/Status filter
       if (stageFilter === 'pending' && item.status !== 'pending' && item.status !== 'submitted') return false;
       if (stageFilter === 'record_only' && item.desiredAction !== 'record_only') return false;
       if (stageFilter === 'hearings' && item.status !== 'proceed_to_barangay' && item.status !== 'under_review' && (!item.proceedings || item.proceedings.length === 0)) return false;
@@ -275,7 +271,7 @@ export default function StaffIncidentsPage() {
       if (stageFilter === 'cfa_pnp' && !item.cfa && !item.pnpReferral && item.status !== 'referred_to_pnp') return false;
       if (stageFilter === 'resolved' && item.status !== 'resolved' && item.status !== 'closed') return false;
 
-      // 3. Search query
+      // Search query
       if (!q) return true;
       return [
         item.id,
@@ -293,7 +289,20 @@ export default function StaffIncidentsPage() {
         .toLowerCase()
         .includes(q);
     });
-  }, [reports, trackFilter, stageFilter, search]);
+  }, [reports, stageFilter, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredReports.length / ITEMS_PER_PAGE));
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedReports = filteredReports.slice(startIndex, endIndex);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, stageFilter]);
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [totalPages]);
 
   const selectedReport = useMemo(
     () => filteredReports.find((r) => r.id === selectedId) ?? filteredReports[0] ?? reports[0] ?? null,
@@ -713,43 +722,13 @@ export default function StaffIncidentsPage() {
           title={locale === 'fil' ? 'Mga Kaso at Concern ng Barangay' : 'Barangay Cases & Concerns'}
           description={locale === 'fil' ? 'Subaybayan, i-review, at pamahalaan ang lahat ng blotter at community concern reports.' : 'Review, manage, and process incident blotters and community concerns.'}
         >
-          {/* Primary Track Tabs */}
-          <div className="flex flex-wrap items-center gap-2 border-b border-[color:var(--portal-border-soft)] pb-3">
-            {TRACK_OPTIONS.map((t) => {
-              const isActive = trackFilter === t.value;
-              const count = trackCounts[t.value];
-              return (
-                <button
-                  key={t.value}
-                  type="button"
-                  onClick={() => setTrackFilter(t.value)}
-                  className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${
-                    isActive
-                      ? 'bg-[color:var(--portal-accent)] text-white shadow-sm ring-1 ring-[color:var(--portal-accent)]'
-                      : 'bg-[color:var(--portal-surface-2)] text-[color:var(--portal-ink-700)] hover:bg-[color:var(--portal-border-soft)]'
-                  }`}
-                >
-                  {t.value === 'all' ? <Layers size={14} /> : t.value === 'incident' ? <ShieldAlert size={14} /> : <HeartHandshake size={14} />}
-                  <span>{locale === 'fil' ? t.fil : t.en}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-white text-[color:var(--portal-ink-700)] border border-[color:var(--portal-border-soft)]'
-                  }`}>
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Search & Stage Filter Toolbar */}
-          <div className="mt-3.5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="relative flex-1 max-w-md">
-              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <div className="grid gap-2">
+            <div className="relative w-full sm:w-[190px]">
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder={locale === 'fil' ? 'Hanapin: Case No, pangalan, lokasyon...' : 'Search: Case No, name, location...'}
-                className="pl-9 pr-8 text-xs h-9 w-full"
+                placeholder={locale === 'fil' ? 'Case No., pangalan, lokasyon' : 'Case No., name, location'}
+                className="h-11 w-full pr-8 text-sm"
               />
               {search && (
                 <button
@@ -763,97 +742,94 @@ export default function StaffIncidentsPage() {
               )}
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              <label htmlFor="staff-stage-filter" className="text-xs font-medium text-[color:var(--portal-ink-600)] whitespace-nowrap">
-                {locale === 'fil' ? 'Yugto / Katayuan:' : 'Stage / Status:'}
-              </label>
-              <Select
-                id="staff-stage-filter"
-                value={stageFilter}
-                onChange={(e) => setStageFilter(e.target.value as StageFilter)}
-                className="w-[230px] text-xs h-9"
-              >
-                {STAGE_OPTIONS.map((o) => {
-                  const c = stageCounts[o.value];
-                  return (
-                    <option key={o.value} value={o.value}>
-                      {(locale === 'fil' ? o.fil : o.en)} ({c})
-                    </option>
-                  );
-                })}
-              </Select>
-
-              {(search || trackFilter !== 'all' || stageFilter !== 'all') && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    setSearch('');
-                    setTrackFilter('all');
-                    setStageFilter('all');
-                  }}
-                  className="h-9 px-2.5 text-xs text-gray-500 hover:text-gray-900"
-                  title={locale === 'fil' ? 'I-reset ang lahat ng filter' : 'Reset all filters'}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-xs text-[color:var(--portal-ink-500)]">
+                {locale === 'fil'
+                  ? `Ipinapakita ang ${filteredReports.length} sa ${reports.length} kaso`
+                  : `${filteredReports.length} cases | Sorted by most recent`}
+              </span>
+              <div className="flex items-center gap-2">
+                <label htmlFor="staff-stage-filter" className="sr-only">
+                  {locale === 'fil' ? 'I-filter ayon sa yugto o katayuan' : 'Filter by stage or status'}
+                </label>
+                <Select
+                  id="staff-stage-filter"
+                  value={stageFilter}
+                  onChange={(e) => setStageFilter(e.target.value as StageFilter)}
+                  className="h-9 w-[190px] min-w-[190px] max-w-[190px] text-xs"
                 >
-                  <RotateCcw size={13} className="mr-1.5" />
-                  {locale === 'fil' ? 'I-reset' : 'Reset'}
-                </Button>
-              )}
+                  {STAGE_OPTIONS.map((o) => {
+                    const c = stageCounts[o.value];
+                    return (
+                      <option key={o.value} value={o.value}>
+                        {o.value === 'all'
+                          ? `${locale === 'fil' ? 'Lahat' : 'All'} (${c})`
+                          : `${locale === 'fil' ? o.fil : o.en} (${c})`}
+                      </option>
+                    );
+                  })}
+                </Select>
+                <button
+                  type="button"
+                  aria-label={locale === 'fil' ? 'Ipakita ang mga pending na ulat' : 'Show pending reports'}
+                  title={locale === 'fil' ? 'Ipakita ang mga pending na ulat' : 'Show pending reports'}
+                  onClick={() => setStageFilter('pending')}
+                  className="relative inline-flex h-9 w-9 items-center justify-center rounded-md border-0 bg-[color:var(--portal-surface-1)] text-[color:var(--portal-ink-700)] outline-none hover:bg-[color:var(--portal-border-soft)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--portal-accent)]"
+                >
+                  <Filter size={16} aria-hidden />
+                  {stageCounts.pending > 0 ? (
+                    <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-red-600 ring-2 ring-white" aria-hidden />
+                  ) : null}
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Results counter */}
-          <div className="mt-2 text-xs text-[color:var(--portal-ink-500)] flex items-center justify-between">
-            <span>
-              {locale === 'fil'
-                ? `Ipinapakita ang ${filteredReports.length} sa ${reports.length} kaso`
-                : `Showing ${filteredReports.length} of ${reports.length} total records`}
-            </span>
-          </div>
-
           {/* Cases Table */}
-          <div className="mt-3 overflow-hidden rounded-[var(--portal-radius-md)] border border-[color:var(--portal-border-soft)] shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full min-w-[900px] table-fixed text-sm">
+                <colgroup>
+                  <col className="w-[14%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[25%]" />
+                  <col className="w-[18%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[16%]" />
+                </colgroup>
                 <thead>
-                  <tr className="border-b border-[color:var(--portal-border-soft)] bg-[color:var(--portal-surface-2)] text-[color:var(--portal-ink-700)]">
-                    <th className="px-4 py-3 font-semibold">Case No.</th>
-                    <th className="px-4 py-3 font-semibold">Track & Title</th>
-                    <th className="px-4 py-3 font-semibold">Resident</th>
-                    <th className="px-4 py-3 font-semibold">Intent</th>
-                    <th className="px-4 py-3 font-semibold">Status</th>
-                    <th className="px-4 py-3 font-semibold text-right">Action</th>
+                  <tr className="border-b border-[color:var(--portal-border-soft)]">
+                    <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">Case No.</th>
+                    <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">Track</th>
+                    <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">Title</th>
+                    <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">Resident</th>
+                    <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">Status</th>
+                    <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[color:var(--portal-border-soft)]">
-                  {filteredReports.length ? filteredReports.map((item) => (
+                <tbody>
+                  {filteredReports.length ? paginatedReports.map((item, index) => (
                     <tr
                       key={item.id}
-                      className={`cursor-pointer transition-colors ${selectedReport?.id === item.id ? 'bg-[color:var(--portal-surface-3)] font-medium' : 'bg-white hover:bg-gray-50'}`}
-                      onClick={() => openReview(item.id)}
+                      className={`border-b border-[color:var(--portal-border-soft)] ${selectedReport?.id === item.id ? 'bg-[color:var(--portal-surface-3)] font-medium' : index % 2 === 0 ? 'bg-white' : 'bg-[color:var(--portal-surface-1)]'}`}
                     >
-                      <td className="px-4 py-4 align-middle text-xs font-mono uppercase tracking-wider text-[color:var(--portal-ink-700)]">
+                      <td className="truncate px-4 py-3 text-center font-mono text-xs text-[color:var(--portal-ink-600)]">
                         {formatIncidentCaseNumber(item.id, item.createdAt)}
                       </td>
-                      <td className="px-4 py-4 align-middle">
-                        <div className="flex items-center gap-2">
-                          <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${item.trackType === 'community_concern' ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-emerald-100 text-emerald-800 border-emerald-200'}`}>
-                            {item.trackType === 'community_concern' ? 'Community' : 'Incident'}
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex justify-center">
+                          <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${item.trackType === 'community_concern' ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-emerald-100 text-emerald-800 border-emerald-200'}`}>
+                            {item.trackType === 'community_concern' ? 'Concern' : 'Incident'}
                           </span>
-                          <span className="text-gray-900 font-semibold line-clamp-1">{item.title}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-4 align-middle text-[color:var(--portal-ink-900)] font-medium">{item.residentName}</td>
-                      <td className="px-4 py-4 align-middle text-xs text-gray-600">
-                        {item.desiredAction === 'record_only' ? 'Record Only' : item.desiredAction === 'request_meeting' ? 'Barangay Meeting' : '—'}
-                      </td>
-                      <td className="px-4 py-4 align-middle">
+                      <td className="truncate px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-900)]" title={item.title}>{item.title}</td>
+                      <td className="truncate px-4 py-3 text-center text-[color:var(--portal-ink-700)]" title={item.residentName}>{item.residentName}</td>
+                      <td className="px-4 py-3 text-center">
                         <StatusBadge tone={statusToneFromState(item.status)}>{getReportStatusLabel(item.status, locale)}</StatusBadge>
                       </td>
-                      <td className="px-4 py-4 align-middle text-right">
-                        <Button type="button" size="sm" variant="residentOutline" onClick={(e) => { e.stopPropagation(); openReview(item.id); }}>
-                          Review & Manage
+                      <td className="px-4 py-3 text-center">
+                        <Button type="button" variant="ghost" onClick={() => openReview(item.id)}>
+                          {locale === 'fil' ? 'Suriin' : 'Review'}
                         </Button>
                       </td>
                     </tr>
@@ -863,9 +839,26 @@ export default function StaffIncidentsPage() {
                     </td></tr>
                   )}
                 </tbody>
-              </table>
-            </div>
+            </table>
           </div>
+          {filteredReports.length > 0 ? (
+            <div className="flex items-center justify-between pt-2">
+              <div className="text-sm text-[color:var(--portal-ink-600)]">
+                {locale === 'fil'
+                  ? `Ipinapakita ang ${startIndex + 1}-${Math.min(endIndex, filteredReports.length)} sa ${filteredReports.length}`
+                  : `Showing ${startIndex + 1}-${Math.min(endIndex, filteredReports.length)} of ${filteredReports.length}`}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="ghost" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage <= 1}>
+                  {locale === 'fil' ? 'Nakaraan' : 'Previous'}
+                </Button>
+                <div className="text-sm text-[color:var(--portal-ink-600)]">{currentPage} / {totalPages}</div>
+                <Button type="button" variant="ghost" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={currentPage >= totalPages}>
+                  {locale === 'fil' ? 'Susunod' : 'Next'}
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </SectionCard>
 
         {/* Street & Relationship management */}
@@ -913,11 +906,18 @@ export default function StaffIncidentsPage() {
                       <Button
                         type="button"
                         size="sm"
-                        variant="residentOutline"
+                        variant={st.isActive ? 'destructiveOutline' : 'residentOutline'}
                         className="h-7 px-3 text-xs shrink-0"
+                        disabled={Boolean(streetAction)}
                         onClick={() => void handleToggleStreetArchive(st)}
                       >
-                        {st.isActive ? (locale === 'fil' ? 'I-archive' : 'Archive') : (locale === 'fil' ? 'Ibalik' : 'Restore')}
+                        {streetAction === `${st.id}:archiving`
+                          ? (locale === 'fil' ? 'Ina-archive…' : 'Archiving…')
+                          : streetAction === `${st.id}:restoring`
+                            ? (locale === 'fil' ? 'Ibinabalik…' : 'Restoring…')
+                            : st.isActive
+                              ? (locale === 'fil' ? 'I-archive' : 'Archive')
+                              : (locale === 'fil' ? 'Ibalik' : 'Restore')}
                       </Button>
                     </div>
                   ))
@@ -973,11 +973,18 @@ export default function StaffIncidentsPage() {
                       <Button
                         type="button"
                         size="sm"
-                        variant="residentOutline"
+                        variant={rel.isActive ? 'destructiveOutline' : 'residentOutline'}
                         className="h-7 px-3 text-xs shrink-0"
+                        disabled={Boolean(relAction)}
                         onClick={() => void handleToggleRelArchive(rel)}
                       >
-                        {rel.isActive ? (locale === 'fil' ? 'I-archive' : 'Archive') : (locale === 'fil' ? 'Ibalik' : 'Restore')}
+                        {relAction === `${rel.id}:archiving`
+                          ? (locale === 'fil' ? 'Ina-archive…' : 'Archiving…')
+                          : relAction === `${rel.id}:restoring`
+                            ? (locale === 'fil' ? 'Ibinabalik…' : 'Restoring…')
+                            : rel.isActive
+                              ? (locale === 'fil' ? 'I-archive' : 'Archive')
+                              : (locale === 'fil' ? 'Ibalik' : 'Restore')}
                       </Button>
                     </div>
                   ))
@@ -996,22 +1003,19 @@ export default function StaffIncidentsPage() {
       {/* Case review modal                                                      */}
       {/* -------------------------------------------------------------------- */}
       <Dialog open={reviewOpen} onOpenChange={(open) => (open ? setReviewOpen(true) : closeReview())}>
-        {/* hideCloseButton — we render our own X in the green header */}
-        <DialogContent hideCloseButton className="max-w-4xl max-h-[92vh] overflow-y-auto rounded-[24px] border border-[color:var(--portal-border-soft)] bg-white p-0 shadow-2xl">
+        {/* hideCloseButton — we render our own X in the modal header */}
+        <DialogContent hideCloseButton className="max-w-[620px] max-h-[90vh] overflow-y-auto rounded-[var(--portal-radius-lg)] border border-[color:var(--portal-border-soft)] bg-[color:var(--portal-surface-1)] p-0 shadow-[0_24px_70px_rgba(13,45,29,0.28)]">
           {selectedReport ? (
             <div className="grid">
               {/* Header */}
-              <div className="flex items-start justify-between border-b bg-[linear-gradient(180deg,#1d7a53_0%,#155f40_100%)] px-6 py-4 text-white rounded-t-[24px]">
-                <div className="min-w-0 pr-4">
-                  <p className="text-xs font-mono uppercase tracking-widest text-white/70">{formatIncidentCaseNumber(selectedReport.id, selectedReport.createdAt)}</p>
-                  <DialogTitle className="mt-0.5 text-xl font-bold text-white leading-tight">{selectedReport.title}</DialogTitle>
-                  <div className="mt-2">
-                    <StatusBadge tone={statusToneFromState(selectedReport.status)}>
-                      {getReportStatusLabel(selectedReport.status, locale)}
-                    </StatusBadge>
-                  </div>
+              <div className="flex items-start justify-between gap-3 border-b border-[color:var(--portal-border-soft)] px-5 py-4">
+                <div className="min-w-0">
+                  <p className="text-xs text-[color:var(--portal-ink-500)]">{selectedReport.residentName}</p>
+                  <DialogTitle className="mt-1 text-base font-semibold text-[color:var(--portal-ink-900)]">
+                    {locale === 'fil' ? 'Detalye at Pamamahala ng Kaso' : 'Case Detail and Management'}
+                  </DialogTitle>
                 </div>
-                <button type="button" onClick={closeReview} className="shrink-0 mt-0.5 rounded-lg p-1.5 text-white/70 hover:bg-white/15 hover:text-white transition-colors" aria-label="Close">
+                <button type="button" onClick={closeReview} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[color:var(--portal-border-soft)] text-[color:var(--portal-ink-600)] transition-colors hover:bg-[color:var(--portal-surface-2)] hover:text-[color:var(--portal-ink-900)]" aria-label="Close">
                   <X size={18} />
                 </button>
               </div>
@@ -1019,7 +1023,7 @@ export default function StaffIncidentsPage() {
               <DialogDescription className="sr-only">Case management for {selectedReport.title}</DialogDescription>
 
               {/* Tabs — single navigation row, no separate stepper */}
-              <div className="flex border-b bg-white px-6 pt-0 gap-0 overflow-x-auto">
+              <div className="flex border-b bg-white px-5 pt-0 gap-0 overflow-x-auto">
                 <Tab tab="details" label={locale === 'fil' ? 'Detalye' : 'Details'} />
                 {selectedReport.trackType === 'community_concern' && (
                   <Tab tab="action" label="Staff Action" />
@@ -1038,9 +1042,19 @@ export default function StaffIncidentsPage() {
 
               {/* ---- TAB: Details ---- */}
               {activeTab === 'details' && (
-                <div className="p-6 grid gap-5 text-sm text-gray-800">
+                <div className="grid gap-4 px-5 py-4 text-sm text-gray-800">
+                  <p className="text-xs font-medium text-[color:var(--portal-ink-500)]">
+                    {locale === 'fil' ? 'Case No.' : 'Case No.'}: {formatIncidentCaseNumber(selectedReport.id, selectedReport.createdAt)}
+                    {' | '}{locale === 'fil' ? 'Iniulat' : 'Reported'}: {formatDateTime(selectedReport.createdAt, locale)}
+                  </p>
                   {/* Case info card */}
-                  <div className="grid gap-3 rounded-xl border bg-gray-50/60 p-4">
+                  <div className="grid gap-3 rounded-[var(--portal-radius-md)] border border-[color:var(--portal-border-soft)] bg-[color:var(--portal-surface-2)] p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <p className="text-sm font-semibold text-[color:var(--portal-ink-900)]">{selectedReport.title}</p>
+                      <StatusBadge tone={statusToneFromState(selectedReport.status)}>
+                        {getReportStatusLabel(selectedReport.status, locale)}
+                      </StatusBadge>
+                    </div>
                     <div className="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
                       <p><span className="font-semibold text-gray-700">Complainant:</span> {selectedReport.residentName}</p>
                       {selectedReport.parties?.find(p => p.role === 'respondent')?.fullName || (selectedReport as any).respondentName
@@ -1198,7 +1212,7 @@ export default function StaffIncidentsPage() {
                       <div className="border-t pt-4 grid gap-2">
                         <span className="font-medium text-gray-800">Action Taken / Resolution Summary</span>
                         <Textarea value={actionTakenText} onChange={(e) => setActionTakenText(e.target.value)} placeholder="Describe the completed action in detail." className="min-h-[100px]" />
-                        <Button type="button" variant="secondary" disabled={isProcessing || !actionTakenText.trim()} onClick={() => void handleRecordActionTaken()}>Record Action & Resolve Case</Button>
+                        <Button type="button" variant="resident" disabled={isProcessing || !actionTakenText.trim()} onClick={() => void handleRecordActionTaken()}>Record Action & Resolve Case</Button>
                       </div>
                     </>
                   ) : (
@@ -1518,7 +1532,7 @@ export default function StaffIncidentsPage() {
               )}
 
               {/* Footer */}
-              <div className="border-t bg-gray-50 px-6 py-3 flex justify-between items-center rounded-b-[24px]">
+              <div className="flex items-center justify-between rounded-b-[24px] border-t border-[color:var(--portal-border-soft)] bg-white px-5 py-4">
                 <p className="text-xs text-gray-500">{locale === 'fil' ? 'Opisyal na Dokumentasyon' : 'Official Case Documentation'}</p>
                 {isEnded(selectedReport.status) ? (
                   <Button type="button" variant="resident" size="sm" onClick={() => setDocumentModalOpen(true)} className="gap-1.5 text-xs">

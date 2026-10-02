@@ -27,6 +27,25 @@ function formatFileSize(bytes: number | undefined) {
   return `${bytes} B`;
 }
 
+function renderPurposeDetails(purpose: string) {
+  return purpose.split('\n').map((line, index) => {
+    const match = line.match(/^(Full Name|Address|Contact Number|Relationship):\s*(.*)$/);
+
+    return (
+      <span key={`${line}-${index}`}>
+        {index > 0 ? '\n' : ''}
+        {match ? (
+          <>
+            <strong>{match[1]}:</strong> {match[2]}
+          </>
+        ) : (
+          line
+        )}
+      </span>
+    );
+  });
+}
+
 export default function StaffProcessRequestsPage() {
   const { state, locale } = useAppState();
   const [reason, setReason] = useState('');
@@ -349,7 +368,7 @@ export default function StaffProcessRequestsPage() {
                             </td>
                             <td className="px-4 py-3 text-center">
                               <div className="flex justify-center">
-                                <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedId(request.id)}>
+                                <Button type="button" variant="ghost" onClick={() => setSelectedId(request.id)}>
                                   {locale === 'fil' ? 'Tingnan' : 'Review'}
                                 </Button>
                               </div>
@@ -422,7 +441,10 @@ export default function StaffProcessRequestsPage() {
                 <p className="text-xs uppercase tracking-[0.1em] text-[color:var(--portal-ink-500)]">{selected.referenceNumber}</p>
                 <p className="mt-1 text-sm font-semibold text-[color:var(--portal-ink-900)]">{selected.typeLabel}</p>
                 <p className="mt-1 text-sm text-[color:var(--portal-ink-700)]">{locale === 'fil' ? 'Resident' : 'Resident'}: {selected.residentName}</p>
-                <p className="mt-1 text-sm text-[color:var(--portal-ink-700)]">{locale === 'fil' ? 'Purpose' : 'Purpose'}: {selected.purpose}</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-[color:var(--portal-ink-700)]">
+                  <strong>{locale === 'fil' ? 'Purpose' : 'Purpose'}:</strong>{' '}
+                  {renderPurposeDetails(selected.purpose)}
+                </p>
                 <div className="mt-2">
                   <StatusBadge tone={statusToneFromState(selected.status)}>
                     {getRequestStatusLabel(selected.status, locale)}

@@ -24,6 +24,23 @@ function clean(value: string | null | undefined) {
   return value?.trim() ?? '';
 }
 
+export function getRequestedPersonDetails(purpose: string | null | undefined) {
+  const details = {
+    fullName: '',
+    address: '',
+  };
+
+  if (!purpose?.includes('[Requested For Someone Else]')) return details;
+
+  purpose.split('\n').forEach((line) => {
+    const match = line.match(/^(Full Name|Address):\s*(.*)$/);
+    if (match?.[1] === 'Full Name') details.fullName = match[2];
+    if (match?.[1] === 'Address') details.address = match[2];
+  });
+
+  return details;
+}
+
 function includesAny(value: string, needles: string[]) {
   return needles.some((needle) => value.includes(needle));
 }
@@ -124,8 +141,9 @@ export function buildRequestTemplateDefaultFields(
   templateKey: string,
   source: RequestTemplateFieldSource,
 ): Record<string, string> {
-  const residentName = clean(source.residentName) || 'Resident';
-  const address = resolveResidentAddress(source);
+  const requestedPerson = getRequestedPersonDetails(source.purpose);
+  const residentName = clean(requestedPerson.fullName) || clean(source.residentName) || 'Resident';
+  const address = clean(requestedPerson.address) || resolveResidentAddress(source);
 
   if (templateKey === INDIGENCY_TEMPLATE_KEY) {
     return {
