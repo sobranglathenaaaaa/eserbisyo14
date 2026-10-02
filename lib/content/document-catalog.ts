@@ -18,8 +18,10 @@ export const documentCatalog: DocumentCatalogItem[] = [
   { id: 'transient-construction', category: 'Transient Employee/Worker', type: 'Construction Workers', price: 100 },
   { id: 'transient-other', category: 'Transient Employee/Worker', type: 'Other Transient Workers', price: 100 },
 
+  { id: 'lupon-summons', category: 'Lupon ng mga Tagapamayapa', type: 'Summons / Patawag (KP Form #9)', price: 100 },
+  { id: 'lupon-notice', category: 'Lupon ng mga Tagapamayapa', type: 'Notice of Hearing / Reconciliation Notice (KP Form #8)', price: 100 },
+  { id: 'lupon-action', category: 'Lupon ng mga Tagapamayapa', type: 'Certificate to File Action (CFA - KP Form #20)', price: 300 },
   { id: 'lupon-filing', category: 'Lupon ng mga Tagapamayapa', type: 'Lupon Filing Fee', price: 100 },
-  { id: 'lupon-action', category: 'Lupon ng mga Tagapamayapa', type: 'Certificate to File Action', price: 300 },
 
   { id: 'business-20k', category: 'Business Clearances', type: 'Capital up to 20,000', price: 500 },
   { id: 'business-200k', category: 'Business Clearances', type: 'Capital above 20,000 up to 200,000', price: 1000 },

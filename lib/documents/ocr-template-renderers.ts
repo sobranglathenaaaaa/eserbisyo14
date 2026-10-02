@@ -33,6 +33,10 @@ const RENDERERS_BY_TEMPLATE_KEY: Record<string, OcrDocumentRenderer> = {
   [LUPON_SUMMONS_TEMPLATE_KEY]: renderLuponSummonsFromDocx,
   [BUSINESS_PERMIT_TEMPLATE_KEY]: renderBusinessPermitFromDocx,
   [CONSTRUCTION_PERMIT_TEMPLATE_KEY]: renderConstructionPermitFromDocx,
+  barangay_certification: renderBarangayCertificateFromDocx,
+  lupon_tagapamayapa: renderLuponSummonsFromDocx,
+  business_clearance: renderBusinessPermitFromDocx,
+  construction_clearances: renderConstructionPermitFromDocx,
 };
 
 export function resolvePrintableTemplateKey(
@@ -44,6 +48,47 @@ export function resolvePrintableTemplateKey(
   }
   const resolved = resolveTemplateForDocumentType(documentType);
   return resolved && RENDERERS_BY_TEMPLATE_KEY[resolved.key] ? resolved.key : null;
+}
+
+export function resolvePurposeFromReasons(fields: Record<string, string>): string {
+  if (fields.purpose?.trim()) return fields.purpose.trim();
+  if (fields.reason?.trim()) return fields.reason.trim();
+  if (fields.reasonText?.trim()) return fields.reasonText.trim();
+  if (fields.otherReasonText?.trim()) return fields.otherReasonText.trim();
+
+  const checkedReasons: string[] = [];
+  const REASON_MAP: Record<string, string> = {
+    reasonGeneralCert: 'Barangay Certification (General)',
+    reasonIndigency: 'Certificate of Indigency (Financial / Medical Assistance)',
+    reasonResidency: 'Proof of Residency',
+    reasonGoodMoral: 'Certificate of Good Moral Character',
+    reasonEmployment: 'Application for Employment',
+    reasonSchoolReference: 'School Requirement / Scholarship',
+    reasonSrCitizenId: 'PWD / Senior Citizen Application',
+    reasonSjHealthCard: 'SJ Health Card / Medical Clearance',
+    reasonPoliceNbi: 'Police / NBI / Court Clearance',
+    reasonPostalId: 'Postal ID / Passport / Visa Application',
+    reasonBurialAssistance: 'Burial Assistance',
+    reasonSssGsisPhilhealth: 'SSS / GSIS / PhilHealth Requirement',
+    reasonFinancialAssistance: 'Financial Assistance',
+    reasonMedicalAssistance: 'Medical Assistance',
+    reasonTransferResidence: 'Transfer of Residence',
+    reasonNoOperation: 'Certificate of No Operation',
+    reasonNonResident: 'Non-Resident Certification',
+  };
+
+  for (const [key, label] of Object.entries(REASON_MAP)) {
+    const val = (fields[key] ?? '').toLowerCase();
+    if (val && !['0', 'false', 'no', 'none', 'n/a'].includes(val)) {
+      checkedReasons.push(label);
+    }
+  }
+
+  if (checkedReasons.length > 0) {
+    return checkedReasons.join(', ');
+  }
+
+  return 'For whatever legal purpose it may serve';
 }
 
 export async function renderOcrTemplateFromDocx(
@@ -60,13 +105,19 @@ export async function renderOcrTemplateFromDocx(
       .order('updated_at', { ascending: false });
 
     const keyLower = templateKey.toLowerCase();
+    const isLuponKey = keyLower.includes('lupon') || keyLower.includes('summons') || keyLower.includes('cfa') || keyLower.includes('notice');
     const customDbTemplate = (dbTemplates || []).find((t) => {
       if (t.id === templateKey) return true;
       if (t.body?.includes(`"documentType":"${templateKey}"`)) return true;
       const nameLower = (t.name || '').toLowerCase();
+      if (isLuponKey) {
+        if (keyLower.includes('cfa') && (nameLower.includes('cfa') || nameLower.includes('file action'))) return true;
+        if (keyLower.includes('notice') && (nameLower.includes('notice') || nameLower.includes('reconciliation') || nameLower.includes('abiso'))) return true;
+        if (keyLower.includes('summons') && (nameLower.includes('summons') || nameLower.includes('patawag'))) return true;
+        return false;
+      }
       if (keyLower.includes('indigency') && nameLower.includes('indigency')) return true;
       if (keyLower.includes('barangay_cert') && (nameLower.includes('barangay') || nameLower.includes('clearance'))) return true;
-      if (keyLower.includes('lupon') && nameLower.includes('lupon')) return true;
       if (keyLower.includes('business') && (nameLower.includes('business') || nameLower.includes('negosyo'))) return true;
       if (keyLower.includes('construction') && (nameLower.includes('construction') || nameLower.includes('pagpapatayo'))) return true;
       return nameLower.includes(keyLower);
@@ -81,7 +132,7 @@ export async function renderOcrTemplateFromDocx(
 
       const residentName = fields.residentName || doc.residentName || 'Resident';
       const address = fields.address || fields.residenceAddress || 'Barangay Progreso, City of San Juan';
-      const purpose = fields.purpose || fields.reasonText || 'Educational / Medical Assistance';
+      const purpose = resolvePurposeFromReasons(fields);
       const dateIssued = doc.dateIssued || new Date().toISOString().slice(0, 10);
 
       const punongBarangay = fields.punongBarangay || fields.punong_barangay || 'CESAR JR. H. STO. DOMINGO';
@@ -101,16 +152,30 @@ export async function renderOcrTemplateFromDocx(
 
       let renderedText = cleanBody;
       renderedText = renderedText.replaceAll('{{resident_name}}', residentName);
+      renderedText = renderedText.replaceAll('{{residentName}}', residentName);
+      renderedText = renderedText.replaceAll('{{name}}', residentName);
       renderedText = renderedText.replaceAll('{{resident_address}}', address);
+      renderedText = renderedText.replaceAll('{{residentAddress}}', address);
+      renderedText = renderedText.replaceAll('{{address}}', address);
       renderedText = renderedText.replaceAll('{{purpose}}', purpose);
+      renderedText = renderedText.replaceAll('{{reason}}', purpose);
       renderedText = renderedText.replaceAll('{{date_issued}}', dateIssued);
+      renderedText = renderedText.replaceAll('{{dateIssued}}', dateIssued);
+      renderedText = renderedText.replaceAll('{{issuedDate}}', dateIssued);
       renderedText = renderedText.replaceAll('{{punong_barangay}}', punongBarangay);
+      renderedText = renderedText.replaceAll('{{punongBarangay}}', punongBarangay);
       renderedText = renderedText.replaceAll('{{barangay_secretary}}', barangaySecretary);
+      renderedText = renderedText.replaceAll('{{barangaySecretary}}', barangaySecretary);
       renderedText = renderedText.replaceAll('{{barangay_treasurer}}', barangayTreasurer);
+      renderedText = renderedText.replaceAll('{{barangayTreasurer}}', barangayTreasurer);
       renderedText = renderedText.replaceAll('{{barangay_name}}', barangayName);
+      renderedText = renderedText.replaceAll('{{barangayName}}', barangayName);
       renderedText = renderedText.replaceAll('{{city}}', city);
+      renderedText = renderedText.replaceAll('{{cityName}}', city);
       renderedText = renderedText.replaceAll('{{kagawad_list}}', kagawadList);
+      renderedText = renderedText.replaceAll('{{kagawadList}}', kagawadList);
       renderedText = renderedText.replaceAll('{{reference_number}}', referenceNumber);
+      renderedText = renderedText.replaceAll('{{referenceNumber}}', referenceNumber);
       renderedText = renderedText.replaceAll('{{country_seal}}', sealImgs.country);
       renderedText = renderedText.replaceAll('{{city_seal}}', sealImgs.city);
       renderedText = renderedText.replaceAll('{{barangay_seal}}', sealImgs.barangay);
@@ -119,6 +184,14 @@ export async function renderOcrTemplateFromDocx(
       renderedText = renderedText.replaceAll('{{barangay_email}}', fields.barangayEmail || fields.barangay_email || 'barangayprogreso@yahoo.com');
       renderedText = renderedText.replaceAll('{{barangay_phone}}', fields.barangayPhone || fields.barangay_phone || '(02)8727-5635 / (02)76258731');
       renderedText = renderedText.replaceAll('{{official_seal}}', '<div style="display:inline-block;border:2px solid #1e3a8a;color:#1e3a8a;padding:4px 10px;border-radius:9999px;font-weight:bold;font-size:10px;">[ OFFICIAL BARANGAY SEAL ]</div>');
+
+      // Replace any other custom or dynamic fields from the fields map
+      for (const [key, val] of Object.entries(fields)) {
+        if (!val) continue;
+        renderedText = renderedText.replaceAll(`{{${key}}}`, String(val));
+        const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+        renderedText = renderedText.replaceAll(`{{${snakeKey}}}`, String(val));
+      }
 
       const defaultRenderer = RENDERERS_BY_TEMPLATE_KEY[templateKey];
       const baseResult = defaultRenderer ? await defaultRenderer(doc, fields) : null;
@@ -166,9 +239,19 @@ export async function renderOcrTemplateFromDocx(
     // Fall back seamlessly to default renderer
   }
 
-  const renderer = RENDERERS_BY_TEMPLATE_KEY[templateKey];
-  if (!renderer) {
-    throw new Error(`Printable rendering is not configured for template "${templateKey}".`);
+  const isIndigencyMarked =
+    fields.reasonIndigency === 'true' ||
+    fields.reasonIndigency === '1' ||
+    fields.reasonIndigency === 'yes' ||
+    fields.purpose?.toLowerCase().includes('indigency');
+
+  if (
+    (templateKey === 'barangay_certification' || templateKey === BARANGAY_CERTIFICATE_TEMPLATE_KEY) &&
+    isIndigencyMarked
+  ) {
+    return renderIndigencyCertificateFromDocx(doc, fields);
   }
+
+  const renderer = RENDERERS_BY_TEMPLATE_KEY[templateKey] ?? renderBarangayCertificateFromDocx;
   return renderer(doc, fields);
 }

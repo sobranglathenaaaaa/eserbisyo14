@@ -53,12 +53,30 @@ export async function POST(request: NextRequest) {
 
   const body = (await request.json().catch(() => null)) as { templateKey?: string } | null;
   const requestedTemplateKey = typeof body?.templateKey === 'string' ? body.templateKey.trim() : '';
+  const admin = getSupabaseAdminClient();
+  let dynamicDef = undefined;
+
   if (requestedTemplateKey && !getOcrTemplateByKey(requestedTemplateKey)) {
-    return fail('VALIDATION_ERROR', `Unsupported templateKey "${requestedTemplateKey}".`, 400);
+    const { data: dbTemplate } = await admin
+      .from('document_templates')
+      .select('id, name, body, dynamic_fields')
+      .eq('id', requestedTemplateKey)
+      .maybeSingle();
+
+    if (dbTemplate) {
+      const { buildDynamicOcrTemplateDefinition } = await import('@/lib/ocr/templates');
+      dynamicDef = buildDynamicOcrTemplateDefinition({
+        id: dbTemplate.id,
+        name: dbTemplate.name,
+        body: dbTemplate.body,
+        dynamicFields: dbTemplate.dynamic_fields ?? [],
+      });
+    } else {
+      return fail('VALIDATION_ERROR', `Unsupported templateKey "${requestedTemplateKey}".`, 400);
+    }
   }
 
-  const admin = getSupabaseAdminClient();
-  const template = getTemplateConfig(requestedTemplateKey || null);
+  const template = getTemplateConfig(requestedTemplateKey || null, dynamicDef);
   const { data, error } = await admin
     .from('ocr_issuances')
     .insert({
@@ -69,7 +87,7 @@ export async function POST(request: NextRequest) {
       template_version: template.version,
       status: 'draft',
       extracted_text: '',
-      parsed_fields: getTemplateFieldDefaults(template.key),
+      parsed_fields: getTemplateFieldDefaults(template.key, dynamicDef),
       required_fields: template.requiredFields,
       model_name: null,
       error_message: null,

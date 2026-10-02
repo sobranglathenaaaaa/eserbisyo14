@@ -173,6 +173,7 @@ export interface DocumentTemplate {
   htmlBody?: string;
   previewImageUrl?: string;
   isActive?: boolean;
+  isOverwritten?: boolean;
 }
 
 export interface GeneratedDocument {

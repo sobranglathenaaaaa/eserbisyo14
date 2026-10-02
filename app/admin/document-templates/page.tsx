@@ -548,13 +548,84 @@ function buildDefaultHtmlLayout(
       break;
   }
 
-  // LUPON SUMMONS (PATAWAG - KP FORM) DEDICATED FULL-PAGE STRUCTURE (1:1 with BLANK-LUPON-SUMMONS-KP2026.docx)
+  // LUPON NG MGA TAGAPAMAYAPA (PATAWAG, HEARING NOTICE, CFA) DEDICATED FULL-PAGE STRUCTURE
   if (
     docTypeKey.includes('lupon') ||
     docTypeKey.includes('summons') ||
     docTypeKey.includes('patawag') ||
-    docTypeKey.includes('cfa')
+    docTypeKey.includes('cfa') ||
+    docTypeKey.includes('hearing') ||
+    docTypeKey.includes('notice')
   ) {
+    const isCfa = docTypeKey.includes('cfa') || docTypeKey.includes('file_action');
+    const isNotice = !isCfa && (docTypeKey.includes('notice') || docTypeKey.includes('reconciliation') || docTypeKey.includes('hearing'));
+
+    let luponTitle = '= S U M M O N S =';
+    let luponSubtitle = '(KP FORM #9 - PATAWAG)';
+    if (isCfa) {
+      luponTitle = 'CERTIFICATE TO FILE ACTION';
+      luponSubtitle = '(KP FORM #20 - KATIBAYAN UPANG MAKADULOG SA HUKUMAN)';
+    } else if (isNotice) {
+      luponTitle = 'NOTICE OF HEARING / RECONCILIATION NOTICE';
+      luponSubtitle = '(KP FORM #8 - ABISO NG PAGDINIG)';
+    }
+
+    let luponBody = '';
+    if (isCfa) {
+      luponBody = `
+    <!-- CFA BODY -->
+    <div style="font-size:15px;line-height:2.1;margin:18px 0 24px 0;text-align:justify;color:#000;">
+      <p style="font-weight:bold;margin-bottom:14px;">This is to certify that:</p>
+      <ol style="margin:0 0 20px 28px;padding:0;line-height:2.2;">
+        <li style="margin-bottom:10px;">There has been a personal confrontation between the parties before the Punong Barangay / Lupon Tagapamayapa;</li>
+        <li style="margin-bottom:10px;">A mediation/conciliation was attempted in good faith, but <strong>NO SETTLEMENT / CONCILIATION</strong> was reached;</li>
+        <li style="margin-bottom:10px;">Therefore, the corresponding complaint for the dispute may now be formally filed in Court (MTC/RTC) or Prosecutor's Office.</li>
+      </ol>
+      <p style="margin-top:20px;">
+        Issued this <span style="display:inline-block;border-bottom:1px solid #000;min-width:180px;text-align:center;font-weight:bold;padding:0 6px;">{{date_issued}}</span> at {{barangay_name}}, {{city}}.
+      </p>
+    </div>`;
+    } else if (isNotice) {
+      luponBody = `
+    <!-- TO PARTIES -->
+    <div style="margin-bottom:16px;font-size:15px;line-height:1.5;">
+      <strong>TO:</strong> <span style="display:inline-block;border-bottom:1px solid #000;min-width:320px;text-align:center;font-weight:bold;padding:0 8px;">{{complainant_name}} & {{resident_name}}</span>
+      <div style="margin-left:36px;font-size:13px;color:#333;font-weight:500;">(Complainant/s and Respondent/s)</div>
+    </div>
+
+    <!-- NOTICE BODY -->
+    <p style="font-size:15px;line-height:2.0;text-indent:42px;margin-bottom:18px;text-align:justify;color:#000;">
+      You are hereby required to appear before the undersigned at the Barangay Hall on <span style="display:inline-block;border-bottom:1px solid #000;min-width:180px;text-align:center;font-weight:bold;padding:0 6px;">{{hearing_date_time}}</span> for a conciliation and mediation hearing of the above-entitled case.
+    </p>
+    <p style="font-size:15px;line-height:2.0;text-indent:42px;margin-bottom:18px;text-align:justify;color:#000;">
+      Please be present promptly on the scheduled date and time with all your relevant supporting records, agreements, or witnesses.
+    </p>
+    <p style="font-size:15px;margin-top:22px;margin-bottom:32px;color:#000;">
+      Issued this <span style="display:inline-block;border-bottom:1px solid #000;min-width:180px;text-align:center;font-weight:bold;padding:0 6px;">{{date_issued}}</span> at {{barangay_name}}, {{city}}.
+    </p>`;
+    } else {
+      luponBody = `
+    <!-- TO RESPONDENT -->
+    <div style="margin-bottom:16px;font-size:15px;line-height:1.5;">
+      <strong>TO:</strong> <span style="display:inline-block;border-bottom:1px solid #000;min-width:240px;text-align:center;font-weight:bold;padding:0 8px;">{{resident_name}}</span>
+      <div style="margin-left:36px;font-size:13px;color:#333;font-weight:500;">Respondent/s</div>
+    </div>
+
+    <!-- SUMMONS BODY -->
+    <p style="font-size:15px;line-height:2.0;text-indent:42px;margin-bottom:18px;text-align:justify;color:#000;">
+      You are hereby summoned to appear before me, in person together with your witness on the <span style="display:inline-block;border-bottom:1px solid #000;min-width:180px;text-align:center;font-weight:bold;padding:0 6px;">{{hearing_date_time}}</span> then and there to answer to a complaint made before me, copy of which is attached hereto, for mediation/conciliation of your dispute with complainant/s.
+    </p>
+    <p style="font-size:15px;line-height:2.0;text-indent:42px;margin-bottom:18px;text-align:justify;color:#000;">
+      You are hereby warned that if you refuse or willfully fail to appear in obedience to this summons, you may be barred from the filing of any counterclaim arising from said complaint.
+    </p>
+    <p style="font-size:15px;font-weight:bold;text-align:center;margin:22px 0;letter-spacing:1px;color:#000;">
+      FAIL NOT or else face punishment as for contempt of court.
+    </p>
+    <p style="font-size:15px;margin-top:22px;margin-bottom:32px;color:#000;">
+      Issued this <span style="display:inline-block;border-bottom:1px solid #000;min-width:180px;text-align:center;font-weight:bold;padding:0 6px;">{{date_issued}}</span> at {{barangay_name}}, {{city}}.
+    </p>`;
+    }
+
     return `
 <div style="font-family:'Times New Roman',Georgia,serif;color:#000;width:100%;max-width:840px;min-height:272mm;height:100%;margin:0 auto;background:#fff;display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;padding:4mm 8mm;position:relative;">
   <!-- DYNAMIC WATERMARK SEAL -->
@@ -581,30 +652,17 @@ function buildDefaultHtmlLayout(
       <div><strong>Respondent/s:</strong> <span style="display:inline-block;border-bottom:1px solid #000;min-width:260px;text-align:center;padding:0 8px;">{{resident_name}}</span></div>
     </div>
 
-    <!-- SUMMONS HEADING -->
-    <h2 style="text-align:center;font-size:24px;font-weight:800;letter-spacing:3px;margin:18px 0 16px 0;color:#000;">
-      = S U M M O N S =
-    </h2>
-
-    <!-- TO RESPONDENT -->
-    <div style="margin-bottom:16px;font-size:15px;line-height:1.5;">
-      <strong>TO:</strong> <span style="display:inline-block;border-bottom:1px solid #000;min-width:240px;text-align:center;font-weight:bold;padding:0 8px;">{{resident_name}}</span>
-      <div style="margin-left:36px;font-size:13px;color:#333;font-weight:500;">Respondent/s</div>
+    <!-- DOCUMENT HEADING -->
+    <div style="text-align:center;margin:18px 0 16px 0;">
+      <h2 style="font-size:24px;font-weight:800;letter-spacing:3px;margin:0;color:#000;text-transform:uppercase;">
+        ${luponTitle}
+      </h2>
+      <p style="font-size:12px;font-weight:bold;color:#475569;margin:4px 0 0 0;text-transform:uppercase;letter-spacing:1px;">
+        ${luponSubtitle}
+      </p>
     </div>
 
-    <!-- SUMMONS BODY -->
-    <p style="font-size:15px;line-height:2.0;text-indent:42px;margin-bottom:18px;text-align:justify;color:#000;">
-      You are hereby summoned to appear before me, in person together with your witness on the <span style="display:inline-block;border-bottom:1px solid #000;min-width:180px;text-align:center;font-weight:bold;padding:0 6px;">{{hearing_date_time}}</span> then and there to answer to a complaint made before me, copy of which is attached hereto, for mediation/conciliation of your dispute with complainant/s.
-    </p>
-    <p style="font-size:15px;line-height:2.0;text-indent:42px;margin-bottom:18px;text-align:justify;color:#000;">
-      You are hereby warned that if you refuse or willfully fail to appear in obedience to this summons, you may be barred from the filing of any counterclaim arising from said complaint.
-    </p>
-    <p style="font-size:15px;font-weight:bold;text-align:center;margin:22px 0;letter-spacing:1px;color:#000;">
-      FAIL NOT or else face punishment as for contempt of court.
-    </p>
-    <p style="font-size:15px;margin-top:22px;margin-bottom:32px;color:#000;">
-      Issued this <span style="display:inline-block;border-bottom:1px solid #000;min-width:180px;text-align:center;font-weight:bold;padding:0 6px;">{{date_issued}}</span>
-    </p>
+    ${luponBody}
   </div>
 
   <!-- SIGNATURE & FOOTER -->
@@ -615,7 +673,7 @@ function buildDefaultHtmlLayout(
           {{punong_barangay}}
         </p>
         <p style="font-size:13px;font-weight:bold;margin:4px 0 0 0;color:#000;">
-          Punong Barangay
+          Punong Barangay / Lupon Chairman
         </p>
       </div>
     </div>
@@ -932,6 +990,10 @@ export default function AdminDocumentTemplatesPage() {
     isOpen: boolean;
     existingTemplate: DocumentTemplate;
   } | null>(null);
+  const [overwriteSaveModal, setOverwriteSaveModal] = useState<{
+    isOpen: boolean;
+    conflictingTemplate: DocumentTemplate;
+  } | null>(null);
 
   // Template Editor State
   const [editorName, setEditorName] = useState('');
@@ -942,6 +1004,7 @@ export default function AdminDocumentTemplatesPage() {
   const [htmlContent, setHtmlContent] = useState('');
   const [dynamicFieldsInput, setDynamicFieldsInput] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [editorIsOverwritten, setEditorIsOverwritten] = useState(false);
 
   // Editor Display Mode Tab: 'visual' | 'html' | 'text' | 'original_upload'
   const [editorTab, setEditorTab] = useState<'visual' | 'html' | 'text' | 'original_upload'>('visual');
@@ -993,7 +1056,7 @@ export default function AdminDocumentTemplatesPage() {
   // Feedback banner
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'error' | 'info'; text: string } | null>(null);
 
-  // Filtered Template List with Overwritten / Custom Draft classification
+  // Filtered Template List with clean Status and Category classification
   const filteredTemplates = useMemo(() => {
     return templatesList.filter((item) => {
       const q = searchQuery.toLowerCase();
@@ -1001,18 +1064,15 @@ export default function AdminDocumentTemplatesPage() {
       const category = getCategoryForDocType(item.documentType, item.name);
       const matchesType = typeFilter === 'all' || item.documentType === typeFilter || category === typeFilter;
 
-      const isKnownDocType = DOCUMENT_TYPES.some((dt) => dt.id === item.documentType);
-      const isOverwritten =
-        item.sourceType === 'uploaded' ||
-        item.isActive === false ||
-        !isKnownDocType ||
-        item.name.toLowerCase().includes('update');
-
       let matchesStatus = true;
       if (statusFilter === 'active') {
-        matchesStatus = item.isActive !== false && !isOverwritten;
+        matchesStatus = item.isActive !== false;
       } else if (statusFilter === 'overwritten') {
-        matchesStatus = isOverwritten;
+        matchesStatus = Boolean(item.isOverwritten);
+      } else if (statusFilter === 'inactive') {
+        matchesStatus = item.isActive === false;
+      } else if (statusFilter === 'custom') {
+        matchesStatus = item.sourceType === 'uploaded' || item.sourceType === 'custom';
       }
 
       return matchesSearch && matchesType && matchesStatus;
@@ -1287,6 +1347,7 @@ export default function AdminDocumentTemplatesPage() {
       setHtmlContent(template.htmlBody || buildDefaultHtmlLayout(docType, sealAlignment, targetLayout, sideColumnVerticalSpacing));
       setDynamicFieldsInput((template.dynamicFields || []).join(','));
       setIsActive(template.isActive ?? true);
+      setEditorIsOverwritten(Boolean(template.isOverwritten));
       if (template.headerConfig) {
         setShowLogo(template.headerConfig.showLogo ?? true);
         setShowSeal(template.headerConfig.showSeal ?? true);
@@ -1307,6 +1368,7 @@ export default function AdminDocumentTemplatesPage() {
       setHtmlContent(buildDefaultHtmlLayout(defaultDocType, sealAlignment, layoutStyle, sideColumnVerticalSpacing));
       setDynamicFieldsInput('resident_name,resident_address,purpose,date_issued,punong_barangay');
       setIsActive(true);
+      setEditorIsOverwritten(false);
     }
     setEditorTab('visual');
     setViewMode('editor');
@@ -1323,32 +1385,6 @@ export default function AdminDocumentTemplatesPage() {
       setEditorName(`${docObj.labelEn} Template`);
       setHtmlContent(buildDefaultHtmlLayout(newDocType, sealAlignment, targetLayout, sideColumnVerticalSpacing));
     }
-  };
-
-  // 1-Click Load Official Template from \template directory
-  const handleLoadOfficialWordTemplate = (officialTplId: string) => {
-    const officialTpl = OFFICIAL_WORD_TEMPLATES.find((t) => t.id === officialTplId);
-    if (!officialTpl) return;
-    const isLupon = officialTpl.documentType.includes('lupon') || officialTpl.documentType.includes('summons') || officialTpl.documentType.includes('patawag');
-    const targetLayout = isLupon ? 'single_column' : 'two_column_sidebar';
-    setLayoutStyle(targetLayout);
-    setEditorName(officialTpl.name);
-    setEditorDocType(officialTpl.documentType);
-    setEditorSourceType('official');
-    setEditorFileName(officialTpl.fileName);
-    setDynamicFieldsInput(officialTpl.dynamicFields.join(','));
-    setHtmlContent(
-      buildDefaultHtmlLayout(
-        officialTpl.documentType,
-        sealAlignment,
-        targetLayout,
-        sideColumnVerticalSpacing
-      )
-    );
-    setFeedback({
-      tone: 'success',
-      text: `Loaded official template: ${officialTpl.fileName}`,
-    });
   };
 
   // Re-generate HTML Layout when Seal Alignment, Layout Style, or Vertical Spacing changes
@@ -1522,6 +1558,7 @@ export default function AdminDocumentTemplatesPage() {
       setEditorDocType(wizardDocType);
       setEditorSourceType('uploaded');
       setEditorFileName(uploadedFile.name);
+      setEditorIsOverwritten(Boolean(targetTemplateId));
 
       setBodyContent(
         extractedText ||
@@ -1548,7 +1585,7 @@ export default function AdminDocumentTemplatesPage() {
       setFeedback({
         tone: 'success',
         text: targetTemplateId
-          ? `Document "${uploadedFile.name}" analyzed successfully! Template for ${docLabel} will override the existing configuration upon saving.`
+          ? `Document "${uploadedFile.name}" analyzed successfully! Template for ${docLabel} will overwrite the existing configuration upon saving.`
           : `Document "${uploadedFile.name}" analyzed successfully! New layout for ${docLabel} loaded into paper canvas.`,
       });
     } catch (err) {
@@ -1562,19 +1599,45 @@ export default function AdminDocumentTemplatesPage() {
     }
   };
 
-  // Save Template into Supabase & System State
-  const handleSaveTemplate = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  // Save Template into Supabase & System State with Overwrite confirmation
+  const handleSaveTemplate = async (
+    event?: FormEvent<HTMLFormElement>,
+    overwriteConfirmed = false,
+    saveAsNewCopy = false,
+    customOverrideTargetId?: string
+  ) => {
+    if (event) event.preventDefault();
     if (!editorName.trim()) {
       setFeedback({ tone: 'error', text: 'Please enter a template name.' });
       return;
     }
 
+    // Check if saving a new template that conflicts with an existing one
+    if (!selectedTemplateId && !overwriteConfirmed && !saveAsNewCopy) {
+      const conflicting = templatesList.find(
+        (t) =>
+          t.name.trim().toLowerCase() === editorName.trim().toLowerCase() ||
+          t.documentType === editorDocType ||
+          getCategoryForDocType(t.documentType, t.name) === editorDocType
+      );
+      if (conflicting) {
+        setOverwriteSaveModal({
+          isOpen: true,
+          conflictingTemplate: conflicting,
+        });
+        return;
+      }
+    }
+
+    const targetId = customOverrideTargetId || (overwriteConfirmed && overwriteSaveModal ? overwriteSaveModal.conflictingTemplate.id : selectedTemplateId);
+    const finalName = saveAsNewCopy ? `${editorName.trim()} (New)` : editorName.trim();
+    const shouldMarkOverwritten = Boolean(overwriteConfirmed || editorIsOverwritten || targetId);
+
     const dynamicFields = dynamicFieldsInput.split(',').map((f) => f.trim()).filter(Boolean);
 
     await upsertDocumentTemplate({
-      id: selectedTemplateId ?? undefined,
-      name: editorName,
+      id: targetId ?? undefined,
+      name: finalName,
       documentType: editorDocType,
       sourceType: editorSourceType,
       originalFileName: editorFileName,
@@ -1584,11 +1647,15 @@ export default function AdminDocumentTemplatesPage() {
       dynamicFields,
       headerConfig: { showLogo, showSeal, fontFamily, alignment, cityText, barangayText },
       isActive,
+      isOverwritten: shouldMarkOverwritten,
     });
 
+    setOverwriteSaveModal(null);
     setFeedback({
       tone: 'success',
-      text: `Template "${editorName}" saved successfully!`,
+      text: shouldMarkOverwritten
+        ? `Template "${finalName}" has been saved and is now the active overridden template for the system.`
+        : `Template "${finalName}" saved successfully!`,
     });
     setViewMode('list');
   };
@@ -1738,7 +1805,9 @@ export default function AdminDocumentTemplatesPage() {
               <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-10 w-full">
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
-                <option value="overwritten">Overwritten / Drafts</option>
+                <option value="overwritten">Overwritten</option>
+                <option value="custom">Custom / Uploaded</option>
+                <option value="inactive">Inactive</option>
               </Select>
             </div>
           </div>
@@ -1765,30 +1834,36 @@ export default function AdminDocumentTemplatesPage() {
                 const category = getCategoryForDocType(item.documentType, item.name);
                 const docTypeObj = DOCUMENT_TYPES.find((d) => d.id === item.documentType);
                 const categoryObj = DOCUMENT_TYPES.find((d) => d.id === category);
-                const isKnownDocType = DOCUMENT_TYPES.some((dt) => dt.id === item.documentType);
-                const isOverwritten =
-                  item.sourceType === 'uploaded' ||
-                  item.isActive === false ||
-                  !isKnownDocType ||
-                  item.name.toLowerCase().includes('update');
-                const statusTone = isOverwritten ? 'warning' : statusToneFromState(item.isActive !== false ? 'active' : 'inactive');
+                const isUploaded = item.sourceType === 'uploaded';
+                const isCustom = item.sourceType === 'custom' || !DOCUMENT_TYPES.some((dt) => dt.id === item.documentType);
+                const typeLabel = docTypeObj?.labelEn || categoryObj?.labelEn || (isUploaded ? 'Uploaded (.docx) Template' : isCustom ? 'Custom Template' : 'Official Barangay Template');
+                const isOverwritten = Boolean(item.isOverwritten);
+                const isActive = item.isActive !== false;
+                const statusTone = isOverwritten ? 'warning' : statusToneFromState(isActive ? 'active' : 'inactive');
 
                 return (
                   <TableRow key={item.id} className="transition-colors hover:bg-[color:var(--portal-surface-1)]">
                     <TableCell className="px-4 py-3.5 text-left">
                       <div className="min-w-[240px]">
-                        <h3 className="truncate text-sm font-bold text-[color:var(--portal-ink-900)]">{item.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="truncate text-sm font-bold text-[color:var(--portal-ink-900)]">{item.name}</h3>
+                          {isOverwritten ? (
+                            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 border border-amber-300">
+                              Overwritten
+                            </span>
+                          ) : null}
+                        </div>
                         {item.originalFileName ? (
                           <p className="mt-0.5 truncate text-xs text-[color:var(--portal-ink-700)]">{item.originalFileName}</p>
                         ) : null}
                       </div>
                     </TableCell>
                     <TableCell className="px-4 py-3.5 text-center text-sm text-[color:var(--portal-ink-700)]">
-                      {docTypeObj?.labelEn || categoryObj?.labelEn || (isOverwritten ? 'Overwritten / Custom Template' : 'Official Barangay Template')}
+                      {typeLabel}
                     </TableCell>
                     <TableCell className="px-4 py-3.5 text-center">
                       <StatusBadge tone={statusTone}>
-                        {isOverwritten ? 'Overwritten' : item.isActive !== false ? 'Active' : 'Inactive'}
+                        {isOverwritten ? 'Overwritten' : isActive ? 'Active' : 'Inactive'}
                       </StatusBadge>
                     </TableCell>
                     <TableCell className="whitespace-nowrap px-4 py-3.5 text-center text-xs text-[color:var(--portal-ink-700)]">
@@ -2163,24 +2238,6 @@ export default function AdminDocumentTemplatesPage() {
                     {DOCUMENT_TYPES.map((dt) => (
                       <option key={dt.id} value={dt.id}>
                         {dt.labelEn}
-                      </option>
-                    ))}
-                  </Select>
-                </FieldLabel>
-
-                <FieldLabel label="Load Official Template (/template)">
-                  <Select
-                    value=""
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        handleLoadOfficialWordTemplate(e.target.value);
-                      }
-                    }}
-                  >
-                    <option value="">-- Choose template file to apply --</option>
-                    {OFFICIAL_WORD_TEMPLATES.map((ow) => (
-                      <option key={ow.id} value={ow.id}>
-                        {ow.fileName} ({ow.name.split(' (')[0]})
                       </option>
                     ))}
                   </Select>
@@ -2743,6 +2800,54 @@ export default function AdminDocumentTemplatesPage() {
                 className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs gap-1.5"
               >
                 Override Existing Template
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Overwrite Confirmation Modal on Template Save */}
+      {overwriteSaveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="grid h-10 w-10 place-items-center rounded-full bg-amber-100 text-amber-700 shrink-0">
+                <Settings className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">Overwrite Existing Template?</h3>
+                <p className="text-xs text-slate-500">Mayroon nang template na may kaparehong pangalan o uri.</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-700 mb-6 leading-relaxed">
+              Mayroon nang umiiral na template na pinangalanang <strong className="text-blue-700 font-semibold">"{overwriteSaveModal.conflictingTemplate.name}"</strong>.
+              <br /><br />
+              Nais mo ba itong <strong>i-overwrite / palitan</strong> upang ito na ang maging aktibong template na gagamitin sa buong system (Staff OCR & Document Requests), o i-save bilang <strong>panibagong hiwalay na template</strong>?
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setOverwriteSaveModal(null)}
+                className="w-full sm:w-auto px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 rounded-md hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => void handleSaveTemplate(undefined, false, true)}
+                className="w-full sm:w-auto text-xs"
+              >
+                Save as New Copy
+              </Button>
+              <Button
+                type="button"
+                onClick={() => void handleSaveTemplate(undefined, true, false)}
+                className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs gap-1.5"
+              >
+                Yes, Overwrite Template
               </Button>
             </div>
           </div>

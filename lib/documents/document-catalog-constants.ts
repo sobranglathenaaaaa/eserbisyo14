@@ -33,8 +33,8 @@ export const OFFICIAL_DOCUMENT_CATEGORIES: DocumentCategoryDefinition[] = [
   },
   {
     id: 'lupon_tagapamayapa',
-    labelEn: 'Lupon ng mga Tagapamayapa (Summons / CFA)',
-    labelFil: 'Lupon ng mga Tagapamayapa (Summons / CFA)',
+    labelEn: 'Lupon ng mga Tagapamayapa',
+    labelFil: 'Lupon ng mga Tagapamayapa',
     descriptionEn: 'Summons (Patawag), CFA (Certificate to File Action), and hearing conciliation notices',
     descriptionFil: 'Patawag, Certificate to File Action (CFA), at mga abiso sa pagdinig ng Lupon',
   },
@@ -99,11 +99,29 @@ export const OFFICIAL_WORD_TEMPLATES: OfficialWordTemplateDefinition[] = [
   },
   {
     id: 'tpl_lupon_summons',
-    name: 'Notice of Hearing / Summons (Patawag - KP Form #9)',
+    name: 'Summons / Patawag (KP Form #9)',
     fileName: 'BLANK-LUPON-SUMMONS-KP2026.docx',
     categoryId: 'lupon_tagapamayapa',
-    documentType: 'lupon_tagapamayapa',
+    documentType: 'lupon_summons',
     description: 'Official Katarungang Pambarangay Summons / Patawag for conciliation and mediation hearings',
+    dynamicFields: ['resident_name', 'complainant_name', 'case_number', 'date_filed', 'purpose', 'date_issued', 'punong_barangay', 'barangay_name', 'city'],
+  },
+  {
+    id: 'tpl_lupon_cfa',
+    name: 'Certificate to File Action (CFA - KP Form #20)',
+    fileName: 'BLANK-LUPON-SUMMONS-KP2026.docx',
+    categoryId: 'lupon_tagapamayapa',
+    documentType: 'lupon_cfa',
+    description: 'Official Katarungang Pambarangay Certificate to File Action (CFA) after failed conciliation',
+    dynamicFields: ['resident_name', 'complainant_name', 'case_number', 'date_filed', 'purpose', 'date_issued', 'punong_barangay', 'barangay_name', 'city'],
+  },
+  {
+    id: 'tpl_lupon_notice',
+    name: 'Notice of Hearing / Reconciliation Notice (KP Form #8)',
+    fileName: 'BLANK-LUPON-SUMMONS-KP2026.docx',
+    categoryId: 'lupon_tagapamayapa',
+    documentType: 'lupon_notice',
+    description: 'Official Katarungang Pambarangay Notice of Hearing / Abiso ng Pagdinig',
     dynamicFields: ['resident_name', 'complainant_name', 'case_number', 'date_filed', 'purpose', 'date_issued', 'punong_barangay', 'barangay_name', 'city'],
   },
   {
@@ -258,10 +276,10 @@ export const DEFAULT_OFFICIAL_TEMPLATES: DefaultTemplateDefinition[] = [
     description: 'Certification for other transient and temporary workers',
   },
 
-  // 3. Lupon ng mga Tagapamayapa (Summons / CFA)
+  // 3. Lupon ng mga Tagapamayapa (Summons, Hearing Notice, CFA)
   {
     id: 'tpl_lupon_summons',
-    name: 'Notice of Hearing / Summons (Patawag - KP Form #9)',
+    name: 'Summons / Patawag (KP Form #9)',
     categoryId: 'lupon_tagapamayapa',
     price: 0,
     description: 'Summons notice issued to respondents for Katarungang Pambarangay conciliation (BLANK-LUPON-SUMMONS-KP2026.docx)',
@@ -275,7 +293,7 @@ export const DEFAULT_OFFICIAL_TEMPLATES: DefaultTemplateDefinition[] = [
   },
   {
     id: 'tpl_lupon_notice',
-    name: 'Lupon Conciliation Notice',
+    name: 'Notice of Hearing / Reconciliation Notice (KP Form #8)',
     categoryId: 'lupon_tagapamayapa',
     price: 0,
     description: 'General notice of mediation and hearing schedule before the Lupon',

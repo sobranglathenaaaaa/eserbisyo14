@@ -9,6 +9,7 @@ import {
   type StandaloneIssuanceRow,
   toStandaloneIssuance,
 } from '@/lib/ocr/issuance';
+import { getOcrTemplateByKey } from '@/lib/ocr/templates';
 import {
   getOcrIssuancesSchemaCacheMigrationMessage,
   isStaleOcrIssuancesSchemaCacheError,
@@ -109,7 +110,24 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     updates.resident_id = residentId;
   }
   if (templateKey) {
-    const template = getTemplateConfig(templateKey);
+    let dynamicDef = undefined;
+    if (!getOcrTemplateByKey(templateKey)) {
+      const { data: dbTemplate } = await admin
+        .from('document_templates')
+        .select('id, name, body, dynamic_fields')
+        .eq('id', templateKey)
+        .maybeSingle();
+      if (dbTemplate) {
+        const { buildDynamicOcrTemplateDefinition } = await import('@/lib/ocr/templates');
+        dynamicDef = buildDynamicOcrTemplateDefinition({
+          id: dbTemplate.id,
+          name: dbTemplate.name,
+          body: dbTemplate.body,
+          dynamicFields: dbTemplate.dynamic_fields ?? [],
+        });
+      }
+    }
+    const template = getTemplateConfig(templateKey, dynamicDef);
     updates.template_key = template.key;
     updates.template_version = template.version;
   }

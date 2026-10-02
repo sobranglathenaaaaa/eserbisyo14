@@ -9,17 +9,22 @@ const TEMPLATE_FILE_CANDIDATES = [
 ];
 
 const REASON_FIELDS: Array<{ key: string; label: string }> = [
+  { key: 'reasonGeneralCert', label: 'Barangay Certification (General)' },
+  { key: 'reasonIndigency', label: 'Certificate of Indigency' },
+  { key: 'reasonResidency', label: 'Certificate of Residency' },
+  { key: 'reasonGoodMoral', label: 'Certificate of Good Moral Character' },
   { key: 'reasonEmployment', label: 'Application for Employment' },
-  { key: 'reasonResidency', label: 'Proof of Residency' },
-  { key: 'reasonMedicalAssistance', label: 'Medical Assistance' },
-  { key: 'reasonSjHealthCard', label: 'SJ Health Card' },
-  { key: 'reasonTransferResidence', label: 'Transfer of Residence' },
-  { key: 'reasonPostalId', label: 'Postal ID' },
   { key: 'reasonSchoolReference', label: 'School Reference' },
+  { key: 'reasonSrCitizenId', label: 'SR Citizen ID' },
+  { key: 'reasonSjHealthCard', label: 'SJ Health Card' },
+  { key: 'reasonPoliceNbi', label: 'Police / NBI / Court Clearance' },
+  { key: 'reasonPostalId', label: 'Postal ID' },
   { key: 'reasonBurialAssistance', label: 'Burial Assistance' },
   { key: 'reasonSssGsisPhilhealth', label: 'SSS/GSIS/PHILHEALTH' },
   { key: 'reasonFinancialAssistance', label: 'Financial Assistance' },
-  { key: 'reasonSrCitizenId', label: 'SR Citizen ID' },
+  { key: 'reasonMedicalAssistance', label: 'Medical Assistance' },
+  { key: 'reasonTransferResidence', label: 'Transfer of Residence' },
+  { key: 'reasonNoOperation', label: 'Certificate of No Operation' },
   { key: 'reasonNonResident', label: 'Non-Resident' },
 ];
 

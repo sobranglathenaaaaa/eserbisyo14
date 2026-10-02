@@ -58,16 +58,27 @@ export function toStandaloneIssuance(row: StandaloneIssuanceRow) {
   };
 }
 
-export function getTemplateFieldDefaults(templateKey?: string | null): Record<string, string> {
+import type { OcrTemplateDefinition } from '@/lib/ocr/templates';
+
+export function getTemplateFieldDefaults(templateKey?: string | null, dynamicDefinition?: OcrTemplateDefinition): Record<string, string> {
+  if (dynamicDefinition) {
+    return dynamicDefinition.defaultFields.reduce<Record<string, string>>((acc, key) => {
+      acc[key] = '';
+      return acc;
+    }, {});
+  }
   return getTemplateDefaults(templateKey);
 }
 
-export function getMissingTemplateFields(templateKey: string | null | undefined, parsedFields: Record<string, string>) {
+export function getMissingTemplateFields(templateKey: string | null | undefined, parsedFields: Record<string, string>, dynamicDefinition?: OcrTemplateDefinition) {
+  if (dynamicDefinition) {
+    return dynamicDefinition.getMissingFields(parsedFields);
+  }
   return getMissingRequiredTemplateFields(templateKey, parsedFields);
 }
 
-export function getTemplateConfig(templateKey: string | null | undefined) {
-  const template = getTemplateOrDefault(templateKey);
+export function getTemplateConfig(templateKey: string | null | undefined, dynamicDefinition?: OcrTemplateDefinition) {
+  const template = dynamicDefinition ?? getTemplateOrDefault(templateKey);
   return {
     key: template.key,
     version: template.version,

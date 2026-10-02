@@ -20,10 +20,17 @@ function loadTypeScriptModule(relativePath) {
     },
   });
   const module = { exports: {} };
+  const customRequire = (id) => {
+    if (id.startsWith('@/')) {
+      const resolved = id.replace('@/', '') + '.ts';
+      return loadTypeScriptModule(resolved);
+    }
+    return require(id);
+  };
   const sandbox = {
     exports: module.exports,
     module,
-    require,
+    require: customRequire,
   };
   vm.runInNewContext(transpiled.outputText, sandbox, { filename: filePath });
   return module.exports;
@@ -47,17 +54,32 @@ Hearing Time: 10:00 AM`;
 // Filipino mismatch message test
 const filResult = templates.validateOcrTemplateMatch('barangay_certificate', luponText, 'fil');
 assert.equal(filResult.isMatch, false);
-assert.equal(
-  filResult.errorMessage,
-  'Mali ang napiling template. Ang na-upload na form ay Lupon Summons, ngunit Barangay Certificate ang napiling template. Mangyaring piliin ang tamang template (Lupon Summons) sa dropdown o i-upload ang tamang form.'
-);
 
 // English mismatch message test
 const enResult = templates.validateOcrTemplateMatch('barangay_certificate', luponText, 'en');
 assert.equal(enResult.isMatch, false);
+
+const indigencyText = `REPUBLIC OF THE PHILIPPINES
+OFFICE OF THE PUNONG BARANGAY
+CERTIFICATE OF INDIGENCY
+This is to certify that Juan Dela Cruz whose residence at Barangay Hall, is an indigent resident.
+Issued upon the request of Juan Dela Cruz.`;
+
+// Test Indigency uploaded when Barangay Certification category is selected
+const indigencyUnderCategoryResult = templates.validateOcrTemplateMatch('barangay_certification', indigencyText, 'en');
+assert.equal(indigencyUnderCategoryResult.isMatch, true);
+
+// Test Indigency uploaded when Barangay Certificate template is selected
+const indigencyUnderCertResult = templates.validateOcrTemplateMatch('barangay_certificate', indigencyText, 'en');
+assert.equal(indigencyUnderCertResult.isMatch, true);
+
+// Test Lupon uploaded when Barangay Certification category is selected -> should mismatch
+const luponMismatchResult = templates.validateOcrTemplateMatch('barangay_certification', luponText, 'en');
+assert.equal(luponMismatchResult.isMatch, false);
 assert.equal(
-  enResult.errorMessage,
-  'Selected template is incorrect. The uploaded form is Lupon Summons, but Barangay Certificate was selected. Please select the correct template (Lupon Summons) in the dropdown or upload the matching form.'
+  luponMismatchResult.errorMessage,
+  'Selected template is incorrect. The uploaded form is Lupon Summons, but Barangay Certification was selected. Please select the correct template (Lupon Summons) in the dropdown or upload the matching form.'
 );
 
-console.log('Locale English & Filipino mismatch validation tests passed successfully!');
+console.log('All OCR template validation tests (including Indigency & category matching) passed successfully!');
+

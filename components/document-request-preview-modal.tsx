@@ -51,7 +51,7 @@ export default function DocumentRequestPreviewModal({
       return 'transient_employees';
     }
 
-    // 3. Lupon Summons / KP Form / CFA
+    // 3. Lupon Summons / KP Form / CFA / Reconciliation Notice
     if (
       combined.includes('lupon') ||
       combined.includes('summons') ||
@@ -59,9 +59,36 @@ export default function DocumentRequestPreviewModal({
       combined.includes('tagapamayapa') ||
       combined.includes('certificate to file action') ||
       combined.includes('cfa') ||
-      combined.includes('barangay case')
+      combined.includes('barangay case') ||
+      combined.includes('reconciliation') ||
+      combined.includes('hearing notice') ||
+      combined.includes('notice of hearing') ||
+      combined.includes('abiso')
     ) {
-      return 'lupon_tagapamayapa';
+      if (
+        combined.includes('cfa') ||
+        combined.includes('certificate to file action') ||
+        combined.includes('file action') ||
+        combined.includes('makadulog') ||
+        combined.includes('kp form #20') ||
+        combined.includes('kp form 20')
+      ) {
+        return 'lupon_cfa';
+      }
+      if (
+        combined.includes('reconciliation') ||
+        combined.includes('hearing notice') ||
+        combined.includes('notice of hearing') ||
+        combined.includes('abiso') ||
+        combined.includes('conciliation') ||
+        combined.includes('kp form #8') ||
+        combined.includes('kp form 8') ||
+        combined.includes('kp form #10') ||
+        combined.includes('kp form 10')
+      ) {
+        return 'lupon_notice';
+      }
+      return 'lupon_summons';
     }
 
     // 4. Business Clearance
@@ -207,15 +234,60 @@ export default function DocumentRequestPreviewModal({
     const dynamicWatermarkHtml = `<img src="/images/indigency-template/barangay-progreso-seal.jpeg" class="doc-watermark" style="position:absolute;left:50%;top:50%;width:560px;max-width:88%;transform:translate(-50%, -50%);opacity:0.12;filter:contrast(115%);pointer-events:none;z-index:1;user-select:none;-webkit-user-select:none;" alt="Barangay Seal Watermark" />`;
 
     const currentDocKey = docTypeKey as string;
+    const isLuponType =
+      currentDocKey === 'lupon_cfa' ||
+      currentDocKey === 'lupon_notice' ||
+      currentDocKey === 'lupon_summons' ||
+      currentDocKey === 'lupon_tagapamayapa';
+
     const reqTypeLabelLower = (request.selectedTypeLabel || request.typeLabel || '').trim().toLowerCase();
     const matchingCustomTemplate = (documentTemplates || []).find((t) => {
       const nameLower = (t.name || '').trim().toLowerCase();
+      const docTypeLower = (t.documentType || '').trim().toLowerCase();
+
+      // If it's a Lupon document request, make sure it matches the exact Lupon sub-type!
+      if (isLuponType) {
+        if (currentDocKey === 'lupon_cfa') {
+          return (
+            (t.id === request.typeId && (nameLower.includes('cfa') || nameLower.includes('file action') || docTypeLower.includes('cfa'))) ||
+            nameLower.includes('cfa') ||
+            nameLower.includes('certificate to file action') ||
+            nameLower.includes('kp form #20') ||
+            nameLower.includes('kp form 20') ||
+            docTypeLower === 'lupon_cfa'
+          );
+        }
+        if (currentDocKey === 'lupon_notice') {
+          return (
+            (t.id === request.typeId && (nameLower.includes('notice') || nameLower.includes('reconciliation') || nameLower.includes('abiso') || docTypeLower.includes('notice'))) ||
+            nameLower.includes('reconciliation') ||
+            nameLower.includes('notice of hearing') ||
+            nameLower.includes('hearing notice') ||
+            nameLower.includes('abiso') ||
+            nameLower.includes('conciliation notice') ||
+            nameLower.includes('kp form #8') ||
+            nameLower.includes('kp form 8') ||
+            docTypeLower === 'lupon_notice'
+          );
+        }
+        if (currentDocKey === 'lupon_summons') {
+          return (
+            (t.id === request.typeId && (nameLower.includes('summons') || nameLower.includes('patawag') || docTypeLower.includes('summons'))) ||
+            nameLower.includes('summons') ||
+            nameLower.includes('patawag') ||
+            nameLower.includes('kp form #9') ||
+            nameLower.includes('kp form 9') ||
+            docTypeLower === 'lupon_summons'
+          );
+        }
+        return false;
+      }
+
       if (reqTypeLabelLower && (nameLower === reqTypeLabelLower || reqTypeLabelLower.includes(nameLower) || nameLower.includes(reqTypeLabelLower))) return true;
       if (t.id === request.typeId) return true;
       if (t.documentType === currentDocKey) return true;
       if ((currentDocKey === 'certificate_indigency' || currentDocKey === 'barangay_certification') && (nameLower.includes('indigency') || nameLower.includes('barangay') || nameLower.includes('clearance') || nameLower.includes('certification'))) return true;
       if (currentDocKey === 'transient_employees' && (nameLower.includes('transient') || nameLower.includes('worker'))) return true;
-      if ((currentDocKey === 'lupon_tagapamayapa' || currentDocKey === 'lupon_summons') && (nameLower.includes('lupon') || nameLower.includes('summons') || nameLower.includes('cfa'))) return true;
       if ((currentDocKey === 'business_clearance' || currentDocKey === 'business_permit') && (nameLower.includes('business') || nameLower.includes('negosyo'))) return true;
       if ((currentDocKey === 'construction_clearances' || currentDocKey === 'construction_permit') && (nameLower.includes('construction') || nameLower.includes('building') || nameLower.includes('renovation'))) return true;
       if (currentDocKey === 'delivery_hauling_clearances' && (nameLower.includes('delivery') || nameLower.includes('hauling') || nameLower.includes('debris'))) return true;
@@ -225,35 +297,38 @@ export default function DocumentRequestPreviewModal({
       return false;
     });
 
-
     if (matchingCustomTemplate && (matchingCustomTemplate.htmlBody || matchingCustomTemplate.body)) {
       let customHtml = matchingCustomTemplate.htmlBody || matchingCustomTemplate.body;
-      const metaMatch = customHtml.match(/<!-- TEMPLATE_META:([\s\S]*?) -->$/);
-      if (metaMatch) {
-        customHtml = customHtml.replace(/<!-- TEMPLATE_META:([\s\S]*?) -->$/, '').trim();
-      }
-      if (customHtml.includes('{{') || customHtml.includes('<div') || customHtml.includes('<p')) {
-        let rendered = customHtml;
-        rendered = rendered.replaceAll('{{resident_name}}', residentName);
-        rendered = rendered.replaceAll('{{resident_address}}', residentAddress);
-        rendered = rendered.replaceAll('{{purpose}}', purpose);
-        rendered = rendered.replaceAll('{{date_issued}}', dateIssued);
-        rendered = rendered.replaceAll('{{reference_number}}', request.referenceNumber || '');
-        rendered = rendered.replaceAll('{{punong_barangay}}', 'CESAR JR. H. STO. DOMINGO');
-        rendered = rendered.replaceAll('{{barangay_secretary}}', 'Ma. Theresa R. Dela Cruz');
-        rendered = rendered.replaceAll('{{barangay_treasurer}}', 'Saturnina C. Mirata');
-        rendered = rendered.replaceAll('{{kagawad_list}}', kagawadListHtml);
-        rendered = rendered.replaceAll('{{barangay_name}}', 'BARANGAY PROGRESO');
-        rendered = rendered.replaceAll('{{city}}', 'City Of San Juan');
-        rendered = rendered.replaceAll('{{country_seal}}', countryLogoHtml);
-        rendered = rendered.replaceAll('{{city_seal}}', cityLogoHtml);
-        rendered = rendered.replaceAll('{{barangay_seal}}', barangayLogoHtml);
-        rendered = rendered.replaceAll('{{barangay_watermark}}', dynamicWatermarkHtml);
-        rendered = rendered.replaceAll('{{barangay_address}}', '#15 M. Cruz Street Barangay Progreso, San Juan City');
-        rendered = rendered.replaceAll('{{barangay_email}}', 'barangayprogreso@yahoo.com');
-        rendered = rendered.replaceAll('{{barangay_phone}}', '(02)8727-5635 / (02)76258731');
-        rendered = rendered.replaceAll('{{official_seal}}', '<div style="display:inline-block;border:2px solid #1e3a8a;color:#1e3a8a;padding:4px 10px;border-radius:9999px;font-weight:bold;font-size:10px;">[ OFFICIAL BARANGAY SEAL ]</div>');
-        return rendered;
+      const isLegacySidebar = customHtml.includes('doc-frame') || customHtml.includes('KAGAWAD:') || customHtml.includes('kagawad_list');
+      // If this is a Lupon document, do NOT render the two-column kagawad sidebar layout even if an old template had it
+      if (!isLuponType || !isLegacySidebar) {
+        const metaMatch = customHtml.match(/<!-- TEMPLATE_META:([\s\S]*?) -->$/);
+        if (metaMatch) {
+          customHtml = customHtml.replace(/<!-- TEMPLATE_META:([\s\S]*?) -->$/, '').trim();
+        }
+        if (customHtml.includes('{{') || customHtml.includes('<div') || customHtml.includes('<p')) {
+          let rendered = customHtml;
+          rendered = rendered.replaceAll('{{resident_name}}', residentName);
+          rendered = rendered.replaceAll('{{resident_address}}', residentAddress);
+          rendered = rendered.replaceAll('{{purpose}}', purpose);
+          rendered = rendered.replaceAll('{{date_issued}}', dateIssued);
+          rendered = rendered.replaceAll('{{reference_number}}', request.referenceNumber || '');
+          rendered = rendered.replaceAll('{{punong_barangay}}', 'CESAR JR. H. STO. DOMINGO');
+          rendered = rendered.replaceAll('{{barangay_secretary}}', 'Ma. Theresa R. Dela Cruz');
+          rendered = rendered.replaceAll('{{barangay_treasurer}}', 'Saturnina C. Mirata');
+          rendered = rendered.replaceAll('{{kagawad_list}}', kagawadListHtml);
+          rendered = rendered.replaceAll('{{barangay_name}}', 'BARANGAY PROGRESO');
+          rendered = rendered.replaceAll('{{city}}', 'City Of San Juan');
+          rendered = rendered.replaceAll('{{country_seal}}', countryLogoHtml);
+          rendered = rendered.replaceAll('{{city_seal}}', cityLogoHtml);
+          rendered = rendered.replaceAll('{{barangay_seal}}', barangayLogoHtml);
+          rendered = rendered.replaceAll('{{barangay_watermark}}', dynamicWatermarkHtml);
+          rendered = rendered.replaceAll('{{barangay_address}}', '#15 M. Cruz Street Barangay Progreso, San Juan City');
+          rendered = rendered.replaceAll('{{barangay_email}}', 'barangayprogreso@yahoo.com');
+          rendered = rendered.replaceAll('{{barangay_phone}}', '(02)8727-5635 / (02)76258731');
+          rendered = rendered.replaceAll('{{official_seal}}', '<div style="display:inline-block;border:2px solid #1e3a8a;color:#1e3a8a;padding:4px 10px;border-radius:9999px;font-weight:bold;font-size:10px;">[ OFFICIAL BARANGAY SEAL ]</div>');
+          return rendered;
+        }
       }
     }
 
@@ -388,17 +463,161 @@ export default function DocumentRequestPreviewModal({
 
       case 'lupon_tagapamayapa':
       case 'lupon_summons':
-        docTitleUpper = 'PATAWAG / SUMMONS (KP FORM #9)';
-        bodyWordingHtml = `
-<p style="font-size:14px;font-weight:bold;margin-bottom:16px;color:#000;">TO RESPONDENT: <u style="font-weight:bold;">${residentName}</u></p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  You are hereby summoned to appear before me personally at the Barangay Hall on <u style="font-weight:bold;">${dateIssued}</u> for a mediation/conciliation hearing regarding complaint filed against you for: <u style="font-weight:bold;">${purpose}</u>.
-</p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
-  Fail not, or else face prejudice and legal action in court according to law.
-</p>
-`;
-        break;
+      case 'lupon_cfa':
+      case 'lupon_notice': {
+        const combined = `${request?.typeLabel || ''} ${request?.purpose || ''} ${request?.category || ''} ${request?.selectedTypeLabel || ''}`.toLowerCase();
+        const isCfa = docTypeKey === 'lupon_cfa' || combined.includes('cfa') || combined.includes('certificate to file action') || combined.includes('makadulog') || combined.includes('kp form #20') || combined.includes('kp form 20');
+        const isHearingNotice = !isCfa && (docTypeKey === 'lupon_notice' || combined.includes('reconciliation') || combined.includes('hearing notice') || combined.includes('notice of hearing') || combined.includes('abiso') || combined.includes('kp form #8') || combined.includes('kp form 8'));
+
+        const complainants = fieldDraft.complainants || fieldDraft.complainantNames || residentName || 'Juan Dela Cruz';
+        const respondents = fieldDraft.respondents || fieldDraft.respondentNames || 'Pedro Santos';
+        const caseNumber = fieldDraft.barangayCaseNumber || fieldDraft.caseNumber || request?.referenceNumber || '2026-001';
+        const complaintFor = fieldDraft.complaintFor || purpose || 'Mediation / Settlement of Dispute';
+        const dateFiled = fieldDraft.dateFiled || dateIssued;
+
+        let titleText = '= S U M M O N S =';
+        let subtitleText = '(KP FORM #9 - PATAWAG)';
+        if (isCfa) {
+          titleText = 'CERTIFICATE TO FILE ACTION';
+          subtitleText = '(KP FORM #20 - KATIBAYAN UPANG MAKADULOG SA HUKUMAN)';
+        } else if (isHearingNotice) {
+          titleText = 'NOTICE OF HEARING / RECONCILIATION NOTICE';
+          subtitleText = '(KP FORM #8 - ABISO NG PAGDINIG)';
+        }
+
+        return `
+<div style="font-family:'Times New Roman',Georgia,serif;color:#000;width:100%;max-width:840px;min-height:272mm;margin:0 auto;background:#fff;display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;padding:4mm 8mm;position:relative;">
+  ${dynamicWatermarkHtml}
+
+  <!-- TOP 3-SEAL HEADER -->
+  <div style="position:relative;z-index:2;">
+    ${headerHtml}
+  </div>
+
+  <!-- CASE CAPTION & DETAILS (STANDARD KP COURT LAYOUT) -->
+  <div style="position:relative;z-index:2;margin-top:16px;display:grid;grid-template-columns:1.2fr 1fr;gap:24px;font-size:14px;color:#000;">
+    <!-- LEFT: COMPLAINANT VS RESPONDENT -->
+    <div>
+      <div style="border-bottom:1.5px solid #000;min-height:22px;font-weight:bold;font-size:14px;padding-bottom:2px;">
+        ${complainants}
+      </div>
+      <div style="font-size:11.5px;color:#444;text-align:center;margin-top:2px;">Complainant/s</div>
+
+      <div style="text-align:center;font-weight:bold;margin:8px 0;font-size:13px;letter-spacing:1px;">
+        -against-
+      </div>
+
+      <div style="border-bottom:1.5px solid #000;min-height:22px;font-weight:bold;font-size:14px;padding-bottom:2px;">
+        ${respondents}
+      </div>
+      <div style="font-size:11.5px;color:#444;text-align:center;margin-top:2px;">Respondent/s</div>
+    </div>
+
+    <!-- RIGHT: CASE NO, DATE FILED, FOR -->
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:13.5px;padding-left:12px;">
+      <div style="display:flex;align-items:flex-end;gap:6px;">
+        <span style="font-weight:bold;white-space:nowrap;">Barangay Case No.:</span>
+        <span style="border-bottom:1.5px solid #000;flex:1;font-weight:bold;padding-bottom:1px;">${caseNumber}</span>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:6px;">
+        <span style="font-weight:bold;white-space:nowrap;">Date Filed:</span>
+        <span style="border-bottom:1.5px solid #000;flex:1;font-weight:bold;padding-bottom:1px;">${dateFiled}</span>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:6px;">
+        <span style="font-weight:bold;white-space:nowrap;">For:</span>
+        <span style="border-bottom:1.5px solid #000;flex:1;font-weight:bold;padding-bottom:1px;">${complaintFor}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TITLE -->
+  <div style="position:relative;z-index:2;text-align:center;margin:28px 0 20px 0;">
+    <h2 style="font-size:22px;font-weight:800;letter-spacing:3px;margin:0;color:#000;text-transform:uppercase;">
+      ${titleText}
+    </h2>
+    <p style="font-size:12px;font-weight:bold;color:#475569;margin:4px 0 0 0;text-transform:uppercase;letter-spacing:1px;">
+      ${subtitleText}
+    </p>
+  </div>
+
+  <!-- BODY CONTENT -->
+  <div style="position:relative;z-index:2;font-size:14.5px;line-height:2.1;color:#000;">
+    ${
+      isCfa
+        ? `
+    <p style="font-weight:bold;margin-bottom:16px;">This is to certify that:</p>
+    <ol style="margin:0 0 20px 24px;padding:0;line-height:2.0;text-align:justify;">
+      <li style="margin-bottom:8px;">There has been a personal confrontation between the parties before the Punong Barangay / Lupon Tagapamayapa;</li>
+      <li style="margin-bottom:8px;">A mediation/conciliation was attempted in good faith, but <strong>NO SETTLEMENT / CONCILIATION</strong> was reached;</li>
+      <li style="margin-bottom:8px;">Therefore, the corresponding complaint for the above-entitled case may now be formally filed in Court (MTC/RTC) or Prosecutor's Office.</li>
+    </ol>
+    `
+        : isHearingNotice
+          ? `
+    <div style="margin-bottom:16px;">
+      <span style="font-weight:bold;">TO: </span>
+      <span style="font-weight:bold;border-bottom:1.5px solid #000;display:inline-block;min-width:320px;">${complainants} & ${respondents}</span>
+      <div style="font-size:11.5px;color:#444;margin-left:36px;">(Parties / Complainant and Respondent)</div>
+    </div>
+
+    <p style="text-indent:42px;margin-bottom:18px;text-align:justify;">
+      You are hereby required to appear before the undersigned at the Barangay Hall on 
+      <u style="font-weight:bold;">${dateIssued}</u> for a conciliation and mediation hearing of the above-entitled case.
+    </p>
+
+    <p style="text-indent:42px;margin-bottom:16px;text-align:justify;">
+      Please be present promptly on the scheduled date and time with all your relevant supporting records, agreements, or witnesses.
+    </p>
+    `
+          : `
+    <div style="margin-bottom:16px;">
+      <span style="font-weight:bold;">TO: </span>
+      <span style="font-weight:bold;border-bottom:1.5px solid #000;display:inline-block;min-width:240px;">${respondents}</span>
+      <div style="font-size:11.5px;color:#444;margin-left:36px;">Respondent/s</div>
+    </div>
+
+    <p style="text-indent:42px;margin-bottom:18px;text-align:justify;">
+      You are hereby summoned to appear before me personally, together with your witnesses on 
+      <u style="font-weight:bold;">${dateIssued}</u> at the Barangay Hall, then and there to answer to a complaint made before me, copy of which is attached hereto, for mediation/conciliation of your dispute with complainant/s.
+    </p>
+
+    <p style="text-indent:42px;margin-bottom:16px;text-align:justify;">
+      You are hereby warned that if you refuse or willfully fail to appear in obedience to this summons, you may be barred from filing any counterclaim arising from said complaint.
+    </p>
+
+    <p style="font-weight:bold;margin-bottom:24px;">
+      FAIL NOT or else face punishment as for contempt of court.
+    </p>
+    `
+    }
+
+    <p style="margin-top:20px;margin-bottom:42px;">
+      Issued this <u style="font-weight:bold;">${dateIssued}</u>.
+    </p>
+  </div>
+
+  <!-- SIGNATURE -->
+  <div style="position:relative;z-index:2;display:flex;justify-content:flex-end;margin-top:auto;padding-bottom:16px;">
+    <div style="text-align:center;min-width:260px;">
+      <p style="font-size:15px;font-weight:bold;text-decoration:underline;margin:0;color:#000;text-transform:uppercase;">
+        CESAR JR. H. STO. DOMINGO
+      </p>
+      <p style="font-size:12.5px;font-weight:bold;margin:3px 0 0 0;color:#000;">
+        Punong Barangay / Lupon Chairman
+      </p>
+    </div>
+  </div>
+
+  <!-- FOOTER ADDRESS & CONTACT -->
+  <div style="position:relative;z-index:2;text-align:center;margin-top:auto;padding-top:12px;border-top:1px solid #cbd5e1;font-size:11.5px;font-style:italic;color:#4f6e34;font-weight:bold;line-height:1.4;font-family:Georgia,serif;">
+    <p style="margin:0;">#15 M. Cruz Street Barangay Progreso, San Juan City</p>
+    <p style="margin:2px 0 0 0;">
+      Email Address: <span style="text-decoration:underline;">barangayprogreso@yahoo.com</span> | Telephone Nos. (02)8727-5635 / (02)76258731
+    </p>
+  </div>
+</div>
+`.trim();
+      }
 
       case 'certificate_indigency':
         docTitleUpper = 'CERTIFICATE OF INDIGENCY';

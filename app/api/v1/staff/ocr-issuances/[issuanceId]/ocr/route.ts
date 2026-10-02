@@ -150,7 +150,25 @@ export async function POST(request: NextRequest, context: RouteContext) {
     });
 
     try {
-      const template = getTemplateConfig(existing.template_key);
+      let dynamicDef = undefined;
+      const { getOcrTemplateByKey, buildDynamicOcrTemplateDefinition } = await import('@/lib/ocr/templates');
+      if (!getOcrTemplateByKey(existing.template_key)) {
+        const { data: dbTemplate } = await admin
+          .from('document_templates')
+          .select('id, name, body, dynamic_fields')
+          .eq('id', existing.template_key)
+          .maybeSingle();
+        if (dbTemplate) {
+          dynamicDef = buildDynamicOcrTemplateDefinition({
+            id: dbTemplate.id,
+            name: dbTemplate.name,
+            body: dbTemplate.body,
+            dynamicFields: dbTemplate.dynamic_fields ?? [],
+          });
+        }
+      }
+
+      const template = getTemplateConfig(existing.template_key, dynamicDef);
       await setIssuanceProgress(admin, auth, issuanceId, 55);
       const extracted = await extractTextWithGemini(file, {
         templateFields: template.fields,

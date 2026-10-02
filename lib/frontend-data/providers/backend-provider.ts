@@ -868,6 +868,7 @@ async function createState(): Promise<AppState> {
         officialsConfig: meta.officialsConfig,
         overrideSettings: meta.overrideSettings,
         isActive: meta.isActive ?? true,
+        isOverwritten: Boolean(meta.isOverwritten),
       };
     }),
     generatedDocuments: ((generatedRes.data as any[] | null) ?? []).map((item) => ({
@@ -2129,6 +2130,7 @@ export const backendProvider: DataProvider = {
       officialsConfig: payload.officialsConfig,
       overrideSettings: payload.overrideSettings,
       isActive: payload.isActive ?? true,
+      isOverwritten: Boolean(payload.isOverwritten),
     };
     const templateBody = (payload.htmlBody || payload.body || '').trim();
     const encodedBody = `${templateBody}\n\n<!-- TEMPLATE_META:${JSON.stringify(metaObj)} -->`;

@@ -163,7 +163,13 @@ export function buildRequestTemplateDefaultFields(
     };
   }
 
-  if (templateKey === LUPON_SUMMONS_TEMPLATE_KEY) {
+  if (
+    templateKey === LUPON_SUMMONS_TEMPLATE_KEY ||
+    templateKey === 'lupon_tagapamayapa' ||
+    templateKey === 'lupon_cfa' ||
+    templateKey === 'lupon_notice' ||
+    templateKey.includes('lupon')
+  ) {
     const issuedDateParts = splitDateParts(source.issuedDate);
     return {
       barangayCaseNumber: '',

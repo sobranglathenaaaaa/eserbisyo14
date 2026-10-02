@@ -1,6 +1,6 @@
 'use client';
 
-import { ChangeEvent, useMemo, useState } from 'react';
+import { ChangeEvent, useEffect, useMemo, useState } from 'react';
 import PortalShell from '@/components/portal-shell';
 import { FormFeedback, PageGuide, SectionCard } from '@/components/portal-ui';
 import { Button } from '@/components/ui/button';
@@ -16,12 +16,20 @@ import { useAppState } from '@/lib/frontend-data/use-app-state';
 import { getRolePageCopy, resolveRoleCopy, resolveSteps } from '@/lib/content/role-pages';
 import { buildOcrIntakeFormHtml } from '@/lib/documents/ocr-intake-forms';
 import {
+  buildDynamicOcrTemplateDefinition,
   getAllOcrTemplates,
-  getMissingRequiredTemplateFields,
-  getTemplateOrDefault,
+  getCategoryDefaultOcrTemplate,
+  getDefaultOcrTemplate,
+  getOcrTemplateByKey,
   validateOcrTemplateMatch,
+  BARANGAY_CERTIFICATE_TEMPLATE_KEY,
   INDIGENCY_TEMPLATE_KEY,
+  type OcrTemplateDefinition,
 } from '@/lib/ocr/templates';
+import {
+  OFFICIAL_DOCUMENT_CATEGORIES,
+  getCategoryForDocType,
+} from '@/lib/documents/document-catalog-constants';
 import { getSupabaseBrowserClient, getSupabaseSessionSafely } from '@/lib/supabase/client';
 import type { UIStatusTone } from '@/lib/types/ui';
 import type { StandaloneOcrIssuance } from '@/lib/types/models';
@@ -60,7 +68,7 @@ export default function StaffOcrIssuancePage() {
   const [issuance, setIssuance] = useState<StandaloneOcrIssuance | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
-  const [selectedTemplateKey, setSelectedTemplateKey] = useState(INDIGENCY_TEMPLATE_KEY);
+  const [selectedTemplateKey, setSelectedTemplateKey] = useState('barangay_certification');
   const [linkedResidentId, setLinkedResidentId] = useState('');
   const [fieldDraft, setFieldDraft] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<{ tone: UIStatusTone; text: string } | null>(null);
@@ -74,26 +82,79 @@ export default function StaffOcrIssuancePage() {
     [state.users],
   );
 
-  const activeTemplate = useMemo(
-    () => getTemplateOrDefault(issuance?.templateKey ?? selectedTemplateKey),
-    [issuance?.templateKey, selectedTemplateKey],
-  );
+  // 7 Official Document Types matching the system catalog and Admin templates
+  const availableDocumentTypes = useMemo(() => {
+    const officialTypes = OFFICIAL_DOCUMENT_CATEGORIES.map((cat) => {
+      const matchedDb = (state.documentTemplates ?? []).find(
+        (t) => t.documentType === cat.id || getCategoryForDocType(t.documentType, t.name) === cat.id
+      );
+
+      const definition: OcrTemplateDefinition = matchedDb
+        ? buildDynamicOcrTemplateDefinition(matchedDb)
+        : getCategoryDefaultOcrTemplate(cat.id);
+
+      return {
+        key: cat.id,
+        label: locale === 'fil' ? cat.labelFil : cat.labelEn,
+        category: cat.id,
+        definition,
+        hasCustomTemplate: Boolean(matchedDb),
+      };
+    });
+
+    const customTypes = (state.documentTemplates ?? [])
+      .filter(
+        (t) =>
+          !OFFICIAL_DOCUMENT_CATEGORIES.some(
+            (cat) => cat.id === t.documentType || getCategoryForDocType(t.documentType, t.name) === cat.id
+          )
+      )
+      .map((t) => ({
+        key: t.id,
+        label: t.name.replace(/\s+Template$/i, '').trim() || t.name,
+        category: 'custom',
+        definition: buildDynamicOcrTemplateDefinition(t),
+        hasCustomTemplate: true,
+      }));
+
+    return [...officialTypes, ...customTypes];
+  }, [state.documentTemplates, locale]);
+
+  // Sync selectedTemplateKey to first available if initial value not found
+  useEffect(() => {
+    if (availableDocumentTypes.length > 0 && !availableDocumentTypes.some((t) => t.key === selectedTemplateKey)) {
+      setSelectedTemplateKey(availableDocumentTypes[0].key);
+    }
+  }, [availableDocumentTypes, selectedTemplateKey]);
+
+  const activeTemplate: OcrTemplateDefinition = useMemo(() => {
+    const key = issuance?.templateKey ?? selectedTemplateKey;
+    const found = availableDocumentTypes.find((t) => t.key === key);
+    if (found) return found.definition;
+    const directPreset = getOcrTemplateByKey(key);
+    if (directPreset) return directPreset;
+    const matchedDb = (state.documentTemplates ?? []).find(
+      (t) => t.id === key || t.documentType === key || getCategoryForDocType(t.documentType, t.name) === key
+    );
+    if (matchedDb) return buildDynamicOcrTemplateDefinition(matchedDb);
+    return availableDocumentTypes[0]?.definition ?? getDefaultOcrTemplate();
+  }, [issuance?.templateKey, selectedTemplateKey, availableDocumentTypes, state.documentTemplates]);
+
   const missingFieldKeys = useMemo(
-    () => getMissingRequiredTemplateFields(activeTemplate.key, fieldDraft),
-    [activeTemplate.key, fieldDraft],
+    () => {
+      return activeTemplate.getMissingFields(fieldDraft);
+    },
+    [activeTemplate, fieldDraft],
   );
+
   const missingRequiredFields = useMemo(
-    () =>
-      missingFieldKeys.map((key) => ({
+    () => {
+      return missingFieldKeys.map((key) => ({
         key,
-        label:
-          key === 'reasonSelection'
-            ? 'Marked reason(s)'
-            : key === 'permitSelection'
-              ? 'Marked permit choice(s)'
-              : activeTemplate.labels[key] ?? key,
-      })),
-    [activeTemplate.labels, missingFieldKeys],
+        label: activeTemplate.labels[key] ?? key,
+      }));
+    },
+    [activeTemplate, missingFieldKeys],
   );
 
   const ocrAccuracyPercent = useMemo(() => {
@@ -109,7 +170,7 @@ export default function StaffOcrIssuancePage() {
     setSelectedFile(null);
     setLinkedResidentId('');
     setFieldDraft({});
-    setFeedback({ tone: 'info', text: 'Started a new issuance. Select a template and upload a form to run OCR.' });
+    setFeedback({ tone: 'info', text: 'Started a new issuance. Select a document type and upload a form to run OCR.' });
     setHasScanCompleted(false);
     setFileInputKey((prev) => prev + 1);
   };
@@ -158,7 +219,7 @@ export default function StaffOcrIssuancePage() {
   };
 
   const handlePrintIntakeForm = () => {
-    const html = buildOcrIntakeFormHtml(activeTemplate.key);
+    const html = buildOcrIntakeFormHtml(activeTemplate.key, activeTemplate);
     const printWindow = createPrintWindow();
     if (!printWindow) {
       setFeedback({ tone: 'danger', text: 'Popup blocked. Please allow popups for this site to print.' });
@@ -346,15 +407,15 @@ export default function StaffOcrIssuancePage() {
       >
         <div className="grid gap-3">
           <label className="grid gap-1 text-sm text-(--portal-ink-800)">
-            <span>Template</span>
+            <span>Document Type</span>
             <Select
               value={selectedTemplateKey}
               onChange={(event) => void handleTemplateChange(event.target.value)}
               disabled={issuance?.status === 'issued' || isUploadingOcr || isSaving || isIssuing}
             >
-              {getAllOcrTemplates().map((template) => (
-                <option key={template.key} value={template.key}>
-                  {template.documentLabel}
+              {availableDocumentTypes.map((docType) => (
+                <option key={docType.key} value={docType.key}>
+                  {docType.label}
                 </option>
               ))}
             </Select>
@@ -411,7 +472,7 @@ export default function StaffOcrIssuancePage() {
                     </span>
                   </div>
                   <p className="text-xs text-[#1e6141]">
-                    Please wait while Gemini OCR reads text and populates intake form fields.
+                    Please wait while the OCR reads text and fills in form fields.
                   </p>
                 </div>
               </div>

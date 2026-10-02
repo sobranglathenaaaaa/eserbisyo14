@@ -24,10 +24,17 @@ function loadTypeScriptModule(relativePath) {
     },
   });
   const module = { exports: {} };
+  const customRequire = (id) => {
+    if (id.startsWith('@/')) {
+      const resolved = id.replace('@/', '') + '.ts';
+      return loadTypeScriptModule(resolved);
+    }
+    return require(id);
+  };
   const sandbox = {
     exports: module.exports,
     module,
-    require,
+    require: customRequire,
   };
   vm.runInNewContext(transpiled.outputText, sandbox, { filename: filePath });
   return module.exports;

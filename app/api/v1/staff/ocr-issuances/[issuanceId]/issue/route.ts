@@ -85,8 +85,31 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const parsedFields = normalizeStandaloneParsedFields(issuance.parsed_fields);
-  const template = getTemplateOrDefault(issuance.template_key);
-  const missingFields = getMissingRequiredTemplateFields(template.key, parsedFields);
+  const { getOcrTemplateByKey, buildDynamicOcrTemplateDefinition, getTemplateOrDefault } = await import('@/lib/ocr/templates');
+  let template: import('@/lib/ocr/templates').OcrTemplateDefinition;
+
+  if (!getOcrTemplateByKey(issuance.template_key)) {
+    const { data: dbTemplate } = await admin
+      .from('document_templates')
+      .select('id, name, body, dynamic_fields')
+      .eq('id', issuance.template_key)
+      .maybeSingle();
+
+    if (dbTemplate) {
+      template = buildDynamicOcrTemplateDefinition({
+        id: dbTemplate.id,
+        name: dbTemplate.name,
+        body: dbTemplate.body,
+        dynamicFields: dbTemplate.dynamic_fields ?? [],
+      });
+    } else {
+      template = getTemplateOrDefault(issuance.template_key);
+    }
+  } else {
+    template = getTemplateOrDefault(issuance.template_key);
+  }
+
+  const missingFields = template.getMissingFields(parsedFields);
   if (missingFields.length) {
     return fail(
       'VALIDATION_ERROR',
@@ -114,8 +137,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
       .select('id,category,type,price')
       .eq('tenant_id', auth.tenantId);
     const matchedType = (allDocumentTypes ?? []).find((item) =>
-      isTemplateCompatibleWithDocumentType(template.key, item.type, item.category),
-    );
+      template.isDocumentType(item.type, item.category) ||
+      item.type?.toLowerCase().includes(template.name.toLowerCase()) ||
+      template.name.toLowerCase().includes((item.type ?? '').toLowerCase())
+    ) ?? allDocumentTypes?.[0];
     if (!matchedType) {
       return fail('RESOURCE_NOT_FOUND', `${template.documentLabel} document type is not configured for this tenant.`, 404);
     }

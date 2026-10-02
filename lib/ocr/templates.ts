@@ -1,3 +1,9 @@
+import {
+  getCategoryForDocType,
+  getCategoryLabel,
+  OFFICIAL_DOCUMENT_CATEGORIES,
+} from '@/lib/documents/document-catalog-constants';
+
 export const INDIGENCY_TEMPLATE_KEY = 'certificate_indigency';
 export const INDIGENCY_TEMPLATE_VERSION = 'v2';
 export const INDIGENCY_TEMPLATE_NAME = 'Certificate of Indigency Intake Form';
@@ -42,22 +48,27 @@ const INDIGENCY_FIELDS_BASE: OcrTemplateField[] = [
 ];
 
 const BARANGAY_CERTIFICATE_FIELDS_BASE: OcrTemplateField[] = [
-  { key: 'residentName', label: 'This is to certify that', required: true },
-  { key: 'residentAddressLine', label: 'is a bonafide resident of', required: true },
+  { key: 'residentName', label: 'This is to certify that (Resident Full Name)', required: true },
+  { key: 'residentAddressLine', label: 'is a bonafide resident of (Resident Address)', required: true },
+  { key: 'reasonGeneralCert', label: 'Barangay Certification (General)', required: false },
+  { key: 'reasonIndigency', label: 'Certificate of Indigency', required: false },
+  { key: 'reasonResidency', label: 'Certificate of Residency', required: false },
+  { key: 'reasonGoodMoral', label: 'Certificate of Good Moral Character', required: false },
   { key: 'reasonEmployment', label: 'Application for Employment', required: false },
-  { key: 'reasonResidency', label: 'Proof of Residency', required: false },
-  { key: 'reasonMedicalAssistance', label: 'Medical Assistance', required: false },
-  { key: 'reasonSjHealthCard', label: 'SJ Health Card', required: false },
-  { key: 'reasonTransferResidence', label: 'Transfer of Residence', required: false },
-  { key: 'reasonPostalId', label: 'Postal ID', required: false },
-  { key: 'reasonSchoolReference', label: 'School Reference', required: false },
+  { key: 'reasonSchoolReference', label: 'School Requirement / Scholarship', required: false },
+  { key: 'reasonSrCitizenId', label: 'PWD / Senior Citizen Application', required: false },
+  { key: 'reasonSjHealthCard', label: 'SJ Health Card / Medical Clearance', required: false },
+  { key: 'reasonPoliceNbi', label: 'Police / NBI / Court Clearance', required: false },
+  { key: 'reasonPostalId', label: 'Postal ID / Passport / Visa', required: false },
   { key: 'reasonBurialAssistance', label: 'Burial Assistance', required: false },
-  { key: 'reasonSssGsisPhilhealth', label: 'SSS/GSIS/PHILHEALTH', required: false },
+  { key: 'reasonSssGsisPhilhealth', label: 'SSS / GSIS / PhilHealth', required: false },
   { key: 'reasonFinancialAssistance', label: 'Financial Assistance', required: false },
-  { key: 'reasonSrCitizenId', label: 'SR Citizen ID', required: false },
+  { key: 'reasonMedicalAssistance', label: 'Medical Assistance', required: false },
+  { key: 'reasonTransferResidence', label: 'Transfer of Residence', required: false },
+  { key: 'reasonNoOperation', label: 'Certificate of No Operation', required: false },
   { key: 'reasonNonResident', label: 'Non-Resident', required: false },
   { key: 'otherReasonText', label: 'Other: Please Specify', required: false },
-  { key: 'issuedDate', label: 'Given this (YYYY-MM-DD)', required: true },
+  { key: 'issuedDate', label: 'Given this / Date Issued (YYYY-MM-DD)', required: true },
 ];
 
 const LUPON_SUMMONS_FIELDS_BASE: OcrTemplateField[] = [
@@ -103,17 +114,22 @@ const CONSTRUCTION_PERMIT_FIELDS_BASE: OcrTemplateField[] = [
 ];
 
 const BARANGAY_REASON_KEYS = [
-  'reasonEmployment',
+  'reasonGeneralCert',
+  'reasonIndigency',
   'reasonResidency',
-  'reasonMedicalAssistance',
-  'reasonSjHealthCard',
-  'reasonTransferResidence',
-  'reasonPostalId',
+  'reasonGoodMoral',
+  'reasonEmployment',
   'reasonSchoolReference',
+  'reasonSrCitizenId',
+  'reasonSjHealthCard',
+  'reasonPoliceNbi',
+  'reasonPostalId',
   'reasonBurialAssistance',
   'reasonSssGsisPhilhealth',
   'reasonFinancialAssistance',
-  'reasonSrCitizenId',
+  'reasonMedicalAssistance',
+  'reasonTransferResidence',
+  'reasonNoOperation',
   'reasonNonResident',
 ] as const;
 
@@ -202,16 +218,23 @@ function getMissingConstructionPermitFields(parsedFields: Record<string, string>
   return missing;
 }
 
-function isIndigencyAssistanceType(typeLabel: string | null | undefined): boolean {
+function isIndigencyAssistanceType(typeLabel: string | null | undefined, categoryLabel?: string | null | undefined): boolean {
+  if (includesLabel(categoryLabel, 'barangay certification')) return true;
   if (!typeLabel) return false;
   const value = typeLabel.toLowerCase();
-  return value.includes('indigency') && value.includes('assistance');
+  return value.includes('indigency') || (value.includes('assistance') && value.includes('certificate'));
 }
 
-function isBarangayCertificateType(typeLabel: string | null | undefined): boolean {
+function isBarangayCertificateType(typeLabel: string | null | undefined, categoryLabel?: string | null | undefined): boolean {
+  if (includesLabel(categoryLabel, 'barangay certification') || includesLabel(categoryLabel, 'barangay certificate')) return true;
   if (!typeLabel) return false;
   const value = typeLabel.toLowerCase();
-  return value.includes('barangay') && value.includes('certificate');
+  return (
+    (value.includes('barangay') && (value.includes('certificate') || value.includes('clearance') || value.includes('certification'))) ||
+    value.includes('indigency') ||
+    value.includes('residency') ||
+    value.includes('good moral')
+  );
 }
 
 function isLuponSummonsType(typeLabel: string | null | undefined, categoryLabel?: string | null | undefined): boolean {
@@ -316,13 +339,196 @@ const TEMPLATES_BY_KEY: Record<string, OcrTemplateDefinition> = {
   },
 };
 
+export function buildDynamicOcrTemplateDefinition(docTemplate: {
+  id: string;
+  name: string;
+  body?: string;
+  dynamicFields?: string[];
+  fieldMappings?: Array<{ staticText: string; category: string; mappedTo: string; confidence?: number }>;
+  documentType?: string;
+}): OcrTemplateDefinition {
+  const key = docTemplate.id;
+  const name = docTemplate.name || 'Document Template';
+  const dynamicFields = docTemplate.dynamicFields || [];
+
+  const FIELD_LABELS: Record<string, { label: string; required: boolean }> = {
+    resident_name: { label: 'Resident Full Name', required: true },
+    residentName: { label: 'Resident Full Name', required: true },
+    resident_address: { label: 'Resident Address', required: true },
+    address: { label: 'Resident Address', required: true },
+    residentAddress: { label: 'Resident Address', required: true },
+    residentAddressLine: { label: 'Resident Address', required: true },
+    purpose: { label: 'Purpose / Assistance Type', required: true },
+    reason: { label: 'Purpose / Assistance Type', required: true },
+    date_issued: { label: 'Date Issued (YYYY-MM-DD)', required: true },
+    issuedDate: { label: 'Date Issued (YYYY-MM-DD)', required: true },
+    reference_number: { label: 'Reference / Control Number', required: false },
+    referenceNumber: { label: 'Reference / Control Number', required: false },
+    owner_name: { label: 'Name of Owner', required: true },
+    ownerName: { label: 'Name of Owner', required: true },
+    owner_address: { label: 'Address of Owner', required: true },
+    ownerAddress: { label: 'Address of Owner', required: true },
+    establishment_name: { label: 'Name of Establishment', required: true },
+    establishmentName: { label: 'Name of Establishment', required: true },
+    postal_address: { label: 'Postal Address', required: true },
+    postalAddress: { label: 'Postal Address', required: true },
+    barangay_case_number: { label: 'Barangay Case Number', required: true },
+    barangayCaseNumber: { label: 'Barangay Case Number', required: true },
+    complainants: { label: 'Complainant/s', required: true },
+    complaint_for: { label: 'Complaint For', required: true },
+    complaintFor: { label: 'Complaint For', required: true },
+    respondents: { label: 'Respondent/s', required: true },
+    summons_to: { label: 'Summons To', required: true },
+    summonsTo: { label: 'Summons To', required: true },
+    hearing_time: { label: 'Hearing Schedule', required: true },
+    hearingTime: { label: 'Hearing Schedule', required: true },
+  };
+
+  const systemSealsAndOfficials = new Set([
+    'punong_barangay',
+    'punongBarangay',
+    'barangay_secretary',
+    'barangaySecretary',
+    'barangay_treasurer',
+    'barangayTreasurer',
+    'kagawad_list',
+    'kagawadList',
+    'barangay_name',
+    'barangayName',
+    'city',
+    'cityName',
+    'barangay_address',
+    'barangayAddress',
+    'barangay_email',
+    'barangayEmail',
+    'barangay_phone',
+    'barangayPhone',
+    'country_seal',
+    'city_seal',
+    'barangay_seal',
+    'barangay_watermark',
+    'official_seal',
+  ]);
+
+  const intakeFields: OcrTemplateField[] = [];
+  const labels: Record<string, string> = {};
+  const addedKeys = new Set<string>();
+
+  if (docTemplate.fieldMappings && docTemplate.fieldMappings.length > 0) {
+    for (const mapping of docTemplate.fieldMappings) {
+      const fieldKey = mapping.mappedTo.replace(/^\{\{|\}\}$/g, '').trim();
+      if (!fieldKey || systemSealsAndOfficials.has(fieldKey) || addedKeys.has(fieldKey)) continue;
+      addedKeys.add(fieldKey);
+      const isReq = ['resident_name', 'residentName', 'purpose', 'date_issued', 'issuedDate', 'owner_name', 'ownerName', 'establishment_name', 'establishmentName'].includes(fieldKey);
+      const label = mapping.staticText || FIELD_LABELS[fieldKey]?.label || fieldKey.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+      intakeFields.push({ key: fieldKey, label, required: isReq });
+      labels[fieldKey] = label;
+    }
+  } else if (dynamicFields.length > 0) {
+    for (const df of dynamicFields) {
+      const cleanKey = df.replace(/^\{\{|\}\}$/g, '').trim();
+      if (!cleanKey || systemSealsAndOfficials.has(cleanKey) || addedKeys.has(cleanKey)) continue;
+      addedKeys.add(cleanKey);
+      const meta = FIELD_LABELS[cleanKey] || {
+        label: cleanKey.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+        required: false,
+      };
+      intakeFields.push({ key: cleanKey, label: meta.label, required: meta.required });
+      labels[cleanKey] = meta.label;
+    }
+  }
+
+  // Fallback defaults if no field was recognized
+  if (intakeFields.length === 0) {
+    const fallbackList = [
+      { key: 'residentName', label: 'Resident Full Name', required: true },
+      { key: 'address', label: 'Resident Address', required: true },
+      { key: 'purpose', label: 'Purpose / Assistance Type', required: true },
+      { key: 'issuedDate', label: 'Date Issued (YYYY-MM-DD)', required: true },
+    ];
+    for (const f of fallbackList) {
+      intakeFields.push(f);
+      labels[f.key] = f.label;
+    }
+  }
+
+  const requiredFields = intakeFields.filter((f) => f.required).map((f) => f.key);
+  const defaultFields = intakeFields.map((f) => f.key);
+
+  return {
+    key,
+    version: 'v1',
+    name,
+    intakeFields,
+    requiredFields,
+    defaultFields,
+    labels,
+    documentLabel: name,
+    isDocumentType: () => true,
+    getMissingFields: (parsedFields: Record<string, string>) => {
+      return requiredFields.filter((field) => {
+        const snake = field.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+        const camel = field.replace(/_([a-z])/g, (_, l) => l.toUpperCase());
+        const val = parsedFields[field] ?? parsedFields[snake] ?? parsedFields[camel] ?? '';
+        return !val.trim();
+      });
+    },
+  };
+}
+
+export function getCategoryDefaultOcrTemplate(categoryId: string): OcrTemplateDefinition {
+  switch (categoryId) {
+    case 'barangay_certification':
+      return TEMPLATES_BY_KEY[BARANGAY_CERTIFICATE_TEMPLATE_KEY] ?? getDefaultOcrTemplate();
+    case 'lupon_tagapamayapa':
+      return TEMPLATES_BY_KEY[LUPON_SUMMONS_TEMPLATE_KEY] ?? getDefaultOcrTemplate();
+    case 'business_clearance':
+      return TEMPLATES_BY_KEY[BUSINESS_PERMIT_TEMPLATE_KEY] ?? getDefaultOcrTemplate();
+    case 'construction_clearances':
+      return TEMPLATES_BY_KEY[CONSTRUCTION_PERMIT_TEMPLATE_KEY] ?? getDefaultOcrTemplate();
+    case 'transient_employees':
+      return buildDynamicOcrTemplateDefinition({
+        id: 'transient_employees',
+        name: 'Transient Employees & Worker Certification',
+        dynamicFields: ['resident_name', 'resident_address', 'employer_name', 'workplace_address', 'position', 'purpose', 'date_issued', 'punong_barangay'],
+      });
+    case 'delivery_hauling_clearances':
+      return buildDynamicOcrTemplateDefinition({
+        id: 'delivery_hauling_clearances',
+        name: 'Delivery & Hauling Clearances',
+        dynamicFields: ['applicant_name', 'contractor_name', 'hauling_address', 'vehicle_plate_number', 'purpose', 'date_issued', 'punong_barangay'],
+      });
+    case 'special_commercial_permits':
+      return buildDynamicOcrTemplateDefinition({
+        id: 'special_commercial_permits',
+        name: 'Special & Commercial Permits',
+        dynamicFields: ['applicant_name', 'organization_name', 'activity_description', 'location', 'valid_date_range', 'purpose', 'date_issued', 'punong_barangay'],
+      });
+    default:
+      return TEMPLATES_BY_KEY[categoryId] ?? getDefaultOcrTemplate();
+  }
+}
+
 export function getOcrTemplateByKey(templateKey: string | null | undefined) {
   if (!templateKey) return null;
-  return TEMPLATES_BY_KEY[templateKey] ?? null;
+  if (TEMPLATES_BY_KEY[templateKey]) return TEMPLATES_BY_KEY[templateKey];
+  const officialCategories = [
+    'barangay_certification',
+    'transient_employees',
+    'lupon_tagapamayapa',
+    'business_clearance',
+    'construction_clearances',
+    'delivery_hauling_clearances',
+    'special_commercial_permits',
+  ];
+  if (officialCategories.includes(templateKey)) {
+    return getCategoryDefaultOcrTemplate(templateKey);
+  }
+  return null;
 }
 
 export function getDefaultOcrTemplate() {
-  return TEMPLATES_BY_KEY[INDIGENCY_TEMPLATE_KEY];
+  return TEMPLATES_BY_KEY[BARANGAY_CERTIFICATE_TEMPLATE_KEY] ?? TEMPLATES_BY_KEY[INDIGENCY_TEMPLATE_KEY];
 }
 
 export function getAllOcrTemplates() {
@@ -447,31 +653,53 @@ export function validateOcrTemplateMatch(
   locale: 'en' | 'fil' = 'en'
 ) {
   const detectedTemplateKey = detectTemplateKeyFromText(extractedText);
-  const selectedTemplate = getTemplateOrDefault(selectedTemplateKey);
+  const selectedTemplate = getOcrTemplateByKey(selectedTemplateKey);
 
-  if (detectedTemplateKey && detectedTemplateKey !== selectedTemplate.key) {
-    const detectedTemplate = getTemplateOrDefault(detectedTemplateKey);
+  const detectedCategory = detectedTemplateKey ? getCategoryForDocType(detectedTemplateKey) : null;
+  const selectedCategory = getCategoryForDocType(selectedTemplateKey);
+
+  const isDirectMatch =
+    detectedTemplateKey === selectedTemplateKey ||
+    (Boolean(selectedTemplate) && detectedTemplateKey === selectedTemplate?.key);
+
+  const isCategoryMatch = Boolean(
+    detectedCategory &&
+    selectedCategory &&
+    detectedCategory === selectedCategory
+  );
+
+  const isMatch = !detectedTemplateKey || isDirectMatch || isCategoryMatch;
+
+  const detectedTemplate = detectedTemplateKey ? getTemplateOrDefault(detectedTemplateKey) : null;
+  const detectedLabel = detectedTemplate?.documentLabel ?? 'Uploaded Document';
+
+  const isOfficialCategory = OFFICIAL_DOCUMENT_CATEGORIES.some((c) => c.id === selectedTemplateKey);
+  const selectedLabel = isOfficialCategory
+    ? getCategoryLabel(selectedTemplateKey)
+    : selectedTemplate?.documentLabel ?? getCategoryLabel(selectedCategory);
+
+  if (!isMatch) {
     const errorMessage = getOcrTemplateMismatchMessage(
-      detectedTemplate.documentLabel,
-      selectedTemplate.documentLabel,
+      detectedLabel,
+      selectedLabel,
       locale
     );
     return {
       isMatch: false,
       detectedTemplateKey,
-      detectedTemplateLabel: detectedTemplate.documentLabel,
-      selectedTemplateLabel: selectedTemplate.documentLabel,
+      detectedTemplateLabel: detectedLabel,
+      selectedTemplateLabel: selectedLabel,
       errorMessage,
-      errorMessageEn: getOcrTemplateMismatchMessage(detectedTemplate.documentLabel, selectedTemplate.documentLabel, 'en'),
-      errorMessageFil: getOcrTemplateMismatchMessage(detectedTemplate.documentLabel, selectedTemplate.documentLabel, 'fil'),
+      errorMessageEn: getOcrTemplateMismatchMessage(detectedLabel, selectedLabel, 'en'),
+      errorMessageFil: getOcrTemplateMismatchMessage(detectedLabel, selectedLabel, 'fil'),
     };
   }
 
   return {
     isMatch: true,
     detectedTemplateKey,
-    detectedTemplateLabel: detectedTemplateKey ? getTemplateOrDefault(detectedTemplateKey).documentLabel : null,
-    selectedTemplateLabel: selectedTemplate.documentLabel,
+    detectedTemplateLabel: detectedLabel,
+    selectedTemplateLabel: selectedLabel,
   };
 }
 
