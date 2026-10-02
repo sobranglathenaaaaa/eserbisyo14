@@ -674,9 +674,11 @@ export function IncidentsConcernsPage({ role }: { role: 'staff' | 'admin' }) {
           ? 'Kung naaayos na ang sitwasyon, maaari nang isara ang kaso nang walang pag-escalate pa.'
           : 'If the situation has already been resolved, close the case here without escalating further.'}
       </p>
-      <Button type="button" size="sm" variant="secondary" disabled={isProcessing} onClick={() => void handleCloseCase(note)} className="text-xs">
-        {locale === 'fil' ? 'I-close ang kaso ngayon' : 'Close case now'}
-      </Button>
+      <div className="flex justify-end">
+        <Button type="button" size="sm" variant="residentOutline" disabled={isProcessing} onClick={() => void handleCloseCase(note)} className="text-xs">
+          {locale === 'fil' ? 'I-close ang kaso ngayon' : 'Close case now'}
+        </Button>
+      </div>
     </div>
   );
 
@@ -1089,7 +1091,7 @@ export function IncidentsConcernsPage({ role }: { role: 'staff' | 'admin' }) {
                         <Textarea value={hearingNotes} onChange={(e) => setHearingNotes(e.target.value)} placeholder="Topics to be discussed, summons instructions for respondent and complainant." className="min-h-[70px]" />
                       </label>
 
-                      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-emerald-200">
+                      <div className="flex flex-wrap items-center justify-end gap-3 pt-2 border-t border-emerald-200">
                         <Button type="button" variant="resident" disabled={isProcessing || !hearingDate} onClick={() => void handleScheduleHearing()} className="gap-2">
                           {isProcessing ? 'Scheduling' : locale === 'fil' ? 'I-schedule ang Hearing at Mag-email sa Resident' : 'Schedule Hearing & Email Resident'}
                         </Button>
@@ -1101,7 +1103,7 @@ export function IncidentsConcernsPage({ role }: { role: 'staff' | 'admin' }) {
                           <span className="text-xs font-medium text-gray-600">{locale === 'fil' ? 'O kaya, tanggihan ang kaso kung hindi wasto:' : 'Or decline if invalid / out of barangay jurisdiction:'}</span>
                           <div className="flex gap-2">
                             <Input value={declineReason} onChange={(e) => setDeclineReason(e.target.value)} placeholder={locale === 'fil' ? 'Dahilan ng pagtanggi...' : 'Reason for declining...'} className="text-xs" />
-                            <Button type="button" variant="secondary" disabled={isProcessing || !declineReason.trim()} onClick={() => void handleDecline()} className="whitespace-nowrap text-xs">
+                            <Button type="button" variant="destructiveOutline" disabled={isProcessing || !declineReason.trim()} onClick={() => void handleDecline()} className="whitespace-nowrap text-xs">
                               {locale === 'fil' ? 'Tanggihan' : 'Decline Case'}
                             </Button>
                           </div>
