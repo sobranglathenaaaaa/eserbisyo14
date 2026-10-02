@@ -1,6 +1,6 @@
 'use client';
 
-import { ChangeEvent, FormEvent, useMemo, useState, useRef } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState, useRef } from 'react';
 import {
   ArrowLeft,
   Building2,
@@ -38,6 +38,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatDateTime } from '@/lib/formatters';
 import { getRolePageCopy, resolveRoleCopy, resolveSteps } from '@/lib/content/role-pages';
 import { deleteDocumentTemplate, upsertDocumentTemplate } from '@/lib/frontend-data/store';
@@ -557,6 +558,8 @@ export default function AdminDocumentTemplatesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [templatePage, setTemplatePage] = useState(1);
+  const templatesPerPage = 10;
 
   // Upload Wizard State
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -638,14 +641,16 @@ export default function AdminDocumentTemplatesPage() {
       const category = getCategoryForDocType(item.documentType, item.name);
       const matchesType = typeFilter === 'all' || item.documentType === typeFilter || category === typeFilter;
 
-      const isKnownDocType = DOCUMENT_TYPES.some((dt) => dt.id === item.documentType || dt.id === category);
-      const isOverwritten = item.sourceType === 'uploaded' || !isKnownDocType || item.name.toLowerCase().includes('update');
+      const isKnownDocType = DOCUMENT_TYPES.some((dt) => dt.id === item.documentType);
+      const isOverwritten =
+        item.sourceType === 'uploaded' ||
+        item.isActive === false ||
+        !isKnownDocType ||
+        item.name.toLowerCase().includes('update');
 
       let matchesStatus = true;
       if (statusFilter === 'active') {
         matchesStatus = item.isActive !== false && !isOverwritten;
-      } else if (statusFilter === 'inactive') {
-        matchesStatus = item.isActive === false;
       } else if (statusFilter === 'overwritten') {
         matchesStatus = isOverwritten;
       }
@@ -653,6 +658,22 @@ export default function AdminDocumentTemplatesPage() {
       return matchesSearch && matchesType && matchesStatus;
     });
   }, [templatesList, searchQuery, typeFilter, statusFilter]);
+
+  const templatePageCount = Math.max(1, Math.ceil(filteredTemplates.length / templatesPerPage));
+  const paginatedTemplates = useMemo(() => {
+    const startIndex = (templatePage - 1) * templatesPerPage;
+    return filteredTemplates.slice(startIndex, startIndex + templatesPerPage);
+  }, [filteredTemplates, templatePage]);
+
+  useEffect(() => {
+    setTemplatePage(1);
+  }, [searchQuery, typeFilter, statusFilter]);
+
+  useEffect(() => {
+    if (templatePage > templatePageCount) {
+      setTemplatePage(templatePageCount);
+    }
+  }, [templatePage, templatePageCount]);
 
   // Selected Template Object for Details/Edit
   const activeTemplate = useMemo(() => {
@@ -876,14 +897,6 @@ export default function AdminDocumentTemplatesPage() {
 </body>
 </html>`);
     printWindow.document.close();
-  };
-
-  // Open Template Details View
-  const handleViewTemplate = (template: DocumentTemplate) => {
-    setSelectedTemplateId(template.id);
-    setBodyContent(template.body);
-    setHtmlContent(template.htmlBody || buildDefaultHtmlLayout(template.documentType || 'certificate_indigency', sealAlignment, layoutStyle, sideColumnVerticalSpacing));
-    setViewMode('view_details');
   };
 
   // Open Editor for new or existing template
@@ -1232,45 +1245,12 @@ export default function AdminDocumentTemplatesPage() {
         />
       ) : null}
 
-      {/* Module Header Area */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-[color:var(--portal-border-soft)] pb-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[color:var(--portal-ink-900)]">
-            DOCUMENT TEMPLATES
-          </h1>
-          <p className="mt-1 text-sm text-[color:var(--portal-ink-700)]">
-            Manage official document templates, dynamic system variables, 3-seal placement, and 2-column sidebar layouts.
-          </p>
-        </div>
-
-        {viewMode === 'list' && (
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setViewMode('upload_wizard')}
-              className="inline-flex items-center gap-2 rounded-md border border-emerald-600 bg-emerald-50/40 px-3.5 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-600 hover:text-white transition-all shadow-2xs cursor-pointer"
-            >
-              <Upload className="h-4 w-4" />
-              Upload Template
-            </button>
-            <button
-              type="button"
-              onClick={() => handleOpenEditor()}
-              className="inline-flex items-center gap-2 rounded-md border border-emerald-600 bg-emerald-50/40 px-3.5 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-600 hover:text-white transition-all shadow-2xs cursor-pointer"
-            >
-              <Plus className="h-4 w-4" />
-              Create Template
-            </button>
-          </div>
-        )}
-      </div>
-
       {/* Global Form Feedback Banner */}
       {feedback ? <FormFeedback tone={feedback.tone} text={feedback.text} /> : null}
 
       {/* Main Category Tabs */}
       {viewMode === 'list' && (
-        <div className="mb-6 flex border-b border-[color:var(--portal-border-soft)]">
+        <div className="mb-6 flex justify-center border-b border-[color:var(--portal-border-soft)]">
           <button
             type="button"
             onClick={() => setMainTab('library')}
@@ -1303,16 +1283,39 @@ export default function AdminDocumentTemplatesPage() {
       {/* MODE 1: TEMPLATE LIBRARY LIST                                             */}
       {/* ========================================================================= */}
       {viewMode === 'list' && mainTab === 'library' && (
-        <SectionCard title="DOCUMENT TEMPLATES" description="Official barangay document templates active in the system.">
+        <SectionCard
+          title="Document Templates"
+          description="Official barangay document templates active in the system."
+          actions={
+            <>
+              <button
+                type="button"
+                onClick={() => setViewMode('upload_wizard')}
+                className="inline-flex items-center gap-2 rounded-md border border-emerald-600 bg-emerald-50/40 px-3.5 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-600 hover:text-white transition-all shadow-2xs cursor-pointer"
+              >
+                <Upload className="h-4 w-4" />
+                Upload Template
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenEditor()}
+                className="inline-flex items-center gap-2 rounded-md border border-emerald-600 bg-emerald-50/40 px-3.5 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-600 hover:text-white transition-all shadow-2xs cursor-pointer"
+              >
+                <Plus className="h-4 w-4" />
+                Create Template
+              </button>
+            </>
+          }
+        >
+
           {/* Single-Line Search & Filters Grid */}
           <div className="mb-4 grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
             <div className="relative sm:col-span-6">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-[color:var(--portal-ink-500)]" />
               <Input
-                placeholder="       Search templates..."
+                placeholder="Search templates..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-10 w-full"
+                className="h-10 w-full"
               />
             </div>
 
@@ -1331,7 +1334,6 @@ export default function AdminDocumentTemplatesPage() {
               <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-10 w-full">
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
                 <option value="overwritten">Overwritten / Drafts</option>
               </Select>
             </div>
@@ -1341,81 +1343,102 @@ export default function AdminDocumentTemplatesPage() {
             <EmptyState
               title="No templates found"
               description="No document templates matched your search criteria."
-              actions={
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => handleOpenEditor()}
-                    className="inline-flex items-center gap-2 rounded-md border border-emerald-600 bg-emerald-50/40 px-4 py-2 text-xs font-semibold text-emerald-700 hover:bg-[#e9f5ef] hover:text-white transition-all shadow-2xs cursor-pointer"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Create Template
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('upload_wizard')}
-                    className="inline-flex items-center gap-2 rounded-md border border-emerald-600 bg-emerald-50/40 px-4 py-2 text-xs font-semibold text-emerald-700 hover:bg-[#e9f5ef] hover:text-white transition-all shadow-2xs cursor-pointer"
-                  >
-                    <Upload className="h-4 w-4" />
-                    Upload Template
-                  </button>
-                </div>
-              }
             />
           ) : (
-            <div className="divide-y divide-slate-100 rounded-[var(--portal-radius-md)] border border-slate-200 bg-white">
-              {filteredTemplates.map((item) => {
+            <div className="overflow-hidden bg-white">
+              <Table className="w-full min-w-[900px] table-fixed">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[35%] px-4 text-center text-sm normal-case tracking-normal text-[color:var(--portal-ink-700)]">Template</TableHead>
+                    <TableHead className="w-[25%] px-4 text-center text-sm normal-case tracking-normal text-[color:var(--portal-ink-700)]">Document type</TableHead>
+                    <TableHead className="w-[12%] px-4 text-center text-sm normal-case tracking-normal text-[color:var(--portal-ink-700)]">Status</TableHead>
+                    <TableHead className="w-[13%] px-4 text-center text-sm normal-case tracking-normal text-[color:var(--portal-ink-700)]">Updated</TableHead>
+                    <TableHead className="w-[15%] px-4 text-center text-sm normal-case tracking-normal text-[color:var(--portal-ink-700)]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+              {paginatedTemplates.map((item) => {
+                const category = getCategoryForDocType(item.documentType, item.name);
                 const docTypeObj = DOCUMENT_TYPES.find((d) => d.id === item.documentType);
-                const isOverwritten = item.sourceType === 'uploaded' || !docTypeObj || item.name.toLowerCase().includes('update');
+                const categoryObj = DOCUMENT_TYPES.find((d) => d.id === category);
+                const isKnownDocType = DOCUMENT_TYPES.some((dt) => dt.id === item.documentType);
+                const isOverwritten =
+                  item.sourceType === 'uploaded' ||
+                  item.isActive === false ||
+                  !isKnownDocType ||
+                  item.name.toLowerCase().includes('update');
                 const statusTone = isOverwritten ? 'warning' : statusToneFromState(item.isActive !== false ? 'active' : 'inactive');
 
                 return (
-                  <div key={item.id} className="flex flex-wrap items-center justify-between p-4 gap-4 hover:bg-slate-50 transition-colors">
-                    <div className="flex items-start gap-3 min-w-[260px]">
-                      <div className="grid h-10 w-10 place-items-center rounded-lg bg-blue-50 text-blue-600 font-bold shrink-0">
-                        📄
+                  <TableRow key={item.id} className="transition-colors hover:bg-[color:var(--portal-surface-1)]">
+                    <TableCell className="px-4 py-3.5 text-left">
+                      <div className="min-w-[240px]">
+                        <h3 className="truncate text-sm font-bold text-[color:var(--portal-ink-900)]">{item.name}</h3>
+                        {item.originalFileName ? (
+                          <p className="mt-0.5 truncate text-xs text-[color:var(--portal-ink-700)]">{item.originalFileName}</p>
+                        ) : null}
                       </div>
-                      <div>
-                        <h3 className="text-base font-bold text-[color:var(--portal-ink-900)]">{item.name}</h3>
-                        <p className="text-xs text-[color:var(--portal-ink-700)]">
-                          {docTypeObj?.labelEn || (isOverwritten ? 'Overwritten / Custom Template' : 'Official Barangay Template')}
-                          {item.originalFileName ? ` • ${item.originalFileName}` : ''}
-                        </p>
-                        <div className="mt-1 flex items-center gap-3 text-xs text-slate-500">
-                          <StatusBadge tone={statusTone}>
-                            {isOverwritten ? '● Overwritten' : item.isActive !== false ? '● Active' : 'Inactive'}
-                          </StatusBadge>
-                          <span>Updated {formatDateTime(item.updatedAt, locale)}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
+                    </TableCell>
+                    <TableCell className="px-4 py-3.5 text-center text-sm text-[color:var(--portal-ink-700)]">
+                      {docTypeObj?.labelEn || categoryObj?.labelEn || (isOverwritten ? 'Overwritten / Custom Template' : 'Official Barangay Template')}
+                    </TableCell>
+                    <TableCell className="px-4 py-3.5 text-center">
+                      <StatusBadge tone={statusTone}>
+                        {isOverwritten ? 'Overwritten' : item.isActive !== false ? 'Active' : 'Inactive'}
+                      </StatusBadge>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap px-4 py-3.5 text-center text-xs text-[color:var(--portal-ink-700)]">
+                      {formatDateTime(item.updatedAt, locale)}
+                    </TableCell>
+                    <TableCell className="px-4 py-3.5 text-center">
+                      <div className="flex justify-center whitespace-nowrap">
                       <Button
                         type="button"
                         size="sm"
-                        variant="secondary"
-                        onClick={() => handleViewTemplate(item)}
-                        className="gap-1 text-xs"
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                        View
-                      </Button>
-
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
+                        variant="ghost"
                         onClick={() => handleOpenEditor(item)}
-                        className="gap-1 text-xs"
+                        className="justify-center gap-1 border-slate-300 bg-white text-xs text-slate-700 hover:border-slate-400 hover:bg-slate-50"
                       >
                         <Edit3 className="h-3.5 w-3.5" />
                         Edit
                       </Button>
-                    </div>
-                  </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
+                </TableBody>
+              </Table>
+              <div className="flex flex-col gap-3 border-t border-[color:var(--portal-border-soft)] px-4 py-3 text-sm text-[color:var(--portal-ink-700)] sm:flex-row sm:items-center sm:justify-between">
+                <p>
+                  Showing {filteredTemplates.length === 0 ? 0 : (templatePage - 1) * templatesPerPage + 1}–{Math.min(templatePage * templatesPerPage, filteredTemplates.length)} of {filteredTemplates.length} templates
+                </p>
+                <div className="flex items-center justify-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setTemplatePage((page) => Math.max(1, page - 1))}
+                    disabled={templatePage === 1}
+                    className="border-slate-300 bg-white text-xs text-slate-700 hover:border-slate-400 hover:bg-slate-50"
+                  >
+                    Previous
+                  </Button>
+                  <span className="min-w-16 text-center text-xs font-semibold text-[color:var(--portal-ink-700)]">
+                    Page {templatePage} of {templatePageCount}
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setTemplatePage((page) => Math.min(templatePageCount, page + 1))}
+                    disabled={templatePage === templatePageCount}
+                    className="border-slate-300 bg-white text-xs text-slate-700 hover:border-slate-400 hover:bg-slate-50"
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </SectionCard>
@@ -1427,21 +1450,22 @@ export default function AdminDocumentTemplatesPage() {
       {viewMode === 'view_details' && activeTemplate && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <button
+            <Button
               type="button"
               onClick={() => setViewMode('list')}
-              className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800"
+              variant="ghost"
+              className="gap-1.5 border border-blue-600 bg-white text-xs text-blue-700 shadow-sm transition-all hover:bg-blue-600 hover:text-white hover:shadow-md"
             >
               <ArrowLeft className="h-4 w-4" />
               Back to Template Library
-            </button>
+            </Button>
 
             <div className="flex items-center gap-2">
               <Button type="button" variant="secondary" onClick={() => handleOpenEditor(activeTemplate)} className="gap-1.5 text-xs">
                 <Edit3 className="h-3.5 w-3.5" />
                 Edit Template
               </Button>
-              <Button type="button" onClick={handlePrintDocument} className="gap-1.5 text-xs">
+              <Button type="button" variant="ghost" onClick={handlePrintDocument} className="gap-1.5 border border-emerald-600 bg-white text-xs text-emerald-700 shadow-sm transition-all hover:bg-emerald-600 hover:text-white hover:shadow-md">
                 <Printer className="h-3.5 w-3.5" />
                 Preview & Print
               </Button>
@@ -1526,7 +1550,7 @@ export default function AdminDocumentTemplatesPage() {
       {/* ========================================================================= */}
       {viewMode === 'upload_wizard' && (
         <SectionCard
-          title="UPLOAD DOCUMENT TEMPLATE"
+          title="Upload Document Template"
           description="Select an official document file (.docx / PDF / image) from File Explorer. System will parse layout, formatting, and dynamic fields for the selected document type category."
         >
           <div className="grid gap-6 md:grid-cols-2">
@@ -1619,10 +1643,15 @@ export default function AdminDocumentTemplatesPage() {
               </div>
 
               <div className="flex items-center gap-3">
-                <Button type="button" variant="secondary" onClick={() => setViewMode('list')}>
+                <Button type="button" variant="ghost" onClick={() => setViewMode('list')}>
                   Cancel
                 </Button>
-                <Button type="button" onClick={handleStartAnalysis} disabled={isAnalyzing || !uploadedFile} className="flex-1 gap-2">
+                <Button
+                  type="button"
+                  onClick={handleStartAnalysis}
+                  disabled={isAnalyzing || !uploadedFile}
+                  className="flex-1 gap-2 bg-[linear-gradient(135deg,#1b7a50_0%,#0f5c39_100%)] text-white shadow-[0_8px_20px_rgba(21,98,65,0.2)] hover:bg-[linear-gradient(135deg,#166846_0%,#0b4a30_100%)]"
+                >
                   {isAnalyzing ? (
                     <>
                       <RefreshCw className="h-4 w-4 animate-spin" />
@@ -1669,21 +1698,22 @@ export default function AdminDocumentTemplatesPage() {
       {viewMode === 'editor' && (
         <form onSubmit={handleSaveTemplate} className="space-y-4">
           <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-            <button
+            <Button
               type="button"
               onClick={() => setViewMode('list')}
-              className="flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-900"
+              variant="ghost"
+              className="gap-1 border border-slate-400 bg-white text-xs text-slate-700 shadow-sm transition-all hover:border-slate-700 hover:bg-slate-700 hover:text-white hover:shadow-md"
             >
               <ArrowLeft className="h-4 w-4" />
               Back to Template Library
-            </button>
+            </Button>
 
             <div className="flex items-center gap-2">
               {selectedTemplateId ? (
                 <Button
                   type="button"
                   variant="secondary"
-                  className="gap-1.5 text-xs text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                  className="gap-1.5 border border-red-600 bg-white text-xs text-red-700 shadow-sm transition-all hover:bg-red-600 hover:text-white hover:shadow-md"
                   onClick={() => handleDeleteTemplate(selectedTemplateId)}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -1691,12 +1721,12 @@ export default function AdminDocumentTemplatesPage() {
                 </Button>
               ) : null}
 
-              <Button type="button" variant="secondary" onClick={handlePrintDocument} className="gap-1.5 text-xs">
+              <Button type="button" variant="ghost" onClick={handlePrintDocument} className="gap-1.5 border border-emerald-600 bg-white text-xs text-emerald-700 shadow-sm transition-all hover:bg-emerald-600 hover:text-white hover:shadow-md">
                 <Printer className="h-3.5 w-3.5" />
                 Preview & Print
               </Button>
 
-              <Button type="submit" className="gap-1.5">
+              <Button type="submit" variant="ghost" className="gap-1.5 border border-emerald-600 bg-white text-emerald-700 shadow-sm transition-all hover:bg-emerald-600 hover:text-white hover:shadow-md">
                 <Save className="h-4 w-4" />
                 Save Template
               </Button>
@@ -2230,7 +2260,7 @@ export default function AdminDocumentTemplatesPage() {
 
             {/* SAVE ACTION BUTTON */}
             <div className="mt-6 flex justify-end">
-              <Button type="submit" className="gap-2">
+              <Button type="submit" variant="ghost" className="gap-2">
                 <Save className="h-4 w-4" />
                 Save Information & Refresh Templates
               </Button>

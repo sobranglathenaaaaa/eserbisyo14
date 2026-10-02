@@ -152,6 +152,11 @@ const navConfig: Record<UserRole, NavSection[]> = {
           label: { en: 'Home', fil: 'Simula' },
           hint: { en: 'Today’s tasks', fil: 'Gawain ngayong araw' },
         },
+        {
+          href: '/staff/request-history',
+          label: { en: 'Request History', fil: 'History ng mga Kahilingan' },
+          hint: { en: 'View resident service history', fil: 'Tingnan ang service history ng mga residente' },
+        },
       ],
     },
     {
@@ -233,17 +238,6 @@ const navConfig: Record<UserRole, NavSection[]> = {
       ],
     },
     {
-      id: 'staff-history-monitoring',
-      label: { en: 'History & Monitoring', fil: 'History at Monitoring' },
-      items: [
-        {
-          href: '/staff/request-history',
-          label: { en: 'Request History', fil: 'History ng mga Kahilingan' },
-          hint: { en: 'View resident service history', fil: 'Tingnan ang service history ng mga residente' },
-        },
-      ],
-    },
-    {
       id: 'staff-legal',
       label: { en: 'Legal', fil: 'Legal' },
       items: [
@@ -265,11 +259,16 @@ const navConfig: Record<UserRole, NavSection[]> = {
           label: { en: 'Home', fil: 'Simula' },
           hint: { en: 'Daily overview', fil: 'Pangkalahatang view' },
         },
+        {
+          href: '/admin/request-history',
+          label: { en: 'Request History', fil: 'History ng mga Kahilingan' },
+          hint: { en: 'View resident service history', fil: 'Tingnan ang service history ng mga residente' },
+        },
       ],
     },
     {
-      id: 'admin-operations',
-      label: { en: 'Administration', fil: 'Pangangasiwa' },
+      id: 'admin-setup',
+      label: { en: 'System Setup', fil: 'Setup ng Sistema' },
       items: [
         {
           href: '/admin/users',
@@ -277,14 +276,20 @@ const navConfig: Record<UserRole, NavSection[]> = {
           hint: { en: 'Roles and access', fil: 'Role at access' },
         },
         {
-          href: '/admin/document-requests',
-          label: { en: 'Document Requests', fil: 'Kahilingan sa Dokumento' },
-          hint: { en: 'Approve or not approve', fil: 'Aprubahan o hindi' },
-        },
-        {
           href: '/admin/document-templates',
           label: { en: 'Document Template', fil: 'Document Template' },
           hint: { en: 'Upload and customize templates', fil: 'Mag-upload at mag-customize ng template' },
+        },
+      ],
+    },
+    {
+      id: 'admin-services',
+      label: { en: 'Services', fil: 'Mga Serbisyo' },
+      items: [
+        {
+          href: '/admin/document-requests',
+          label: { en: 'Document Requests', fil: 'Kahilingan sa Dokumento' },
+          hint: { en: 'Approve or not approve', fil: 'Aprubahan o hindi' },
         },
         {
           href: '/admin/announcements',
@@ -303,11 +308,6 @@ const navConfig: Record<UserRole, NavSection[]> = {
       id: 'admin-records-monitoring',
       label: { en: 'History & Monitoring', fil: 'History at Monitoring' },
       items: [
-        {
-          href: '/admin/request-history',
-          label: { en: 'Request History', fil: 'History ng mga Kahilingan' },
-          hint: { en: 'View resident service history', fil: 'Tingnan ang service history ng mga residente' },
-        },
         {
           href: '/admin/reports',
           label: { en: 'Reports', fil: 'Mga Ulat' },
