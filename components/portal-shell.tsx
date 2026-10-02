@@ -157,6 +157,11 @@ const navConfig: Record<UserRole, NavSection[]> = {
           label: { en: 'Request History', fil: 'History ng mga Kahilingan' },
           hint: { en: 'View resident service history', fil: 'Tingnan ang service history ng mga residente' },
         },
+        {
+          href: '/staff/census',
+          label: { en: 'Resident Census', fil: 'Census ng mga Residente' },
+          hint: { en: 'Review household information', fil: 'Tingnan ang impormasyon ng sambahayan' },
+        },
       ],
     },
     {
@@ -263,6 +268,11 @@ const navConfig: Record<UserRole, NavSection[]> = {
           href: '/admin/request-history',
           label: { en: 'Request History', fil: 'History ng mga Kahilingan' },
           hint: { en: 'View resident service history', fil: 'Tingnan ang service history ng mga residente' },
+        },
+        {
+          href: '/admin/census',
+          label: { en: 'Resident Census', fil: 'Census ng mga Residente' },
+          hint: { en: 'Review household information', fil: 'Tingnan ang impormasyon ng sambahayan' },
         },
       ],
     },
