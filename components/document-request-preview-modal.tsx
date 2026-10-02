@@ -442,8 +442,8 @@ export default function DocumentRequestPreviewModal({
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 {isMarkingReady
                   ? locale === 'fil'
-                    ? 'Inihahanda...'
-                    : 'Processing...'
+                    ? 'Inihahanda'
+                    : 'Processing'
                   : locale === 'fil'
                   ? 'I-release bilang Ready for Pickup'
                   : 'Mark Ready for Pickup'}
@@ -517,8 +517,8 @@ export default function DocumentRequestPreviewModal({
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 {isMarkingReady
                   ? locale === 'fil'
-                    ? 'Inihahanda...'
-                    : 'Processing...'
+                    ? 'Inihahanda'
+                    : 'Processing'
                   : locale === 'fil'
                   ? 'I-release bilang Ready for Pickup'
                   : 'Mark Ready for Pickup'}

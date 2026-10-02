@@ -889,7 +889,7 @@ export default function StaffIncidentsPage() {
                   className="whitespace-nowrap text-xs px-4"
                   onClick={() => void handleAddStreet()}
                 >
-                  {streetAction === 'adding' ? '...' : locale === 'fil' ? 'Idagdag' : 'Add'}
+                  {streetAction === 'adding' ? 'Adding' : locale === 'fil' ? 'Idagdag' : 'Add'}
                 </Button>
               </div>
               <div className="max-h-[240px] overflow-y-auto divide-y rounded-lg border text-xs bg-white">
@@ -912,9 +912,9 @@ export default function StaffIncidentsPage() {
                         onClick={() => void handleToggleStreetArchive(st)}
                       >
                         {streetAction === `${st.id}:archiving`
-                          ? (locale === 'fil' ? 'Ina-archive…' : 'Archiving…')
+                          ? (locale === 'fil' ? 'Ina-archive' : 'Archiving')
                           : streetAction === `${st.id}:restoring`
-                            ? (locale === 'fil' ? 'Ibinabalik…' : 'Restoring…')
+                            ? (locale === 'fil' ? 'Ibinabalik' : 'Restoring')
                             : st.isActive
                               ? (locale === 'fil' ? 'I-archive' : 'Archive')
                               : (locale === 'fil' ? 'Ibalik' : 'Restore')}
@@ -956,7 +956,7 @@ export default function StaffIncidentsPage() {
                   className="whitespace-nowrap text-xs px-4"
                   onClick={() => void handleAddRelationship()}
                 >
-                  {relAction === 'adding' ? '...' : locale === 'fil' ? 'Idagdag' : 'Add'}
+                  {relAction === 'adding' ? 'Adding' : locale === 'fil' ? 'Idagdag' : 'Add'}
                 </Button>
               </div>
               <div className="max-h-[240px] overflow-y-auto divide-y rounded-lg border text-xs bg-white">
@@ -979,9 +979,9 @@ export default function StaffIncidentsPage() {
                         onClick={() => void handleToggleRelArchive(rel)}
                       >
                         {relAction === `${rel.id}:archiving`
-                          ? (locale === 'fil' ? 'Ina-archive…' : 'Archiving…')
+                          ? (locale === 'fil' ? 'Ina-archive' : 'Archiving')
                           : relAction === `${rel.id}:restoring`
-                            ? (locale === 'fil' ? 'Ibinabalik…' : 'Restoring…')
+                            ? (locale === 'fil' ? 'Ibinabalik' : 'Restoring')
                             : rel.isActive
                               ? (locale === 'fil' ? 'I-archive' : 'Archive')
                               : (locale === 'fil' ? 'Ibalik' : 'Restore')}
@@ -1116,7 +1116,7 @@ export default function StaffIncidentsPage() {
 
                       <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-emerald-200">
                         <Button type="button" variant="resident" disabled={isProcessing || !hearingDate} onClick={() => void handleScheduleHearing()} className="gap-2">
-                          {isProcessing ? 'Scheduling...' : locale === 'fil' ? 'I-schedule ang Hearing at Mag-email sa Resident' : 'Schedule Hearing & Email Resident'}
+                          {isProcessing ? 'Scheduling' : locale === 'fil' ? 'I-schedule ang Hearing at Mag-email sa Resident' : 'Schedule Hearing & Email Resident'}
                         </Button>
                       </div>
 
@@ -1363,7 +1363,7 @@ export default function StaffIncidentsPage() {
                         )}
 
                         <Button type="button" variant="resident" disabled={isProcessing || !outcomeMinutes.trim()} onClick={() => void handleRecordHearingOutcome()} className="gap-2">
-                          {isProcessing ? 'Saving...' : locale === 'fil' ? 'I-save ang Resulta at Magpatuloy' : 'Save Outcome & Proceed'}
+                          {isProcessing ? 'Saving' : locale === 'fil' ? 'I-save ang Resulta at Magpatuloy' : 'Save Outcome & Proceed'}
                         </Button>
                       </div>
 
@@ -1457,7 +1457,7 @@ export default function StaffIncidentsPage() {
                         )}
 
                         <Button type="button" variant="resident" disabled={isProcessing || !luponMinutes.trim()} onClick={() => void handleRecordLuponOutcome()} className="gap-2">
-                          {isProcessing ? 'Saving...' : locale === 'fil' ? 'I-save ang Resulta ng Lupon' : 'Save Lupon Outcome'}
+                          {isProcessing ? 'Saving' : locale === 'fil' ? 'I-save ang Resulta ng Lupon' : 'Save Lupon Outcome'}
                         </Button>
                       </div>
 

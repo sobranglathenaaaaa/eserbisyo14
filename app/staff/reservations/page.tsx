@@ -462,28 +462,28 @@ export default function StaffReservationsPage() {
               {selectedReservation.status === 'approved' && selectedReservation.resource === 'equipment' ? (
                 <Button type="button" variant="resident" disabled={processingStatus !== null} onClick={() => void updateReservationStatus('ready_for_pickup')}>
                   {processingStatus === 'ready_for_pickup'
-                    ? locale === 'fil' ? 'Minamarkahang handa na...' : 'Marking ready...'
+                    ? locale === 'fil' ? 'Minamarkahang handa na' : 'Marking ready'
                     : locale === 'fil' ? 'Markahan bilang Ready for Pickup' : 'Mark Ready for Pickup'}
                 </Button>
               ) : null}
               {selectedReservation.status === 'approved' && selectedReservation.resource !== 'equipment' ? (
                 <Button type="button" variant="resident" disabled={processingStatus !== null} onClick={() => void updateReservationStatus('completed')}>
                   {processingStatus === 'completed'
-                    ? locale === 'fil' ? 'Kinukumpleto...' : 'Completing...'
+                    ? locale === 'fil' ? 'Kinukumpleto' : 'Completing'
                     : locale === 'fil' ? 'Markahan bilang Nakumpleto' : 'Mark as Completed'}
                 </Button>
               ) : null}
               {selectedReservation.status === 'ready_for_pickup' && selectedReservation.resource === 'equipment' ? (
                 <Button type="button" variant="resident" disabled={processingStatus !== null} onClick={() => void updateReservationStatus('received')}>
                   {processingStatus === 'received'
-                    ? locale === 'fil' ? 'Minamarkahang natanggap...' : 'Marking received...'
+                    ? locale === 'fil' ? 'Minamarkahang natanggap' : 'Marking received'
                     : locale === 'fil' ? 'Markahan bilang Natanggap' : 'Mark as Received'}
                 </Button>
               ) : null}
               {selectedReservation.status === 'received' && selectedReservation.resource === 'equipment' ? (
                 <Button type="button" variant="resident" disabled={processingStatus !== null} onClick={() => void updateReservationStatus('returned')}>
                   {processingStatus === 'returned'
-                    ? locale === 'fil' ? 'Minamarkahang naibalik...' : 'Marking returned...'
+                    ? locale === 'fil' ? 'Minamarkahang naibalik' : 'Marking returned'
                     : locale === 'fil' ? 'Markahan bilang Naibalik' : 'Mark as Returned'}
                 </Button>
               ) : null}

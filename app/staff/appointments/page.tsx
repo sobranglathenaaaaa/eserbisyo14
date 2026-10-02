@@ -1018,8 +1018,8 @@ export default function StaffAppointmentsPage() {
                                       <Loader2 className="h-3.5 w-3.5 animate-spin text-[color:var(--portal-ink-700)]" />
                                       <span>
                                         {locale === 'fil'
-                                          ? 'Naglo-load...'
-                                          : 'Loading...'}
+                                          ? 'Naglo-load'
+                                          : 'Loading'}
                                       </span>
                                     </span>
                                   ) : slot.isBlocked ? (
@@ -1230,7 +1230,7 @@ export default function StaffAppointmentsPage() {
                       }
                     >
                       {busyAppointmentId === selectedAppointment.id && busyAppointmentAction === 'declining'
-                        ? locale === 'fil' ? 'Tumatanggi...' : 'Declining...'
+                        ? locale === 'fil' ? 'Tumatanggi' : 'Declining'
                         : locale === 'fil' ? 'Tanggihan' : 'Decline'}
                     </Button>
 
@@ -1244,7 +1244,7 @@ export default function StaffAppointmentsPage() {
                       }
                     >
                       {busyAppointmentId === selectedAppointment.id && busyAppointmentAction === 'approving'
-                        ? locale === 'fil' ? 'Inaaprubahan...' : 'Approving...'
+                        ? locale === 'fil' ? 'Inaaprubahan' : 'Approving'
                         : locale === 'fil' ? 'Aprubahan' : 'Approve'}
                     </Button>
                   </>
@@ -1266,7 +1266,7 @@ export default function StaffAppointmentsPage() {
                       onClick={() => void completeSelectedAppointment()}
                     >
                       {busyAppointmentId === selectedAppointment.id && busyAppointmentAction === 'completing'
-                        ? locale === 'fil' ? 'Kinukumpleto...' : 'Completing...'
+                        ? locale === 'fil' ? 'Kinukumpleto' : 'Completing'
                         : locale === 'fil' ? 'Markahang Tapos' : 'Mark as Completed'}
                     </Button>
                   </>

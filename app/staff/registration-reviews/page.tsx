@@ -498,8 +498,8 @@ export default function StaffRegistrationReviewsPage() {
             >
               {processingDecision === 'forward'
                 ? locale === 'fil'
-                  ? 'I-forwarding...'
-                  : 'Forwarding...'
+                  ? 'I-forwarding'
+                  : 'Forwarding'
                 : locale === 'fil'
                   ? 'I-forward sa Admin'
                   : 'Forward to Admin'}
@@ -513,8 +513,8 @@ export default function StaffRegistrationReviewsPage() {
             >
               {processingDecision === 'reject'
                 ? locale === 'fil'
-                  ? 'Rejecting...'
-                  : 'Rejecting...'
+                  ? 'Rejecting'
+                  : 'Rejecting'
                 : locale === 'fil'
                   ? 'Reject Registration'
                   : 'Reject Registration'}
