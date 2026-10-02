@@ -47,6 +47,7 @@ import type { DocumentTemplate } from '@/lib/types/models';
 import {
   OFFICIAL_DOCUMENT_CATEGORIES as DOCUMENT_TYPES,
   DEFAULT_OFFICIAL_TEMPLATES,
+  OFFICIAL_WORD_TEMPLATES,
   getCategoryForDocType,
 } from '@/lib/documents/document-catalog-constants';
 
@@ -353,38 +354,62 @@ function buildDefaultHtmlLayout(
       break;
 
     case docTypeKey.includes('lupon') || docTypeKey.includes('summons') || docTypeKey.includes('patawag'):
-      docTitleUpper = 'PATAWAG / SUMMONS (KP FORM #9)';
+      docTitleUpper = '= S U M M O N S =';
       bodyWordingHtml = `
-<p style="font-size:14px;font-weight:bold;margin-bottom:14px;color:#000;">TO RESPONDENT: <u style="font-weight:bold;">{{resident_name}}</u></p>
-<p style="font-size:14px;line-height:2.1;text-indent:42px;margin-bottom:22px;text-align:justify;color:#000;">
-  You are hereby summoned to appear before me personally at the Barangay Hall on <u style="font-weight:bold;">{{date_issued}}</u> for a mediation/conciliation hearing regarding complaint filed against you for: <u style="font-weight:bold;">{{purpose}}</u>.
-</p>
-<p style="font-size:14px;line-height:2.1;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
-  Fail not, or else face prejudice and legal action in court according to the provisions of Katarungang Pambarangay Law (RA 7160).
-</p>
-`;
-      break;
+<div style="border:1.5px solid #000;padding:10px 14px;margin-bottom:18px;font-size:13px;line-height:1.7;">
+  <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+    <div><strong>Barangay Case No.:</strong> <u style="font-weight:bold;">{{reference_number}}</u></div>
+    <div><strong>Date Filed:</strong> <u style="font-weight:bold;">{{date_issued}}</u></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+    <div><strong>Complainant/s:</strong> <u style="font-weight:bold;">{{complainant_name}}</u></div>
+    <div><strong>For:</strong> <u style="font-weight:bold;">{{purpose}}</u></div>
+  </div>
+  <div style="text-align:center;font-weight:bold;margin:4px 0;letter-spacing:1px;">- against -</div>
+  <div><strong>Respondent/s:</strong> <u style="font-weight:bold;">{{resident_name}}</u></div>
+</div>
 
-    // 4. Business Clearance
-    case docTypeKey.includes('business'):
-      docTitleUpper = 'BARANGAY BUSINESS CLEARANCE';
-      bodyWordingHtml = `
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
-  Barangay clearance is hereby granted to <u style="font-weight:bold;">{{resident_name}}</u> to operate business under registered trade name located at <u style="font-weight:bold;">{{resident_address}}</u>, {{barangay_name}}, {{city}}.
+<p style="font-size:14px;font-weight:bold;margin-bottom:12px;color:#000;">TO: <u style="font-weight:bold;">{{resident_name}}</u> (Respondent/s)</p>
+<p style="font-size:14px;line-height:2.0;text-indent:42px;margin-bottom:18px;text-align:justify;color:#000;">
+  You are hereby summoned to appear before me, in person together with your witness on the <u style="font-weight:bold;">{{date_issued}}</u> then and there to answer to a complaint made before me, copy of which is attached hereto, for mediation/conciliation of your dispute with complainant/s.
 </p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
-  This clearance covers: <u style="font-weight:bold;">{{purpose}}</u>.
+<p style="font-size:14px;line-height:2.0;text-indent:42px;margin-bottom:18px;text-align:justify;color:#000;">
+  You are hereby warned that if you refuse or willfully fail to appear in obedience to this summons, you may be barred from the filing of any counterclaim arising from said complaint.
 </p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  Subject to compliance with all existing barangay ordinances, municipal health and zoning laws.
+<p style="font-size:13.5px;font-weight:bold;text-align:center;margin:16px 0;letter-spacing:0.5px;color:#000;">
+  FAIL NOT or else face punishment as for contempt of court.
 </p>
-<p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
+<p style="font-size:14px;margin-top:20px;margin-bottom:28px;color:#000;">
   Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
 </p>
 `;
       break;
 
-    // 5. Construction Clearances
+    // 4. Business Clearance (BLANK BUSINESS-PERMIT.docx reference)
+    case docTypeKey.includes('business'):
+      docTitleUpper = 'BARANGAY BUSINESS CLEARANCE';
+      bodyWordingHtml = `
+<div style="font-size:14.5px;line-height:2.1;text-align:justify;color:#000;">
+  <p style="margin-bottom:16px;text-indent:42px;">
+    <strong>Name of Establishment:</strong> <u style="font-weight:bold;font-size:15.5px;">{{purpose}}</u>
+  </p>
+  <p style="margin-bottom:16px;text-indent:42px;">
+    is issued to <u style="font-weight:bold;font-size:15.5px;">{{resident_name}}</u> (Name of Owner)
+  </p>
+  <p style="margin-bottom:20px;text-indent:42px;">
+    With postal address at <u style="font-weight:bold;">{{resident_address}}</u>, {{city}}.
+  </p>
+  <p style="text-indent:42px;margin-bottom:24px;line-height:2.1;">
+    This clearance is issued upon the request of the aforementioned name granted that no law / city ordinance / resolution shall be violated upon the duration of the operations or renewal of the aforementioned clearance shall not be granted.
+  </p>
+  <p style="margin-top:24px;margin-bottom:32px;">
+    Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
+  </p>
+</div>
+`;
+      break;
+
+    // 5. Construction Clearances (CONSTRUCTION-PERMIT.docx reference)
     case docTypeKey.includes('construction') ||
       docTypeKey.includes('occupancy') ||
       docTypeKey.includes('renovation') ||
@@ -393,19 +418,31 @@ function buildDefaultHtmlLayout(
       docTypeKey.includes('utilities') ||
       docTypeKey.includes('excavation') ||
       docTypeKey.includes('demolition'):
-      docTitleUpper = 'BARANGAY CONSTRUCTION CLEARANCE';
+      docTitleUpper = 'BARANGAY CLEARANCE';
       bodyWordingHtml = `
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
-  Barangay construction clearance is hereby granted to <u style="font-weight:bold;">{{resident_name}}</u> with project address located at <u style="font-weight:bold;">{{resident_address}}</u>, {{barangay_name}}, {{city}}.
+<p style="font-size:14.5px;line-height:2.0;margin-bottom:14px;text-align:justify;color:#000;">
+  This is to certify that the Sangguniang Barangay of Progreso, {{city}} interposes no objection to the issuance of:
 </p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
-  This clearance covers proposed project activities specified for: <u style="font-weight:bold;">{{purpose}}</u>.
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-bottom:18px;font-size:13px;padding:8px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;">
+  <div><span style="font-weight:bold;display:inline-block;width:24px;border-bottom:1px solid #000;text-align:center;">&nbsp;</span> Mayor's Business Permit</div>
+  <div><span style="font-weight:bold;display:inline-block;width:24px;border-bottom:1px solid #000;text-align:center;">&nbsp;</span> Building Permit</div>
+  <div><span style="font-weight:bold;display:inline-block;width:24px;border-bottom:1px solid #000;text-align:center;">&nbsp;</span> Occupancy Permit</div>
+  <div><span style="font-weight:bold;display:inline-block;width:24px;border-bottom:1px solid #000;text-align:center;">&nbsp;</span> Excavation Permit</div>
+  <div><span style="font-weight:bold;display:inline-block;width:24px;border-bottom:1px solid #000;text-align:center;">&nbsp;</span> Demolition Permit</div>
+  <div><span style="font-weight:bold;display:inline-block;width:24px;border-bottom:1px solid #000;text-align:center;">&nbsp;</span> Renovation / Repair Permit</div>
+  <div><span style="font-weight:bold;display:inline-block;width:24px;border-bottom:1px solid #000;text-align:center;">✓</span> Construction Permit</div>
+  <div><span style="font-weight:bold;display:inline-block;width:24px;border-bottom:1px solid #000;text-align:center;">&nbsp;</span> Hauling Permit</div>
+  <div><span style="font-weight:bold;display:inline-block;width:24px;border-bottom:1px solid #000;text-align:center;">&nbsp;</span> Signage / Billboards Permit</div>
+  <div><span style="font-weight:bold;display:inline-block;width:24px;border-bottom:1px solid #000;text-align:center;">&nbsp;</span> Others (Asphalt Overlay)</div>
+</div>
+<p style="font-size:14px;font-weight:bold;margin-bottom:6px;">IN FAVOR OF:</p>
+<p style="font-size:14px;margin-bottom:4px;margin-left:20px;">Name of Owner: <u style="font-weight:bold;">{{resident_name}}</u></p>
+<p style="font-size:14px;margin-bottom:16px;margin-left:20px;">Address of Owner: <u style="font-weight:bold;">{{resident_address}}</u></p>
+<p style="font-size:14px;line-height:2.0;text-indent:42px;margin-bottom:20px;text-align:justify;color:#000;">
+  This Certification is being issued upon the request of the above-named applicant for the aforementioned purpose (<u style="font-weight:bold;">{{purpose}}</u>).
 </p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  Subject to strict compliance with the National Building Code of the Philippines, environmental safety standards, and all existing barangay ordinances.
-</p>
-<p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
-  Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
+<p style="font-size:14px;margin-top:20px;margin-bottom:28px;color:#000;">
+  Given this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}, Metro Manila.
 </p>
 `;
       break;
@@ -511,6 +548,91 @@ function buildDefaultHtmlLayout(
       break;
   }
 
+  // LUPON SUMMONS (PATAWAG - KP FORM) DEDICATED FULL-PAGE STRUCTURE (1:1 with BLANK-LUPON-SUMMONS-KP2026.docx)
+  if (
+    docTypeKey.includes('lupon') ||
+    docTypeKey.includes('summons') ||
+    docTypeKey.includes('patawag') ||
+    docTypeKey.includes('cfa')
+  ) {
+    return `
+<div style="font-family:'Times New Roman',Georgia,serif;color:#000;width:100%;max-width:840px;min-height:272mm;height:100%;margin:0 auto;background:#fff;display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;padding:4mm 8mm;position:relative;">
+  <!-- DYNAMIC WATERMARK SEAL -->
+  {{barangay_watermark}}
+
+  <div style="position:relative;z-index:2;">
+    ${headerHtml}
+    
+    <div style="text-align:center;font-size:12px;font-weight:bold;color:#4f6e34;font-style:italic;margin-top:2px;margin-bottom:14px;letter-spacing:0.5px;">
+      OFFICE OF THE LUPONG TAGAPAMAYAPA
+    </div>
+
+    <!-- CAPTION TABLE / BOX (Barangay Case No, Date Filed, Complainants, For, Respondents) -->
+    <div style="border:1.5px solid #000;padding:12px 18px;margin-bottom:18px;font-size:14px;line-height:1.8;background:transparent;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+        <div style="flex:1;"><strong>Barangay Case No.:</strong> <span style="display:inline-block;border-bottom:1px solid #000;min-width:140px;text-align:center;padding:0 8px;">{{case_number}}</span></div>
+        <div style="flex:1;text-align:right;"><strong>Date Filed:</strong> <span style="display:inline-block;border-bottom:1px solid #000;min-width:140px;text-align:center;padding:0 8px;">{{date_filed}}</span></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+        <div style="flex:1;"><strong>Complainant/s:</strong> <span style="display:inline-block;border-bottom:1px solid #000;min-width:160px;text-align:center;padding:0 8px;">{{complainant_name}}</span></div>
+        <div style="flex:1;text-align:right;"><strong>For:</strong> <span style="display:inline-block;border-bottom:1px solid #000;min-width:160px;text-align:center;padding:0 8px;">{{purpose}}</span></div>
+      </div>
+      <div style="text-align:center;font-weight:bold;margin:6px 0;letter-spacing:2px;">- against -</div>
+      <div><strong>Respondent/s:</strong> <span style="display:inline-block;border-bottom:1px solid #000;min-width:260px;text-align:center;padding:0 8px;">{{resident_name}}</span></div>
+    </div>
+
+    <!-- SUMMONS HEADING -->
+    <h2 style="text-align:center;font-size:24px;font-weight:800;letter-spacing:3px;margin:18px 0 16px 0;color:#000;">
+      = S U M M O N S =
+    </h2>
+
+    <!-- TO RESPONDENT -->
+    <div style="margin-bottom:16px;font-size:15px;line-height:1.5;">
+      <strong>TO:</strong> <span style="display:inline-block;border-bottom:1px solid #000;min-width:240px;text-align:center;font-weight:bold;padding:0 8px;">{{resident_name}}</span>
+      <div style="margin-left:36px;font-size:13px;color:#333;font-weight:500;">Respondent/s</div>
+    </div>
+
+    <!-- SUMMONS BODY -->
+    <p style="font-size:15px;line-height:2.0;text-indent:42px;margin-bottom:18px;text-align:justify;color:#000;">
+      You are hereby summoned to appear before me, in person together with your witness on the <span style="display:inline-block;border-bottom:1px solid #000;min-width:180px;text-align:center;font-weight:bold;padding:0 6px;">{{hearing_date_time}}</span> then and there to answer to a complaint made before me, copy of which is attached hereto, for mediation/conciliation of your dispute with complainant/s.
+    </p>
+    <p style="font-size:15px;line-height:2.0;text-indent:42px;margin-bottom:18px;text-align:justify;color:#000;">
+      You are hereby warned that if you refuse or willfully fail to appear in obedience to this summons, you may be barred from the filing of any counterclaim arising from said complaint.
+    </p>
+    <p style="font-size:15px;font-weight:bold;text-align:center;margin:22px 0;letter-spacing:1px;color:#000;">
+      FAIL NOT or else face punishment as for contempt of court.
+    </p>
+    <p style="font-size:15px;margin-top:22px;margin-bottom:32px;color:#000;">
+      Issued this <span style="display:inline-block;border-bottom:1px solid #000;min-width:180px;text-align:center;font-weight:bold;padding:0 6px;">{{date_issued}}</span>
+    </p>
+  </div>
+
+  <!-- SIGNATURE & FOOTER -->
+  <div style="position:relative;z-index:2;margin-top:auto;">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:28px;">
+      <div style="text-align:center;min-width:260px;">
+        <p style="font-size:16px;font-weight:bold;border-bottom:1px solid #000;padding-bottom:4px;margin:0;color:#000;">
+          {{punong_barangay}}
+        </p>
+        <p style="font-size:13px;font-weight:bold;margin:4px 0 0 0;color:#000;">
+          Punong Barangay
+        </p>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div style="text-align:center;border-top:1px solid #000;padding-top:8px;font-size:11.5px;font-style:italic;color:#4f6e34;font-weight:bold;line-height:1.4;font-family:Georgia,serif;">
+      <p style="margin:0;">{{barangay_address}}</p>
+      <p style="margin:2px 0 0 0;">
+        Email Address: <span style="text-decoration:underline;">{{barangay_email}}</span>
+      </p>
+      <p style="margin:2px 0 0 0;">Telephone Nos. {{barangay_phone}}</p>
+    </div>
+  </div>
+</div>
+`.trim();
+  }
+
   // Sidebar height & spacing distributions:
   // - 'compact': ~50% page length (upper half)
   // - 'standard': ~75% (3/4) page length
@@ -547,6 +669,9 @@ function buildDefaultHtmlLayout(
       : '6px';
   const sidebarJustify =
     sideColumnVerticalSpacing === 'spacious' ? 'space-between' : 'flex-start';
+
+  const isBusinessOrPermit = docTypeKey.includes('business');
+  const showToWhom = !isBusinessOrPermit;
 
   // 2-COLUMN SIDEBAR LAYOUT (FULL A4 HEIGHT PROPORTIONS & DYNAMIC WHOLE-PAGE WATERMARK)
   if (layoutStyle === 'two_column_sidebar') {
@@ -614,9 +739,10 @@ function buildDefaultHtmlLayout(
           ${docTitleUpper}
         </h2>
 
+        ${showToWhom ? `
         <p style="font-size:14.5px;font-weight:bold;margin-bottom:24px;color:#000;">
           TO WHOM IT MAY CONCERN:
-        </p>
+        </p>` : ''}
 
         ${bodyWordingHtml}
       </div>
@@ -673,7 +799,7 @@ function buildDefaultHtmlLayout(
     <h2 style="text-align:center;font-size:23px;font-weight:800;letter-spacing:1.8px;color:#000;text-transform:uppercase;margin:20px 0 28px 0;">
       ${docTitleUpper}
     </h2>
-    <p style="font-size:14.5px;font-weight:bold;margin-bottom:22px;">TO WHOM IT MAY CONCERN:</p>
+    ${showToWhom ? '<p style="font-size:14.5px;font-weight:bold;margin-bottom:22px;">TO WHOM IT MAY CONCERN:</p>' : ''}
     ${bodyWordingHtml}
   </div>
 
@@ -709,31 +835,74 @@ export default function AdminDocumentTemplatesPage() {
   const pageCopy = getRolePageCopy('admin/document-templates');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Dynamic Templates List directly from System State
+  // Dynamic Templates List directly from System State (Strictly Deduplicated)
   const templatesList = useMemo(() => {
     const customTemplates = state.documentTemplates || [];
-    const merged: DocumentTemplate[] = [...customTemplates];
+    const merged: DocumentTemplate[] = [];
+    const seenIds = new Set<string>();
+    const seenNames = new Set<string>();
+
+    const normalizeName = (name: string) =>
+      name.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+
+    // 1. Process custom templates first (preserving user edits)
+    customTemplates.forEach((tpl) => {
+      const normId = (tpl.id || '').trim().toLowerCase();
+      const normName = normalizeName(tpl.name || '');
+      if (normId && !seenIds.has(normId) && !seenNames.has(normName)) {
+        seenIds.add(normId);
+        if (normName) seenNames.add(normName);
+
+        // Enrich with official word template metadata if applicable
+        const officialWordMatch = OFFICIAL_WORD_TEMPLATES.find(
+          (ow) => ow.id === tpl.id || normalizeName(ow.name) === normName
+        );
+
+        merged.push({
+          ...tpl,
+          dynamicFields:
+            tpl.dynamicFields && tpl.dynamicFields.length > 0
+              ? tpl.dynamicFields
+              : officialWordMatch
+              ? officialWordMatch.dynamicFields
+              : ['resident_name', 'resident_address', 'purpose', 'date_issued', 'punong_barangay'],
+          documentType: tpl.documentType || (officialWordMatch ? officialWordMatch.documentType : 'barangay_certification'),
+          sourceType: tpl.sourceType || (officialWordMatch ? 'official' : 'custom'),
+          originalFileName: tpl.originalFileName || (officialWordMatch ? officialWordMatch.fileName : undefined),
+        });
+      }
+    });
+
+    // 2. Add default official templates that haven't been added yet
     DEFAULT_OFFICIAL_TEMPLATES.forEach((defTpl) => {
-      const exists = customTemplates.some(
-        (t) =>
-          t.id === defTpl.id ||
-          t.name.toLowerCase() === defTpl.name.toLowerCase() ||
-          (t.documentType === defTpl.categoryId && t.name.toLowerCase().includes(defTpl.name.toLowerCase()))
-      );
-      if (!exists) {
+      const normId = (defTpl.id || '').trim().toLowerCase();
+      const normName = normalizeName(defTpl.name || '');
+
+      if (!seenIds.has(normId) && !seenNames.has(normName)) {
+        seenIds.add(normId);
+        if (normName) seenNames.add(normName);
+
+        const officialWordMatch = OFFICIAL_WORD_TEMPLATES.find(
+          (ow) => ow.id === defTpl.id || normalizeName(ow.name) === normName
+        );
+
         merged.push({
           id: defTpl.id,
           name: defTpl.name,
           body: '',
-          dynamicFields: ['resident_name', 'resident_address', 'purpose', 'date_issued', 'punong_barangay'],
+          dynamicFields: officialWordMatch
+            ? officialWordMatch.dynamicFields
+            : ['resident_name', 'resident_address', 'purpose', 'date_issued', 'punong_barangay'],
           updatedAt: new Date().toISOString(),
-          updatedBy: 'System',
-          documentType: defTpl.categoryId,
-          sourceType: 'custom',
+          updatedBy: 'System (Official)',
+          documentType: officialWordMatch ? officialWordMatch.documentType : defTpl.categoryId,
+          sourceType: officialWordMatch ? 'official' : 'custom',
+          originalFileName: officialWordMatch ? officialWordMatch.fileName : undefined,
           isActive: true,
         });
       }
     });
+
     return merged;
   }, [state.documentTemplates]);
 
@@ -767,7 +936,7 @@ export default function AdminDocumentTemplatesPage() {
   // Template Editor State
   const [editorName, setEditorName] = useState('');
   const [editorDocType, setEditorDocType] = useState('certificate_indigency');
-  const [editorSourceType, setEditorSourceType] = useState<'uploaded' | 'custom'>('custom');
+  const [editorSourceType, setEditorSourceType] = useState<'uploaded' | 'custom' | 'official'>('custom');
   const [editorFileName, setEditorFileName] = useState('');
   const [bodyContent, setBodyContent] = useState('');
   const [htmlContent, setHtmlContent] = useState('');
@@ -890,6 +1059,12 @@ export default function AdminDocumentTemplatesPage() {
       purpose: '________________________',
       date_issued: `______ day of ____________, ${currentYear}`,
       reference_number: '____________________',
+      complainant_name: '________________________',
+      case_number: '____________________',
+      date_filed: '____________________',
+      hearing_date_time: `_____ day of ____________, ${currentYear} at _____ o'clock in the ____________`,
+      business_name: '________________________',
+      permit_type: 'Construction Permit',
       barangay_name: barangayText.trim() || 'BARANGAY PROGRESO',
       city: cityText.trim() || 'City Of San Juan',
       punong_barangay: punongBarangay.trim() || 'CESAR JR. H. STO. DOMINGO',
@@ -969,6 +1144,12 @@ export default function AdminDocumentTemplatesPage() {
       purpose: '<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>',
       date_issued: `<u>______ day of ____________, ${currentYear}</u>`,
       reference_number: '<u>____________________</u>',
+      complainant_name: '<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>',
+      case_number: '<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>',
+      date_filed: '<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>',
+      hearing_date_time: `<u>_____ day of ____________, ${currentYear} at _____ o'clock in the ____________</u>`,
+      business_name: '<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>',
+      permit_type: 'Construction Permit',
       barangay_name: barangayText.trim() ? `<strong>${barangayText.trim()}</strong>` : 'BARANGAY PROGRESO',
       city: cityText.trim() ? `<strong>${cityText.trim()}</strong>` : 'City Of San Juan',
       punong_barangay: punongBarangay.trim() ? `<strong>${punongBarangay.trim()}</strong>` : 'CESAR JR. H. STO. DOMINGO',
@@ -1094,13 +1275,16 @@ export default function AdminDocumentTemplatesPage() {
   const handleOpenEditor = (template?: DocumentTemplate | null) => {
     if (template) {
       const docType = template.documentType ?? 'certificate_indigency';
+      const isLupon = docType.includes('lupon') || docType.includes('summons') || docType.includes('patawag');
+      const targetLayout = isLupon ? 'single_column' : 'two_column_sidebar';
+      setLayoutStyle(targetLayout);
       setSelectedTemplateId(template.id);
       setEditorName(template.name);
       setEditorDocType(docType);
       setEditorSourceType(template.sourceType ?? 'custom');
       setEditorFileName(template.originalFileName ?? '');
       setBodyContent(template.body);
-      setHtmlContent(template.htmlBody || buildDefaultHtmlLayout(docType, sealAlignment, layoutStyle, sideColumnVerticalSpacing));
+      setHtmlContent(template.htmlBody || buildDefaultHtmlLayout(docType, sealAlignment, targetLayout, sideColumnVerticalSpacing));
       setDynamicFieldsInput((template.dynamicFields || []).join(','));
       setIsActive(template.isActive ?? true);
       if (template.headerConfig) {
@@ -1131,11 +1315,40 @@ export default function AdminDocumentTemplatesPage() {
   // Switch Document Type in Editor & Update Default Layout
   const handleEditorDocTypeChange = (newDocType: string) => {
     setEditorDocType(newDocType);
+    const isLupon = newDocType.includes('lupon') || newDocType.includes('summons') || newDocType.includes('patawag');
+    const targetLayout = isLupon ? 'single_column' : 'two_column_sidebar';
+    setLayoutStyle(targetLayout);
     const docObj = DOCUMENT_TYPES.find((d) => d.id === newDocType);
     if (docObj) {
       setEditorName(`${docObj.labelEn} Template`);
-      setHtmlContent(buildDefaultHtmlLayout(newDocType, sealAlignment, layoutStyle, sideColumnVerticalSpacing));
+      setHtmlContent(buildDefaultHtmlLayout(newDocType, sealAlignment, targetLayout, sideColumnVerticalSpacing));
     }
+  };
+
+  // 1-Click Load Official Template from \template directory
+  const handleLoadOfficialWordTemplate = (officialTplId: string) => {
+    const officialTpl = OFFICIAL_WORD_TEMPLATES.find((t) => t.id === officialTplId);
+    if (!officialTpl) return;
+    const isLupon = officialTpl.documentType.includes('lupon') || officialTpl.documentType.includes('summons') || officialTpl.documentType.includes('patawag');
+    const targetLayout = isLupon ? 'single_column' : 'two_column_sidebar';
+    setLayoutStyle(targetLayout);
+    setEditorName(officialTpl.name);
+    setEditorDocType(officialTpl.documentType);
+    setEditorSourceType('official');
+    setEditorFileName(officialTpl.fileName);
+    setDynamicFieldsInput(officialTpl.dynamicFields.join(','));
+    setHtmlContent(
+      buildDefaultHtmlLayout(
+        officialTpl.documentType,
+        sealAlignment,
+        targetLayout,
+        sideColumnVerticalSpacing
+      )
+    );
+    setFeedback({
+      tone: 'success',
+      text: `Loaded official template: ${officialTpl.fileName}`,
+    });
   };
 
   // Re-generate HTML Layout when Seal Alignment, Layout Style, or Vertical Spacing changes
@@ -1950,6 +2163,24 @@ export default function AdminDocumentTemplatesPage() {
                     {DOCUMENT_TYPES.map((dt) => (
                       <option key={dt.id} value={dt.id}>
                         {dt.labelEn}
+                      </option>
+                    ))}
+                  </Select>
+                </FieldLabel>
+
+                <FieldLabel label="Load Official Template (/template)">
+                  <Select
+                    value=""
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        handleLoadOfficialWordTemplate(e.target.value);
+                      }
+                    }}
+                  >
+                    <option value="">-- Choose template file to apply --</option>
+                    {OFFICIAL_WORD_TEMPLATES.map((ow) => (
+                      <option key={ow.id} value={ow.id}>
+                        {ow.fileName} ({ow.name.split(' (')[0]})
                       </option>
                     ))}
                   </Select>

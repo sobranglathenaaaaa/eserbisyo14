@@ -22,7 +22,15 @@ function escapeHtml(input: string) {
     .replace(/'/g, '&#39;');
 }
 
-export function buildBarangayCertificateIntakeFormHtml() {
+export interface BarangayCertificateIntakeFormOptions {
+  barangayName?: string;
+  officeTitle?: string;
+}
+
+export function buildBarangayCertificateIntakeFormHtml(options?: BarangayCertificateIntakeFormOptions) {
+  const barangayName = options?.barangayName || 'BARANGAY OFFICE';
+  const officeTitle = options?.officeTitle || 'OFFICE OF THE PUNONG BARANGAY';
+
   const reasons = REASON_LABELS.map(
     (reason) =>
       `<li><span class="checkbox" aria-hidden="true"></span><span class="reason-text">${escapeHtml(reason)}</span></li>`,
@@ -52,8 +60,8 @@ export function buildBarangayCertificateIntakeFormHtml() {
 <body>
   <div class="sheet">
     <div class="header">
-      <div><strong>BARANGAY PROGRESO</strong></div>
-      <div>OFFICE OF THE PUNONG BARANGAY</div>
+      <div><strong>${escapeHtml(barangayName)}</strong></div>
+      <div>${escapeHtml(officeTitle)}</div>
     </div>
     <div class="title">BARANGAY CERTIFICATE INTAKE FORM (FOR OCR)</div>
     <div class="field"><span class="label">This is to certify that</span><div class="line"></div></div>

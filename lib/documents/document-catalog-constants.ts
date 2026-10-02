@@ -68,22 +68,101 @@ export const OFFICIAL_DOCUMENT_CATEGORIES: DocumentCategoryDefinition[] = [
   },
 ];
 
-// Official Default Templates across each of the 7 Categories
+export type OfficialWordTemplateDefinition = {
+  id: string;
+  name: string;
+  fileName: string;
+  categoryId: string;
+  documentType: string;
+  description: string;
+  dynamicFields: string[];
+};
+
+export const OFFICIAL_WORD_TEMPLATES: OfficialWordTemplateDefinition[] = [
+  {
+    id: 'tpl_brgy_clearance',
+    name: 'Barangay Certification (General)',
+    fileName: 'BLANK-BARANGAY-CERT-NEW-LOGO-doc.docx',
+    categoryId: 'barangay_certification',
+    documentType: 'barangay_certification',
+    description: 'Official Barangay Certification for residency, school, employment, and general legal requirements (3 months validity)',
+    dynamicFields: ['resident_name', 'resident_address', 'purpose', 'date_issued', 'punong_barangay', 'barangay_name', 'city'],
+  },
+  {
+    id: 'tpl_cert_indigency',
+    name: 'Certificate of Indigency',
+    fileName: 'BLANK-INDIGENCY-WITH-NEW-LOGO-KIM.docx',
+    categoryId: 'barangay_certification',
+    documentType: 'certificate_indigency',
+    description: 'Official Certificate of Indigency for medical, financial, funeral, and educational assistance',
+    dynamicFields: ['resident_name', 'resident_address', 'purpose', 'date_issued', 'punong_barangay', 'barangay_name', 'city'],
+  },
+  {
+    id: 'tpl_lupon_summons',
+    name: 'Notice of Hearing / Summons (Patawag - KP Form #9)',
+    fileName: 'BLANK-LUPON-SUMMONS-KP2026.docx',
+    categoryId: 'lupon_tagapamayapa',
+    documentType: 'lupon_tagapamayapa',
+    description: 'Official Katarungang Pambarangay Summons / Patawag for conciliation and mediation hearings',
+    dynamicFields: ['resident_name', 'complainant_name', 'case_number', 'date_filed', 'purpose', 'date_issued', 'punong_barangay', 'barangay_name', 'city'],
+  },
+  {
+    id: 'tpl_business_clearance',
+    name: 'Barangay Business Clearance',
+    fileName: 'BUSINESS-PERMIT.docx',
+    categoryId: 'business_clearance',
+    documentType: 'business_clearance',
+    description: 'Official Barangay Business Clearance for commercial operations and trade compliance',
+    dynamicFields: ['business_name', 'resident_name', 'resident_address', 'purpose', 'date_issued', 'punong_barangay', 'barangay_name', 'city'],
+  },
+  {
+    id: 'tpl_construction_permit',
+    name: 'Barangay Clearance - Construction & Multi-Permit',
+    fileName: 'CONSTRUCTION-PERMIT.docx',
+    categoryId: 'construction_clearances',
+    documentType: 'construction_clearances',
+    description: 'Official Multi-Permit Clearance (Building, Occupancy, Excavation, Demolition, Renovation, Hauling, Signage)',
+    dynamicFields: ['resident_name', 'resident_address', 'permit_type', 'purpose', 'date_issued', 'punong_barangay', 'barangay_name', 'city'],
+  },
+];
+
+// Official Default Templates across each of the 7 Categories (Clean & Deduplicated)
 export const DEFAULT_OFFICIAL_TEMPLATES: DefaultTemplateDefinition[] = [
   // 1. Barangay Certification
+  {
+    id: 'tpl_brgy_clearance',
+    name: 'Barangay Certification (General)',
+    categoryId: 'barangay_certification',
+    price: 0,
+    description: 'Official General Multipurpose Barangay Certification (BLANK-BARANGAY-CERT-NEW-LOGO-doc.docx)',
+  },
+  {
+    id: 'tpl_cert_indigency',
+    name: 'Certificate of Indigency',
+    categoryId: 'barangay_certification',
+    price: 0,
+    description: 'For indigency, financial assistance, medical aid, burial assistance, or educational subsidy (BLANK-INDIGENCY-WITH-NEW-LOGO-KIM.docx)',
+  },
+  {
+    id: 'tpl_cert_residency',
+    name: 'Certificate of Residency',
+    categoryId: 'barangay_certification',
+    price: 0,
+    description: 'Official proof of bona fide residence in the barangay',
+  },
+  {
+    id: 'tpl_good_moral',
+    name: 'Certificate of Good Moral Character',
+    categoryId: 'barangay_certification',
+    price: 0,
+    description: 'Attestation of good moral standing and lack of derogatory record',
+  },
   {
     id: 'tpl_brgy_school_req',
     name: 'Barangay Certification - School Requirement',
     categoryId: 'barangay_certification',
     price: 0,
     description: 'Barangay certification for school enrollment, scholarship, and student requirements',
-  },
-  {
-    id: 'tpl_cert_indigency',
-    name: 'Certificate of Indigency (Financial, Medical, Educational)',
-    categoryId: 'barangay_certification',
-    price: 0,
-    description: 'For indigency, financial assistance, medical aid, burial assistance, or educational subsidy',
   },
   {
     id: 'tpl_brgy_pwd_senior',
@@ -148,27 +227,6 @@ export const DEFAULT_OFFICIAL_TEMPLATES: DefaultTemplateDefinition[] = [
     price: 0,
     description: 'Official barangay certification for other legal and personal purposes',
   },
-  {
-    id: 'tpl_cert_residency',
-    name: 'Certificate of Residency',
-    categoryId: 'barangay_certification',
-    price: 0,
-    description: 'Official proof of bona fide residence in the barangay',
-  },
-  {
-    id: 'tpl_good_moral',
-    name: 'Certificate of Good Moral Character',
-    categoryId: 'barangay_certification',
-    price: 0,
-    description: 'Attestation of good moral standing and lack of derogatory record',
-  },
-  {
-    id: 'tpl_brgy_clearance',
-    name: 'Barangay Clearance (General)',
-    categoryId: 'barangay_certification',
-    price: 0,
-    description: 'General multipurpose barangay clearance',
-  },
 
   // 2. Transient Employees & Worker Certification
   {
@@ -206,7 +264,7 @@ export const DEFAULT_OFFICIAL_TEMPLATES: DefaultTemplateDefinition[] = [
     name: 'Notice of Hearing / Summons (Patawag - KP Form #9)',
     categoryId: 'lupon_tagapamayapa',
     price: 0,
-    description: 'Summons notice issued to respondents for Katarungang Pambarangay conciliation',
+    description: 'Summons notice issued to respondents for Katarungang Pambarangay conciliation (BLANK-LUPON-SUMMONS-KP2026.docx)',
   },
   {
     id: 'tpl_lupon_cfa',
@@ -224,6 +282,13 @@ export const DEFAULT_OFFICIAL_TEMPLATES: DefaultTemplateDefinition[] = [
   },
 
   // 4. Business Clearance (New & Renewal)
+  {
+    id: 'tpl_business_clearance',
+    name: 'Barangay Business Clearance',
+    categoryId: 'business_clearance',
+    price: 0,
+    description: 'Official Barangay Business Clearance (BUSINESS-PERMIT.docx)',
+  },
   {
     id: 'tpl_business_micro_small',
     name: 'Business Clearance - Micro / Small Enterprise',
@@ -254,6 +319,13 @@ export const DEFAULT_OFFICIAL_TEMPLATES: DefaultTemplateDefinition[] = [
   },
 
   // 5. Construction Clearances
+  {
+    id: 'tpl_construction_permit',
+    name: 'Barangay Clearance - Construction & Multi-Permit',
+    categoryId: 'construction_clearances',
+    price: 0,
+    description: 'Official multi-purpose clearance for Building, Renovation, Demolition, Excavation, and Hauling (CONSTRUCTION-PERMIT.docx)',
+  },
   {
     id: 'tpl_construction_new',
     name: 'New Structure Construction Permit',

@@ -145,7 +145,7 @@ export interface DocumentTemplate {
   updatedAt: string;
   updatedBy: string;
   documentType?: string;
-  sourceType?: 'uploaded' | 'custom';
+  sourceType?: 'uploaded' | 'custom' | 'official';
   originalFileName?: string;
   fieldMappings?: DocumentTemplateFieldMapping[];
   headerConfig?: {
