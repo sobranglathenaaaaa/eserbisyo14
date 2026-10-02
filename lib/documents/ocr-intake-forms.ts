@@ -151,7 +151,7 @@ export function buildDynamicIntakeFormHtml(template: {
 
     <div class="title-banner">
       <h3>${escapeHtml(title)} &mdash; OCR Walk-in Intake Form</h3>
-      <div class="instruction">Mangyaring isulat nang MALINAW at PATAPOS (ALL CAPS) para mabasa ng OCR scanner.</div>
+      <div class="instruction">Mangyaring isulat nang MALINAW at MALALAKING LETRA (ALL CAPS) para mabasa ng OCR scanner.</div>
     </div>
 
     <div class="fields-container">

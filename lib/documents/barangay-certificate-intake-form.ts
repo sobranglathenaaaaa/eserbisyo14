@@ -79,7 +79,7 @@ export function buildBarangayCertificateIntakeFormHtml(options?: BarangayCertifi
 
     <div class="title-banner">
       <h3>BARANGAY CERTIFICATION &mdash; OCR INTAKE ROUTING SLIP</h3>
-      <div class="instruction">Mangyaring isulat nang MALINAW at PATAPOS (ALL CAPS) at lagyan ng tsek (X) ang kailangang dokumento.</div>
+      <div class="instruction">Mangyaring isulat nang MALINAW at MALALAKING LETRA (ALL CAPS) at lagyan ng ekis (X) ang kailangang dokumento.</div>
     </div>
 
     <div class="field"><span class="label">This is to certify that (Resident Full Name) *</span><div class="line"></div></div>
