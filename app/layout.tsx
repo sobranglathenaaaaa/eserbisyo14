@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Fraunces, Work_Sans } from 'next/font/google';
 import ServiceWorkerRegister from '../components/service-worker-register';
+import NetworkStatusIndicator from '../components/network-status-indicator';
 import '../styles/globals.css';
 import '../styles/landing.css';
 
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className={`${headingFont.variable} ${bodyFont.variable}`}>
         <ServiceWorkerRegister />
+        <NetworkStatusIndicator />
         {children}
       </body>
     </html>

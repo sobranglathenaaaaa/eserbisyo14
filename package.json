@@ -21,6 +21,7 @@
     "test:email": "npx tsx scripts/test-email.ts"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@google/genai": "^1.48.0",
     "@radix-ui/react-dialog": "^1.1.15",
     "@sendgrid/mail": "^8.1.6",
