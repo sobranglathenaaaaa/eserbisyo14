@@ -79,7 +79,7 @@ export const landingSections: Record<string, LandingSection> = {
       en: 'Built for real barangay operations',
     },
     description: {
-      en: 'Each module maps to a live workflow in the app, designed around requests, reporting, communication, and approvals.',
+      en: 'Each module maps to a live workflow in the app, designed around requests, reporting, announcements, and feedback.',
     },
   },
   roles: {
@@ -142,15 +142,9 @@ export const trustSignals: TrustSignal[] = [
     icon: 'Ri',
   },
   {
-    label: { en: 'Queue Visibility' },
-    value: 'Role-based',
-    note: { en: 'Staff and admins can prioritize with status-led workflows' },
-    icon: 'Qv',
-  },
-  {
     label: { en: 'Public Accountability' },
     value: 'Dashboard',
-    note: { en: 'Live oversight for requests, approvals, and feedback' },
+    note: { en: 'Resident-visible updates for requests, reports, and feedback' },
     icon: 'Pa',
   },
 ];
@@ -188,17 +182,6 @@ export const moduleFeatures: FeatureItem[] = [
     ],
     href: '/resident/request-feedback',
     icon: 'Cf',
-  },
-  {
-    label: { en: 'Operations Oversight' },
-    title: { en: 'Monitor queues and approvals' },
-    summary: { en: 'Admins and staff get a clear operations view for pending requests, approvals, and service quality.' },
-    bullets: [
-      { en: 'Pending and ready-for-approval snapshots' },
-      { en: 'Feedback and performance visibility for action' },
-    ],
-    href: '/admin/dashboard',
-    icon: 'Aa',
   },
 ];
 
@@ -241,26 +224,26 @@ export const roleCards: RoleCard[] = [
 export const requestLifecycle: LifecycleStep[] = [
   {
     step: '01',
-    title: { en: 'Submit' },
-    detail: { en: 'Resident files a request with required details in-app.' },
+    title: { en: 'Register and verify' },
+    detail: { en: 'Resident creates an account, verifies email, and waits for account approval.' },
     icon: 'Sb',
   },
   {
     step: '02',
-    title: { en: 'Review' },
-    detail: { en: 'Staff verifies details and moves it through the queue.' },
+    title: { en: 'Submit a service request' },
+    detail: { en: 'Resident chooses a document service or reports an incident with the required details.' },
     icon: 'Rv',
   },
   {
     step: '03',
-    title: { en: 'Approve or Return' },
-    detail: { en: 'Authorized approver decides and records the outcome.' },
+    title: { en: 'Review and process' },
+    detail: { en: 'Staff and admins review the record, request corrections when needed, and update its status.' },
     icon: 'Ap',
   },
   {
     step: '04',
-    title: { en: 'Track and Complete' },
-    detail: { en: 'Resident sees status updates and final history record.' },
+    title: { en: 'Track and complete' },
+    detail: { en: 'Resident follows updates, receives notifications, and claims the completed document when ready.' },
     icon: 'Tc',
   },
 ];

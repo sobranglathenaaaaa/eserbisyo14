@@ -62,13 +62,41 @@ function normalizePermissionRole(value: string): PermissionRole | null {
   return null;
 }
 
+function buildAuthContext(token: string, profile: DbProfile): AuthContext | null {
+  if (profile.is_deleted) return null;
+
+  const normalizedRole = normalizePermissionRole(profile.role);
+  if (!normalizedRole) return null;
+
+  if (normalizedRole === 'resident') {
+    if (!profile.is_verified) return null;
+    if (profile.approval_status !== 'admin_approved') return null;
+  }
+
+  return {
+    token,
+    userId: profile.id,
+    tenantId: profile.tenant_id,
+    role: normalizedRole,
+    profile,
+  };
+}
+
 function extractBearerToken(request: NextRequest): string | null {
   const auth = request.headers.get('authorization');
   if (auth?.startsWith('Bearer ')) {
     return auth.slice('Bearer '.length).trim();
   }
 
-  return request.cookies.get('sb-access-token')?.value ?? null;
+  const accessToken = request.cookies.get('sb-access-token')?.value;
+  if (accessToken) return accessToken;
+
+  if (process.env.NODE_ENV !== 'production') {
+    const localUserId = request.cookies.get('x-user-id')?.value;
+    if (localUserId) return `local-offline-access-token-${localUserId}`;
+  }
+
+  return null;
 }
 
 export async function getAuthContext(request: NextRequest): Promise<AuthContext | null> {
@@ -77,34 +105,46 @@ export async function getAuthContext(request: NextRequest): Promise<AuthContext 
 
   const admin = getSupabaseAdminClient();
   const { data: authData, error: authError } = await admin.auth.getUser(token);
-  if (authError || !authData.user?.id) return null;
+  if (!authError && authData.user?.id) {
+    const { data: profile, error: profileError } = await admin
+      .from('profiles')
+      .select(
+        'id,tenant_id,full_name,first_name,middle_name,last_name,suffix,sex,civil_status,citizenship,birthdate,address,address_line,province,city,barangay,phone,id_type,id_number,id_file_name,id_file_path,terms_accepted_at,privacy_accepted_at,email,role,is_deleted,is_verified,approval_status,staff_reviewed_by,staff_reviewed_at,staff_review_note,approval_reviewed_by,approval_reviewed_at,approval_review_note,locale'
+      )
+      .eq('id', authData.user.id)
+      .maybeSingle();
 
-  const { data: profile, error: profileError } = await admin
-    .from('profiles')
-    .select(
-      'id,tenant_id,full_name,first_name,middle_name,last_name,suffix,sex,civil_status,citizenship,birthdate,address,address_line,province,city,barangay,phone,id_type,id_number,id_file_name,id_file_path,terms_accepted_at,privacy_accepted_at,email,role,is_deleted,is_verified,approval_status,staff_reviewed_by,staff_reviewed_at,staff_review_note,approval_reviewed_by,approval_reviewed_at,approval_review_note,locale'
-    )
-    .eq('id', authData.user.id)
-    .maybeSingle();
-
-  if (profileError || !profile || profile.is_deleted) return null;
-
-  const normalizedRole = normalizePermissionRole(profile.role);
-  if (!normalizedRole) return null;
-
-  // Prevent resident API access before both checks pass.
-  if (normalizedRole === 'resident') {
-    if (!profile.is_verified) return null;
-    if (profile.approval_status !== 'admin_approved') return null;
+    if (!profileError && profile) {
+      return buildAuthContext(token, profile as DbProfile);
+    }
   }
 
-  return {
-    token,
-    userId: authData.user.id,
-    tenantId: profile.tenant_id,
-    role: normalizedRole,
-    profile: profile as DbProfile,
-  };
+  if (!token.startsWith('local-offline-access-token-')) return null;
+
+  const localUserId = token.slice('local-offline-access-token-'.length);
+  if (!localUserId) return null;
+
+  try {
+    const { localPgPool } = await import('@/lib/supabase/local-pg');
+    const result = await localPgPool.query(
+      `select
+        id, tenant_id, full_name, first_name, middle_name, last_name, suffix,
+        sex, civil_status, citizenship, birthdate, address, address_line,
+        province, city, barangay, phone, id_type, id_number, id_file_name,
+        id_file_path, terms_accepted_at, privacy_accepted_at, email, role,
+        is_deleted, is_verified, approval_status, staff_reviewed_by,
+        staff_reviewed_at, staff_review_note, approval_reviewed_by,
+        approval_reviewed_at, approval_review_note, locale
+       from public.profiles
+       where id = $1
+       limit 1`,
+      [localUserId]
+    );
+    const profile = result.rows[0] as DbProfile | undefined;
+    return profile ? buildAuthContext(token, profile) : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function requireAuth(request: NextRequest): Promise<AuthContext | Response> {

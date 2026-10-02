@@ -86,6 +86,7 @@ export default function AdminAnnouncementsPage() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [audience, setAudience] = useState<'all' | 'resident' | 'staff'>('all');
+  const [startAtInput, setStartAtInput] = useState<string>(getNowLocalInput());
   const [endAtInput, setEndAtInput] = useState<string>(isoToLocalInput(getDefaultEndAtISO()));
   const [viewing, setViewing] = useState<Announcement | null>(null);
   useBodyScrollLock(Boolean(viewing));
@@ -124,6 +125,7 @@ export default function AdminAnnouncementsPage() {
       if (!item) return;
       setTitle(item.title);
       setBody(item.body);
+      setStartAtInput(isoToLocalInput(item.startAt ?? item.createdAt));
       const endISO = item.endAt ?? getDefaultEndAtISO();
       setEndAtInput(isoToLocalInput(endISO));
     }
@@ -186,20 +188,21 @@ export default function AdminAnnouncementsPage() {
     event.preventDefault();
     setFeedback(null);
     setIsPublishing(true);
-    const now = new Date();
-    const startAt = now.toISOString();
+    const selectedStart = new Date(startAtInput);
     const selectedEnd = new Date(endAtInput);
-    if (selectedEnd <= now) {
-      setFeedback({ tone: 'error', text: locale === 'fil' ? 'Hindi pwede ang nakalipas na oras.' : 'End time cannot be in the past.' });
+    if (Number.isNaN(selectedStart.getTime()) || Number.isNaN(selectedEnd.getTime()) || selectedEnd <= selectedStart) {
+      setFeedback({ tone: 'error', text: locale === 'fil' ? 'Dapat mas maaga ang start time kaysa end time.' : 'Start time must be earlier than the end time.' });
       setIsPublishing(false);
       return;
     }
+    const startAt = selectedStart.toISOString();
     const endAt = selectedEnd.toISOString();
     try {
       await upsertAnnouncement({ id: editingId ?? undefined, title, body, audience, startAt, endAt });
       setFeedback({ tone: 'success', text: editingId ? (locale === 'fil' ? 'Na-update na ang anunsyo.' : 'Announcement updated successfully.') : (locale === 'fil' ? 'Na-publish na ang anunsyo.' : 'Announcement published successfully.') });
       setTitle('');
       setBody('');
+      setStartAtInput(getNowLocalInput());
       setEndAtInput(isoToLocalInput(getDefaultEndAtISO()));
       setEditingId(null);
     } catch (err: any) {
@@ -265,16 +268,23 @@ export default function AdminAnnouncementsPage() {
         }
         
       >
-        <form className="grid gap-3 md:grid-cols-4" onSubmit={onSubmit}>
+        <form className="grid gap-3 md:grid-cols-5" onSubmit={onSubmit}>
           <FieldLabel label={locale === 'fil' ? 'Pamagat' : 'Title'} className="md:col-span-2">
             <Input value={title} onChange={(event) => setTitle(event.target.value)} required />
           </FieldLabel>
 
+          <FieldLabel label={locale === 'fil' ? 'Start Time' : 'Start Time'}>
+            <Input
+              type="datetime-local"
+              value={startAtInput}
+              onChange={(e) => setStartAtInput(e.target.value)}
+              required
+            />
+          </FieldLabel>
           <FieldLabel label={locale === 'fil' ? 'End Time' : 'End Time'}>
             <Input
               type="datetime-local"
               value={endAtInput}
-              min={getNowLocalInput()}
               onChange={(e) => setEndAtInput(e.target.value)}
               required
             />
@@ -286,10 +296,10 @@ export default function AdminAnnouncementsPage() {
               <option value="staff">{locale === 'fil' ? 'Staff' : 'Staff'}</option>
             </Select>
           </FieldLabel>
-          <FieldLabel label={locale === 'fil' ? 'Nilalaman' : 'Body'} className="md:col-span-4">
+          <FieldLabel label={locale === 'fil' ? 'Nilalaman' : 'Body'} className="md:col-span-5">
             <Textarea value={body} onChange={(event) => setBody(event.target.value)} required className="min-h-[100px]" />
           </FieldLabel>
-          <div className="flex items-center justify-between md:col-span-4">
+          <div className="flex items-center justify-between md:col-span-5">
             <div className="flex items-center">
               <Button
                 type="button"
@@ -322,6 +332,7 @@ export default function AdminAnnouncementsPage() {
                     setTitle('');
                     setBody('');
                     setAudience('all');
+                    setStartAtInput(getNowLocalInput());
                     setEndAtInput(isoToLocalInput(getDefaultEndAtISO()));
                   }}
                 >

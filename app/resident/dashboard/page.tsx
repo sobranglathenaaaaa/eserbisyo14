@@ -13,6 +13,7 @@ import { getResidentDashboardData } from '@/features/resident/model/dashboard';
 import { ResidentShell } from '@/features/resident/view/resident-shell';
 import { ResidentEmpty, ResidentMetricCard, ResidentSection } from '@/features/resident/view/resident-primitives';
 import { getRolePageCopy } from '@/lib/content/role-pages';
+import { formatAnnouncementSchedule } from '@/lib/announcements/schedule';
 
 export default function ResidentDashboardPage() {
   const { state, user, locale } = useAppState();
@@ -153,7 +154,8 @@ export default function ResidentDashboardPage() {
                     <p className="text-sm font-semibold text-[color:var(--resident-ink-900)]">{announcement.title}</p>
                     <p className="mt-1 text-xs leading-5 text-[color:var(--resident-ink-500)]">{announcement.body}</p>
                     <p className="mt-2 text-[11px] text-[color:var(--resident-ink-500)]">
-                      {formatDateTime(announcement.createdAt, locale)}
+                      {copyText(locale, 'Schedule: ', 'Iskedyul: ')}
+                      {formatAnnouncementSchedule(announcement, locale)}
                     </p>
                   </Card>
                 ))}

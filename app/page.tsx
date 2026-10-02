@@ -7,9 +7,9 @@ import {
   moduleFeatures,
   requestLifecycle,
   roleCards,
-  trustSignals,
   verificationHighlights,
 } from '../lib/content/landing';
+import PublicAnnouncements from '../components/public-announcements';
 
 export default function HomePage() {
   return (
@@ -83,44 +83,13 @@ export default function HomePage() {
         <section id={landingSections.hero.id} className="landing-hero landing-reveal" aria-labelledby="hero-title">
           <div className="landing-container landing-hero__inner">
             <div className="landing-hero__content">
-              <p className="landing-eyebrow">{landingSections.hero.eyebrow}</p>
               <h1 id="hero-title">{landingSections.hero.title.en}</h1>
               <p className="landing-hero__description">{landingSections.hero.description.en}</p>
-              <div className="landing-hero__cta-row">
-                <Link className="landing-btn" href="/register" aria-label="Register now as a resident">
-                  Resident Sign Up
-                </Link>
-                <Link className="landing-btn landing-btn--ghost" href="/login" aria-label="Log in for existing account holders">
-                  Log In
-                </Link>
-              </div>
-              <p className="landing-hero__trust">Secure • Verified • Pilot-ready</p>
-            </div>
-            <aside className="landing-hero__visual" aria-label="Platform support summary">
-              <div className="landing-orb landing-orb--one" aria-hidden="true" />
-              <article className="landing-hero-panel">
-                <p>RESIDENT-FIRST WORKFLOW</p>
-                <strong>Submit requests and track progress in one view</strong>
-              </article>
-            </aside>
-          </div>
-          <div className="landing-container landing-hero__trust-strip" aria-label="Core trust highlights">
-            <div className="landing-strip__grid">
-            {trustSignals.map((signal) => (
-              <article key={signal.label.en} className="landing-strip__item">
-                <span className="landing-icon-chip" aria-hidden="true">
-                  {signal.icon}
-                </span>
-                <div>
-                  <p className="landing-strip__value">{signal.value}</p>
-                  <h3>{signal.label.en}</h3>
-                  <p>{signal.note.en}</p>
-                </div>
-              </article>
-            ))}
             </div>
           </div>
         </section>
+
+        <PublicAnnouncements />
 
         <section id={landingSections.modules.id} className="landing-section landing-section--modules landing-reveal" aria-labelledby="modules-title">
           <div className="landing-container">

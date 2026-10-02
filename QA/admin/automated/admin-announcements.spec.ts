@@ -11,7 +11,7 @@ type AnnouncementRow = {
 };
 
 test.describe('Admin: Announcements', () => {
-  test('ADM-ANN-001 should show resident announcements only inside the schedule window', async ({ request }) => {
+  test('ADM-ANN-001 should show published resident announcements until their end time', async ({ request }) => {
     const runTag = createQaRunTag();
     const adminCtx = await createAuthedApiContext(request, 'admin');
     const now = Date.now();
@@ -59,7 +59,7 @@ test.describe('Admin: Announcements', () => {
     const residentTitles = residentPayload.data.announcements.map((item) => item.title);
 
     expect(residentTitles).toContain(activeTitle);
-    expect(residentTitles).not.toContain(futureTitle);
+    expect(residentTitles).toContain(futureTitle);
     expect(residentTitles).not.toContain(expiredTitle);
 
     const adminList = await adminCtx.api.get('/api/v1/announcements');

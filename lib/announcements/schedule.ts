@@ -1,4 +1,6 @@
 import type { Announcement, UserRole } from '@/lib/types/models';
+import type { Locale } from '@/lib/types/models';
+import { formatDateTime } from '@/lib/formatters';
 
 type AnnouncementVisibilityInput = {
   audience: Announcement['audience'];
@@ -14,10 +16,8 @@ function parseTime(value?: string | null) {
 }
 
 export function isAnnouncementActiveWindow(input: Pick<AnnouncementVisibilityInput, 'startAt' | 'endAt' | 'createdAt'>, now = new Date()) {
-  const start = parseTime(input.startAt) ?? parseTime(input.createdAt);
   const end = parseTime(input.endAt);
 
-  if (start && now.getTime() < start.getTime()) return false;
   if (end && now.getTime() > end.getTime()) return false;
   return true;
 }
@@ -30,4 +30,15 @@ export function isAnnouncementAudienceVisible(audience: Announcement['audience']
 
 export function isAnnouncementVisibleToRole(input: AnnouncementVisibilityInput, role: UserRole, now = new Date()) {
   return isAnnouncementAudienceVisible(input.audience, role) && isAnnouncementActiveWindow(input, now);
+}
+
+export function formatAnnouncementSchedule(
+  input: Pick<Announcement, 'startAt' | 'endAt' | 'createdAt'>,
+  locale: Locale
+) {
+  const start = input.startAt ?? input.createdAt;
+  const end = input.endAt;
+  return end
+    ? `${formatDateTime(start, locale)} - ${formatDateTime(end, locale)}`
+    : `${formatDateTime(start, locale)} - ${locale === 'fil' ? 'Walang end date' : 'No end date'}`;
 }

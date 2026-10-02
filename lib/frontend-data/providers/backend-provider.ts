@@ -318,7 +318,7 @@ async function apiFetch<T>(path: string, init?: RequestInit & { skipAuth?: boole
     headers.set('content-type', 'application/json');
   }
   if (token) headers.set('authorization', `Bearer ${token}`);
-  let response = await fetch(path, { ...init, headers });
+  let response = await fetch(path, { ...init, headers, credentials: 'same-origin' });
 
   // The server keeps the session in httpOnly cookies, so recover when the
   // browser Supabase session is stale or temporarily unavailable.
@@ -327,7 +327,7 @@ async function apiFetch<T>(path: string, init?: RequestInit & { skipAuth?: boole
     if (refreshedToken) {
       token = refreshedToken;
       headers.set('authorization', `Bearer ${token}`);
-      response = await fetch(path, { ...init, headers });
+      response = await fetch(path, { ...init, headers, credentials: 'same-origin' });
     }
   }
 
