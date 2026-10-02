@@ -13,14 +13,6 @@ function homeByRole(role: 'admin' | 'staff' | 'resident') {
   return '/resident/dashboard';
 }
 
-const quickLoginAccounts = [
-  { label: 'Admin', email: 'admin@eserbisyo.local', password: 'Admin123!' },
-  { label: 'Staff', email: 'staff@eserbisyo.local', password: 'Staff123!' },
-  { label: 'Resident', email: 'resident@eserbisyo.local', password: 'Resident123!' },
-];
-
-const quickLoginEnabled = process.env.NEXT_PUBLIC_ENABLE_QUICK_LOGIN !== 'false';
-
 function sanitizeNextPath(nextPath?: string) {
   if (!nextPath) return null;
   if (!nextPath.startsWith('/')) return null;
@@ -126,27 +118,6 @@ export default function LoginForm({
     void doLogin(email, password);
   };
 
-  const onQuickLogin = async (emailValue: string, passwordValue: string) => {
-    setIsSubmitting(true);
-    setError('');
-    setResendMessage('');
-
-    const bootstrapResponse = await fetch('/api/dev/bootstrap-accounts', {
-      method: 'POST',
-    });
-
-    if (!bootstrapResponse.ok) {
-      const payload = (await bootstrapResponse.json().catch(() => ({ error: 'Failed to prepare quick login.' }))) as {
-        error?: string;
-      };
-      setError(payload.error ?? 'Failed to prepare quick login.');
-      setIsSubmitting(false);
-      return;
-    }
-
-    await doLogin(emailValue, passwordValue);
-  };
-
   const onResendVerification = async () => {
     const emailValue = email.trim().toLowerCase();
     if (!emailValue) {
@@ -175,25 +146,6 @@ export default function LoginForm({
       </header>
 
       {verificationStatusMessage ? <p className={styles.verificationNotice}>{verificationStatusMessage}</p> : null}
-
-      {quickLoginEnabled ? (
-        <section className={styles.devQuickPanel} aria-label="Quick login accounts">
-          <p className={styles.devQuickLabel}>Quick login</p>
-          <div className={styles.devQuickButtons}>
-            {quickLoginAccounts.map((account) => (
-              <button
-                key={account.email}
-                className={styles.devQuickBtn}
-                type="button"
-                onClick={() => void onQuickLogin(account.email, account.password)}
-                disabled={isSubmitting}
-              >
-                {account.label}
-              </button>
-            ))}
-          </div>
-        </section>
-      ) : null}
 
       <form className={styles.authForm} onSubmit={onSubmit} noValidate aria-busy={isSubmitting}>
         <div className={styles.formField}>
