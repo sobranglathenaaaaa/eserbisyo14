@@ -88,6 +88,17 @@ function buildDefaultHtmlLayout(
   layoutStyle: 'single_column' | 'two_column_sidebar' = 'two_column_sidebar',
   sideColumnVerticalSpacing: 'compact' | 'standard' | 'spacious' = 'standard'
 ): string {
+  const normalizedDocTypeKey = docTypeKey.toLowerCase();
+  const isBusinessRenewal =
+    normalizedDocTypeKey.includes('renewal') || normalizedDocTypeKey.includes('renew');
+  const isMicroSmallBusiness =
+    normalizedDocTypeKey.includes('micro') ||
+    normalizedDocTypeKey.includes('small enterprise') ||
+    normalizedDocTypeKey.includes('small business');
+  const isMediumBusiness = normalizedDocTypeKey.includes('medium');
+  const isLargeBusiness =
+    normalizedDocTypeKey.includes('large') || normalizedDocTypeKey.includes('corporat');
+
   const barangayLogoHtml = `{{barangay_seal}}`;
   const cityLogoHtml = `{{city_seal}}`;
   const countryLogoHtml = `{{country_seal}}`;
@@ -140,6 +151,24 @@ function buildDefaultHtmlLayout(
 
   let docTitleUpper = 'BARANGAY CLEARANCE';
   let bodyWordingHtml = '';
+  const businessClassification = isBusinessRenewal
+    ? 'BUSINESS CLEARANCE RENEWAL - EXISTING ENTERPRISE'
+    : isLargeBusiness
+    ? 'LARGE ENTERPRISE / CORPORATE BUSINESS'
+    : isMediumBusiness
+    ? 'MEDIUM ENTERPRISE BUSINESS'
+    : isMicroSmallBusiness
+    ? 'MICRO / SMALL ENTERPRISE BUSINESS'
+    : 'BUSINESS ENTERPRISE';
+  const businessPurpose = isBusinessRenewal
+    ? 'the annual renewal of the existing business clearance'
+    : isLargeBusiness
+    ? 'the operation of a large enterprise or corporate business'
+    : isMediumBusiness
+    ? 'the operation of a medium enterprise business'
+    : isMicroSmallBusiness
+    ? 'the operation of a micro or small enterprise owned or operated by a resident'
+    : 'the operation of the business described below';
 
   switch (true) {
     // 1. Barangay Certification Sub-Types
@@ -386,10 +415,13 @@ function buildDefaultHtmlLayout(
       break;
 
     // 4. Business Clearance (BLANK BUSINESS-PERMIT.docx reference)
-    case docTypeKey.includes('business'):
+    case normalizedDocTypeKey.includes('business'):
       docTitleUpper = 'BARANGAY BUSINESS CLEARANCE';
       bodyWordingHtml = `
 <div style="font-size:14.5px;line-height:2.1;text-align:justify;color:#000;">
+  <p style="text-align:center;font-size:13px;font-weight:bold;letter-spacing:0.6px;margin:0 0 20px 0;">
+    ${businessClassification}
+  </p>
   <p style="margin-bottom:16px;text-indent:42px;">
     <strong>Name of Establishment:</strong> <u style="font-weight:bold;font-size:15.5px;">{{purpose}}</u>
   </p>
@@ -400,7 +432,10 @@ function buildDefaultHtmlLayout(
     With postal address at <u style="font-weight:bold;">{{resident_address}}</u>, {{city}}.
   </p>
   <p style="text-indent:42px;margin-bottom:24px;line-height:2.1;">
-    This clearance is issued upon the request of the aforementioned name granted that no law / city ordinance / resolution shall be violated upon the duration of the operations or renewal of the aforementioned clearance shall not be granted.
+    This clearance specifically covers ${businessPurpose}.
+  </p>
+  <p style="text-indent:42px;margin-bottom:24px;line-height:2.1;">
+    This clearance is issued upon the request of the aforementioned name, provided that no law, city ordinance, or resolution shall be violated during the operation. For renewal applications, no renewal shall be granted if the business is found to be in violation of applicable rules.
   </p>
   <p style="margin-top:24px;margin-bottom:32px;">
     Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
@@ -1117,12 +1152,12 @@ export default function AdminDocumentTemplatesPage() {
       resident_name: '________________________',
       resident_address: '________________________________________',
       purpose: '________________________',
-      date_issued: `______ day of ____________, ${currentYear}`,
+      date_issued: `&nbsp;&nbsp;&nbsp; day of &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;, ${currentYear}`,
       reference_number: '____________________',
       complainant_name: '________________________',
       case_number: '____________________',
       date_filed: '____________________',
-      hearing_date_time: `_____ day of ____________, ${currentYear} at _____ o'clock in the ____________`,
+      hearing_date_time: `&nbsp;&nbsp;&nbsp; day of &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;, ${currentYear} at &nbsp;&nbsp;&nbsp; o'clock in the &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`,
       business_name: '________________________',
       permit_type: 'Construction Permit',
       barangay_name: barangayText.trim() || 'BARANGAY PROGRESO',
@@ -1155,7 +1190,7 @@ export default function AdminDocumentTemplatesPage() {
     let html = htmlContent || activeTemplate?.htmlBody || '';
     if (!html.trim()) {
       html = buildDefaultHtmlLayout(
-        editorDocType || activeTemplate?.documentType || 'certificate_indigency',
+        `${editorDocType || activeTemplate?.documentType || 'certificate_indigency'} ${editorName} ${activeTemplate?.name || ''}`,
         sealAlignment,
         layoutStyle,
         sideColumnVerticalSpacing
@@ -1202,12 +1237,12 @@ export default function AdminDocumentTemplatesPage() {
       resident_name: '<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>',
       resident_address: '<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>',
       purpose: '<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>',
-      date_issued: `<u>______ day of ____________, ${currentYear}</u>`,
+      date_issued: `<u>&nbsp;&nbsp;&nbsp; day of &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;, ${currentYear}</u>`,
       reference_number: '<u>____________________</u>',
       complainant_name: '<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>',
       case_number: '<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>',
       date_filed: '<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>',
-      hearing_date_time: `<u>_____ day of ____________, ${currentYear} at _____ o'clock in the ____________</u>`,
+      hearing_date_time: `<u>&nbsp;&nbsp;&nbsp; day of &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;, ${currentYear} at &nbsp;&nbsp;&nbsp; o'clock in the &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>`,
       business_name: '<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>',
       permit_type: 'Construction Permit',
       barangay_name: barangayText.trim() ? `<strong>${barangayText.trim()}</strong>` : 'BARANGAY PROGRESO',
@@ -1226,9 +1261,15 @@ export default function AdminDocumentTemplatesPage() {
       barangay_seal: barangaySealHtml,
     };
 
+    // Template markup owns its underline/border styling. Avoid nesting another
+    // underline around values when a field is already inside one.
+    Object.keys(sampleData).forEach((key) => {
+      sampleData[key] = sampleData[key].replace(/^<u\b[^>]*>([\s\S]*)<\/u>$/i, '$1');
+    });
+
     const fields = dynamicFieldsInput.split(',').map((f) => f.trim()).filter(Boolean);
     fields.forEach((field) => {
-      const replacement = sampleData[field] ?? sampleData[field.toLowerCase()] ?? `<u>&nbsp;&nbsp;&nbsp;&nbsp;[ ${field} ]&nbsp;&nbsp;&nbsp;&nbsp;</u>`;
+      const replacement = sampleData[field] ?? sampleData[field.toLowerCase()] ?? `&nbsp;&nbsp;&nbsp;&nbsp;[ ${field} ]&nbsp;&nbsp;&nbsp;&nbsp;`;
       html = html.replaceAll(`{{${field}}}`, replacement);
     });
 
@@ -1344,7 +1385,15 @@ export default function AdminDocumentTemplatesPage() {
       setEditorSourceType(template.sourceType ?? 'custom');
       setEditorFileName(template.originalFileName ?? '');
       setBodyContent(template.body);
-      setHtmlContent(template.htmlBody || buildDefaultHtmlLayout(docType, sealAlignment, targetLayout, sideColumnVerticalSpacing));
+      setHtmlContent(
+        template.htmlBody ||
+          buildDefaultHtmlLayout(
+            `${docType} ${template.name}`,
+            sealAlignment,
+            targetLayout,
+            sideColumnVerticalSpacing
+          )
+      );
       setDynamicFieldsInput((template.dynamicFields || []).join(','));
       setIsActive(template.isActive ?? true);
       setEditorIsOverwritten(Boolean(template.isOverwritten));
@@ -1904,7 +1953,7 @@ export default function AdminDocumentTemplatesPage() {
                     Previous
                   </Button>
                   <span className="min-w-16 text-center text-xs font-semibold text-[color:var(--portal-ink-700)]">
-                    Page {templatePage} of {templatePageCount}
+                    {templatePage} of {templatePageCount}
                   </span>
                   <Button
                     type="button"

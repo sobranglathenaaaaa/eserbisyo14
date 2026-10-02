@@ -485,6 +485,13 @@ export function getCategoryForDocType(docType?: string | null, name?: string | n
     return 'lupon_tagapamayapa';
   }
   if (
+    combined.includes('no operation') ||
+    combined.includes('not in operation') ||
+    combined.includes('ceased operations')
+  ) {
+    return 'barangay_certification';
+  }
+  if (
     combined.includes('business') ||
     combined.includes('negosyo') ||
     combined.includes('trade') ||
