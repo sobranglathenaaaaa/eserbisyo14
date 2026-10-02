@@ -49,26 +49,23 @@ export function buildBarangayCertificateIntakeFormHtml(options?: BarangayCertifi
   <style>
     @page { size: A4 portrait; margin: 10mm 15mm; }
     body { font-family: "Times New Roman", Georgia, serif; margin: 0; color: #111; background: #fff; }
-    .sheet { border: 2px solid #0f172a; padding: 18px 24px; box-sizing: border-box; min-height: 900px; }
-    .header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 12px; }
+    .sheet { border: 2px solid #111; padding: 18px 24px; box-sizing: border-box; }
+    .header { text-align: center; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 12px; }
     .header p { margin: 2px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
-    .header h2 { margin: 4px 0; font-size: 16px; color: #1e3a8a; font-weight: bold; }
-    .title-banner { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 8px; text-align: center; margin-bottom: 14px; border-radius: 4px; }
-    .title-banner h3 { margin: 0; font-size: 15px; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px; }
-    .instruction { font-size: 11px; color: #475569; margin-top: 3px; }
+    .header h2 { margin: 4px 0; font-size: 16px; color: #111; font-weight: bold; }
+    .title-banner { background: #fff; border: 1px solid #222; padding: 8px; text-align: center; margin-bottom: 14px; }
+    .title-banner h3 { margin: 0; font-size: 15px; color: #111; text-transform: uppercase; letter-spacing: 0.5px; }
+    .instruction { font-size: 11px; color: #111; margin-top: 3px; }
     .field { margin: 10px 0; }
-    .label { font-weight: bold; font-size: 12px; text-transform: uppercase; color: #1e3a8a; margin-bottom: 4px; display: block; }
-    .line { border: 1.5px solid #334155; min-height: 28px; border-radius: 4px; background: #fff; }
-    .checklist-container { border: 1.5px solid #cbd5e1; border-radius: 4px; padding: 10px 14px; background: #fafafa; margin: 12px 0; }
-    .checklist-title { font-weight: bold; font-size: 12px; text-transform: uppercase; color: #1e3a8a; margin-bottom: 2px; }
-    .mark-help { font-size: 11px; color: #475569; margin-bottom: 8px; font-style: italic; }
+    .label { font-weight: bold; font-size: 12px; text-transform: uppercase; color: #111; margin-bottom: 4px; display: block; }
+    .line { border: 1px solid #222; min-height: 28px; background: #fff; }
+    .checklist-container { border: 1px solid #222; padding: 10px 14px; background: #fff; margin: 12px 0; }
+    .checklist-title { font-weight: bold; font-size: 12px; text-transform: uppercase; color: #111; margin-bottom: 2px; }
+    .mark-help { font-size: 11px; color: #111; margin-bottom: 8px; font-style: italic; }
     ul.checklist { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; }
     li { font-size: 12px; display: flex; align-items: center; gap: 8px; }
-    .checkbox { width: 14px; height: 14px; border: 1.5px solid #0f172a; display: inline-block; flex: 0 0 14px; border-radius: 2px; background: #fff; }
+    .checkbox { width: 14px; height: 14px; border: 1px solid #222; display: inline-block; flex: 0 0 14px; background: #fff; }
     .reason-text { line-height: 1.2; font-size: 12px; }
-    .footer-signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 28px; padding-top: 14px; border-top: 1px dashed #94a3b8; }
-    .sig-block { text-align: center; font-size: 11px; }
-    .sig-line { border-bottom: 1px solid #0f172a; margin-top: 36px; margin-bottom: 4px; }
   </style>
 </head>
 <body>
@@ -77,7 +74,7 @@ export function buildBarangayCertificateIntakeFormHtml(options?: BarangayCertifi
       <p>Republic of the Philippines</p>
       <p style="font-weight: bold;">City of San Juan</p>
       <h2>${escapeHtml(barangayName)}</h2>
-      <p style="font-weight: bold; color: #475569;">${escapeHtml(officeTitle)}</p>
+      <p style="font-weight: bold;">${escapeHtml(officeTitle)}</p>
     </div>
 
     <div class="title-banner">
@@ -96,17 +93,6 @@ export function buildBarangayCertificateIntakeFormHtml(options?: BarangayCertifi
 
     <div class="field"><span class="label">Other: Please Specify (Kung wala sa listahan)</span><div class="line"></div></div>
     <div class="field"><span class="label">Given this / Date Issued (YYYY-MM-DD) *</span><div class="line"></div></div>
-
-    <div class="footer-signatures">
-      <div class="sig-block">
-        <div class="sig-line"></div>
-        <div><strong>Pangalan at Lagda ng Humihiling (Resident Signature)</strong></div>
-      </div>
-      <div class="sig-block">
-        <div class="sig-line"></div>
-        <div><strong>Barangay Staff / Receiving Officer</strong></div>
-      </div>
-    </div>
   </div>
 </body>
 </html>`;

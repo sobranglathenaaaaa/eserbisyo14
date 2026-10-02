@@ -164,11 +164,11 @@ export function buildBusinessPermitIntakeFormHtml() {
     .sheet { border: 1px solid #222; padding: 14px 16px; min-height: 540px; box-sizing: border-box; }
     .header { text-align: center; line-height: 1.2; margin-bottom: 10px; }
     .title { text-align: center; font-size: 22px; font-weight: 700; margin: 8px 0 4px; }
-    .subtitle { text-align: center; font-size: 12px; margin-bottom: 10px; color: #2d3b1f; }
+    .subtitle { text-align: center; font-size: 12px; margin-bottom: 10px; color: #111; }
     .field { margin: 10px 0; }
     .label { font-weight: 700; margin-bottom: 4px; display: block; }
-    .line { border: 1px solid #222; min-height: 26px; border-radius: 4px; padding: 5px 8px; }
-    .note { margin-top: 12px; font-size: 11px; color: #2f3a26; }
+    .line { border: 1px solid #222; min-height: 26px; padding: 5px 8px; }
+    .note { margin-top: 12px; font-size: 11px; color: #111; }
   </style>
 </head>
 <body>

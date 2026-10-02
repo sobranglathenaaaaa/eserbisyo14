@@ -176,15 +176,15 @@ export function buildConstructionPermitIntakeFormHtml() {
     .sheet { border: 1px solid #222; padding: 12px 14px; min-height: 560px; box-sizing: border-box; }
     .header { text-align: center; line-height: 1.2; margin-bottom: 8px; }
     .title { text-align: center; font-size: 21px; font-weight: 700; margin: 6px 0 3px; }
-    .subtitle { text-align: center; font-size: 12px; margin-bottom: 8px; color: #2d3b1f; }
+    .subtitle { text-align: center; font-size: 12px; margin-bottom: 8px; color: #111; }
     .field { margin: 8px 0; }
     .label { font-weight: 700; margin-bottom: 4px; display: block; }
-    .line { border: 1px solid #222; min-height: 24px; border-radius: 4px; padding: 5px 8px; }
+    .line { border: 1px solid #222; min-height: 24px; padding: 5px 8px; }
     ul { margin: 4px 0 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 3px 8px; }
     li { font-size: 11px; display: flex; align-items: center; gap: 6px; }
     .checkbox { width: 12px; height: 12px; border: 1px solid #222; display: inline-block; flex: 0 0 12px; }
     .permit-text { line-height: 1.1; }
-    .mark-help, .note { font-size: 11px; color: #2f3a26; }
+    .mark-help, .note { font-size: 11px; color: #111; }
     .note { margin-top: 8px; }
   </style>
 </head>

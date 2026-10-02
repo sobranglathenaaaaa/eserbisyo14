@@ -115,7 +115,7 @@ export function buildIndigencyPrintableHtml(
     body { font-family: "Times New Roman", serif; margin: 0; color: #111; }
     .sheet { border: 1px solid #222; padding: 20px 24px; min-height: 1020px; box-sizing: border-box; position: relative; }
     .header { text-align: center; line-height: 1.3; margin-bottom: 14px; }
-    .header .country { font-weight: bold; color: #8ea065; letter-spacing: 0.04em; }
+    .header .country { font-weight: bold; color: #111; letter-spacing: 0.04em; }
     .title { text-align: center; font-size: 40px; letter-spacing: 0.05em; font-weight: bold; margin: 20px 0 26px; }
     .body { font-size: 29px; line-height: 1.75; }
     .line { border-bottom: 1px solid #222; min-width: 180px; display: inline-block; padding: 0 6px; }
@@ -187,8 +187,8 @@ export function buildIndigencyIntakeFormHtml() {
     .field-grid { display: grid; gap: 8px; margin-top: 8px; }
     .field { display: grid; gap: 6px; }
     .field label { font-weight: bold; }
-    .line { border: 1px solid #222; min-height: 24px; border-radius: 4px; padding: 5px 8px; }
-    .note { margin-top: 8px; font-size: 11px; color: #2f3a26; }
+    .line { border: 1px solid #222; min-height: 24px; padding: 5px 8px; }
+    .note { margin-top: 8px; font-size: 11px; color: #111; }
   </style>
 </head>
 <body>

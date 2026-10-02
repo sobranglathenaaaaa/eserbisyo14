@@ -295,13 +295,13 @@ export function buildLuponSummonsIntakeFormHtml() {
     .sheet { border: 1px solid #222; padding: 12px 14px; min-height: 560px; box-sizing: border-box; }
     .header { text-align: center; line-height: 1.2; margin-bottom: 8px; }
     .title { text-align: center; font-size: 21px; font-weight: 700; margin: 6px 0 3px; letter-spacing: 0.04em; }
-    .subtitle { text-align: center; font-size: 12px; margin-bottom: 8px; color: #2d3b1f; }
+    .subtitle { text-align: center; font-size: 12px; margin-bottom: 8px; color: #111; }
     .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 8px; }
     .field { display: grid; gap: 3px; }
     .field-full { grid-column: 1 / -1; }
     .label { font-size: 11px; font-weight: 700; }
-    .line { border: 1px solid #222; min-height: 21px; border-radius: 4px; padding: 4px 7px; }
-    .note { margin-top: 8px; font-size: 10px; color: #2f3a26; }
+    .line { border: 1px solid #222; min-height: 21px; padding: 4px 7px; }
+    .note { margin-top: 8px; font-size: 10px; color: #111; }
   </style>
 </head>
 <body>
