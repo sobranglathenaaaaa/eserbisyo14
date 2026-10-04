@@ -1,0 +1,69 @@
+[33mbfe3406[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m feat: add registration reviews page and review modal component
+[33m44cf71f[m Merge branch 'main' of https://github.com/sobranglathenaaaaa/eserbisyo14
+[33m24bb9d5[m feat: enhance print functionality for intake forms with dynamic layout and scaling
+[33me901daa[m feat: add ocr-intake-forms utility for generating document intake form HTML
+[33me967726[m feat: add barangay certificate intake form document generator
+[33m4ac4e45[m style: update document styles for improved consistency and readability across multiple forms
+[33m003272c[m Refactor code structure for improved readability and maintainability
+[33mc64fdfe[m Refactor code structure for improved readability and maintainability
+[33m7aa10bb[m feat: add OCR document issuance workflow with template renderers, APIs, and frontend pages
+[33m11a1183[m feat: add offline capabilities with PGlite, service workers, and synchronization support
+[33m00c427a[m Merge branch 'main' of https://github.com/sobranglathenaaaaa/eserbisyo14
+[33m11e5639[m feat: remove quick login feature and related functionality from login form
+[33mb2d811c[m Merge branch 'main' of https://github.com/sobranglathenaaaaa/eserbisyo14
+[33m504cc79[m feat: improve UI of document request preview modal with updated button styles and accessibility enhancements
+[33m4f86953[m feat: add census management pages for staff and admin, update navigation and database constraints
+[33m6a3cc7c[m feat: add document template management admin page and related data models
+[33me4e0ceb[m Merge branch 'main' of https://github.com/sobranglathenaaaaa/eserbisyo14
+[33m40f4dbd[m feat: implement public announcements component and related API for fetching announcements
+[33m890249d[m feat: implement document request and template management for residents and admins
+[33m9bf8937[m feat: enhance navigation by adding Request History links for staff and admin
+[33m8cea35a[m Merge branch 'main' of https://github.com/sobranglathenaaaaa/eserbisyo14
+[33m6d893c5[m feat: add admin document request management, OCR template renderers, and request history components
+[33m251eb21[m feat: update button styles and alignment in IncidentsConcernsPage for improved UI
+[33mdfd7dfd[m feat: add Request History page with filtering and pagination functionality
+[33m5f7fc68[m meme
+[33m6e1f7a8[m fhf
+[33m6cfa5f0[m feat: enhance staff process requests and document request preview with detailed rendering and dynamic incident report handling
+[33m6ab9244[m feat: add staff process-requests and admin document-requests pages
+[33m310b71d[m feat: add document request preview modal and management pages for admin and staff
+[33m199b705[m feat: add barangay streets and incident relationships with API routes, database migrations, and UI pages
+[33m85dbb51[m feat: add incident reporting workflow with database migrations, API endpoints, and UI components
+[33mbe8b324[m feat: implement blotter and incident reporting module with frontend views, API endpoints, and data store
+[33m0356954[m feat: add incident management and blotter reporting functionality across portals and APIs
+[33md0b0053[m feat: add report editor, document templates, and frontend data store architecture
+[33m5931f38[m Remove peer dependencies from package-lock.json and add @emnapi/core and @emnapi/runtime modules
+[33m53671de[m tesseract as a fall back ocr
+[33m865fd8f[m Merge branch 'main' of https://github.com/sobranglathenaaaaa/eserbisyo14
+[33m4665816[m local postgre
+[33mbf151ff[m fhs
+[33macf5c21[m hhhhhhh
+[33m9d0f0e8[m grahhh
+[33mce3b411[m hm
+[33me4ccadd[m ayay
+[33m6b5ec5b[m hhh
+[33me97cf50[m Merge branch 'main' of https://github.com/sobranglathenaaaaa/eserbisyo14
+[33m4fdfbc5[m hhh
+[33m169d925[m calendar ui for reservations
+[33m2105041[m password eye toggle ui
+[33m005bf1b[m OTP verification
+[33mf631e97[m rebuilding configurations
+[33m5a52d51[m overwrite
+[33mabdbdfe[m removed the links in all the email sending/notification then fixed the modal
+[33m756eb21[m Enhance reservation notifications and dashboard filtering logic
+[33mfb28c71[m Merge branch 'main' of https://github.com/sobranglathenaaaaa/eserbisyo14
+[33mf323264[m incident report stuff and reservations(staff's end)
+[33m3b5711a[m hhh
+[33m9d68056[m Merge branch 'main' of https://github.com/sobranglathenaaaaa/eserbisyo14
+[33m0d93c0d[m ocr loading, accuracy threshold, and issue another
+[33m0881997[m hindi ko na rin alam, wala na copilot
+[33mb8424d1[m updated package.json for versions
+[33m1a5469c[m rebuilt + db.js
+[33mbf43588[m for hostinger deployment build
+[33m959ee81[m feat: implement OTP-based password reset with SendGrid and add Supabase postgres best practices documentation
+[33m1f72033[m feat: add multi-provider email module with support for Brevo, Nodemailer, and Resend (for futurre purposes)
+[33mc5d5c2b[m feat: add docx document generation, frontend state management, and new feature pages
+[33m6ec44cc[m fix: update react-dom version to exact match
+[33mefe9e04[m pljson
+[33m196aab6[m committ
+[33m51f31c0[m Initial commit
