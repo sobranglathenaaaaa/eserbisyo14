@@ -103,7 +103,7 @@ export default async function HomePage() {
             />
             <span className="landing-brand__text">
               <strong>eSerbisyo</strong>
-              <span className="landing-brand__kicker">Digital Barangay Services</span>
+              <span className="landing-brand__kicker">Service and Record Management System</span>
             </span>
           </Link>
 
@@ -287,7 +287,7 @@ export default async function HomePage() {
 
       <footer className="landing-footer">
         <div className="landing-container landing-footer__inner">
-          <div className="landing-footer__brand"><p className="landing-footer__eyebrow">eSerbisyo</p><p className="landing-footer__title">Digital Barangay Services</p></div>
+          <div className="landing-footer__brand"><p className="landing-footer__eyebrow">eSerbisyo</p><p className="landing-footer__title">Service and Record Management System</p></div>
           <div className="landing-footer__links"><a href="#services">Services</a><a href="#how-it-works">How It Works</a><Link href="/terms-and-conditions">Terms of Service</Link><Link href="/data-privacy">Privacy Policy</Link><a href="#contact">Contact</a><a href="#top">Back to top</a></div>
         </div>
       </footer>
