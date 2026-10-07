@@ -564,6 +564,8 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
+  vertical-align: middle;
   border: 1px solid transparent;
   border-radius: 999px;
   padding: 0.72rem 1.05rem;
@@ -1396,6 +1398,10 @@ textarea {
 }
 
 .landing-footer__links a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 0.38rem 0.65rem;
@@ -1899,6 +1905,8 @@ textarea {
   }
 
   .landing-footer__links a {
+    justify-content: center;
+    text-align: center;
     padding: 0.34rem 0.55rem;
   }
 
