@@ -1,11 +1,13 @@
 import { getPublicAnnouncements } from '@/lib/announcements/public';
 import { formatAnnouncementSchedule } from '@/lib/announcements/schedule';
 
-export default async function PublicAnnouncements({ compact = false }: { compact?: boolean }) {
+export default async function PublicAnnouncements({ compact = false, limit = 3 }: { compact?: boolean; limit?: number }) {
   const announcements = await getPublicAnnouncements();
+  const visibleAnnouncements = announcements.slice(0, limit);
 
   return (
     <section
+      id="announcements"
       className={`public-announcements${compact ? ' public-announcements--compact' : ''}`}
       aria-labelledby={compact ? 'public-announcements-compact-title' : 'public-announcements-title'}
     >
@@ -16,14 +18,14 @@ export default async function PublicAnnouncements({ compact = false }: { compact
             Current announcements
           </h2>
         </div>
-        <span className="public-announcements__count" aria-label={`${announcements.length} current announcements`}>
-          {announcements.length}
+        <span className="public-announcements__count" aria-label={`${visibleAnnouncements.length} current announcements`}>
+          {visibleAnnouncements.length}
         </span>
       </div>
 
-      {announcements.length ? (
+      {visibleAnnouncements.length ? (
         <div className="public-announcements__list">
-          {announcements.map((announcement) => (
+          {visibleAnnouncements.map((announcement) => (
             <article key={announcement.id} className="public-announcements__item">
               <div>
                 <h3>{announcement.title}</h3>
