@@ -2089,14 +2089,22 @@ textarea {
   display: block;
 }
 
+.landing-hero--redesigned .landing-hero__inner {
+  position: relative;
+}
+
 .landing-hero--redesigned .landing-hero__content {
-  max-width: 720px;
+  max-width: 920px;
   padding-block: 0;
 }
 
 .landing-hero--redesigned h1 {
-  max-width: 12ch;
+  max-width: 16ch;
   font-size: clamp(3rem, 6.5vw, 5.5rem);
+}
+
+.landing-hero--redesigned .landing-hero__description {
+  max-width: 70ch;
 }
 
 .landing-section--services .landing-section-header {
