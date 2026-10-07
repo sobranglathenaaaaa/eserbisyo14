@@ -1,23 +1,8 @@
 import type { Metadata } from 'next';
-import { Fraunces, Work_Sans } from 'next/font/google';
 import ServiceWorkerRegister from '../components/service-worker-register';
 import NetworkStatusIndicator from '../components/network-status-indicator';
 import '../styles/globals.css';
 import '../styles/landing.css';
-
-const headingFont = Fraunces({
-  subsets: ['latin'],
-  variable: '--font-heading',
-  display: 'swap',
-  weight: ['400', '600', '700'],
-});
-
-const bodyFont = Work_Sans({
-  subsets: ['latin'],
-  variable: '--font-body',
-  display: 'swap',
-  weight: ['400', '500', '600'],
-});
 
 export const metadata: Metadata = {
   title: {
@@ -46,7 +31,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${headingFont.variable} ${bodyFont.variable}`} suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      </head>
+      <body suppressHydrationWarning>
         <ServiceWorkerRegister />
         <NetworkStatusIndicator />
         {children}
