@@ -298,19 +298,19 @@ export default function StaffRegistrationReviewsPage() {
         {/* red dot moved to Pending filter button below */}
 
         <div className="mt-2 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div className="flex items-center gap-4">
+          <div className="flex-1 w-full max-w-full md:max-w-[420px]">
             <label className="grid gap-1 text-sm">
               <span className="sr-only">{locale === 'fil' ? 'Hanapin ang user' : 'Search users'}</span>
               <Input
-                className="w-full max-w-[560px]"
+                className="w-full"
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
                 placeholder={locale === 'fil' ? 'Pangalan, email, o ID' : 'Name, email, or ID'}
               />
             </label>
           </div>
-          <div className="ml-4 flex items-center gap-2">
-            <div className="inline-flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 className={`rounded px-3 py-1 text-sm ${statusFilter === 'all' ? 'bg-[color:var(--portal-border-soft)]' : 'hover:bg-[color:var(--portal-border-soft)]'}`}
@@ -391,61 +391,102 @@ export default function StaffRegistrationReviewsPage() {
               const paginated = filtered.slice(start, start + PAGE_SIZE);
 
               return (
-                <div className="mt-2 overflow-x-auto">
-                  <table className="w-full text-sm table-fixed">
-                    <thead>
-                      <tr className="border-b border-[color:var(--portal-border-soft)] text-[color:var(--portal-ink-700)]">
-                        <th className="py-2 pr-2 align-middle text-center" style={{ width: '12%' }}>{locale === 'fil' ? 'ID' : 'ID'}</th>
-                        <th className="py-2 pr-2 align-middle text-center" style={{ width: '18%' }}>{locale === 'fil' ? 'Pangalan' : 'Name'}</th>
-                        <th className="py-2 pr-2 align-middle text-center" style={{ width: '22%' }}>{locale === 'fil' ? 'Email' : 'Email'}</th>
-                        <th className="py-2 pr-2 align-middle text-center" style={{ width: '14%' }}>{locale === 'fil' ? 'Huling update' : 'Last updated'}</th>
-                        <th className="py-2 pr-2 align-middle text-center" style={{ width: '8%' }}>{locale === 'fil' ? 'Katayuan' : 'Status'}</th>
-                        <th className="py-2 pr-2 align-middle text-center" style={{ width: '10%' }}>{locale === 'fil' ? 'Aksyon' : 'Actions'}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paginated.map((item) => (
-                        <tr key={item.id} className="border-b border-[color:var(--portal-border-soft)]">
-                          <td className="py-2 pr-2 overflow-hidden text-ellipsis whitespace-nowrap max-w-[1px] font-mono text-[10px] text-[color:var(--portal-ink-500)] select-all">{item.id}</td>
-                          <td className="py-2 pr-2 overflow-hidden text-ellipsis whitespace-nowrap max-w-[1px] text-center">{item.full_name}</td>
-                          <td className="py-2 pr-2 overflow-hidden text-ellipsis whitespace-nowrap max-w-[1px] text-center">{item.email}</td>
-                          <td className="py-2 pr-2 text-center align-middle">
-                            <div>{formatDateTime(item.updated_at || item.created_at, locale)}</div>
-                            <p className="text-xs text-[color:var(--portal-ink-500)]">{relativeTime(item.updated_at || item.created_at, locale)}</p>
-                          </td>
-                          <td className="py-2 pr-2 text-center align-middle">
-                            {(() => {
-                              const status = item.approval_status;
-                              const tone = status === 'staff_forwarded_to_admin' ? 'success' : status === 'staff_rejected' ? 'danger' : 'warning';
-                              const label = status === 'staff_forwarded_to_admin' ? (locale === 'fil' ? 'Aprubado' : 'Approved') : status === 'staff_rejected' ? (locale === 'fil' ? 'Tinanggihan' : 'Declined') : (locale === 'fil' ? 'Pending' : 'Pending');
-                              return <StatusBadge tone={tone as any}>{label}</StatusBadge>;
-                            })()}
-                          </td>
-                          <td className="py-2 pr-2">
-                            <div className="flex justify-center">
-                              <Button
-                                variant="ghost"
-                                type="button"
-                                onClick={() => openReviewModal(item.id)}
-                              >
-                                {locale === 'fil' ? 'Review' : 'Review'}
-                              </Button>
+                <div>
+                  {/* Mobile View: Cards */}
+                  <div className="block md:hidden space-y-3">
+                    {paginated.map((item) => {
+                      const status = item.approval_status;
+                      const tone = status === 'staff_forwarded_to_admin' ? 'success' : status === 'staff_rejected' ? 'danger' : 'warning';
+                      const label = status === 'staff_forwarded_to_admin' ? (locale === 'fil' ? 'Aprubado' : 'Approved') : status === 'staff_rejected' ? (locale === 'fil' ? 'Tinanggihan' : 'Declined') : (locale === 'fil' ? 'Pending' : 'Pending');
+                      return (
+                        <div key={`mob-reg-${item.id}`} className="rounded-xl border border-[color:var(--portal-border-soft)] bg-white p-3.5 shadow-xs">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-sm font-bold text-[color:var(--portal-ink-900)] leading-tight">{item.full_name}</h4>
+                              <p className="mt-0.5 text-xs text-[color:var(--portal-ink-600)] truncate">{item.email}</p>
                             </div>
-                          </td>
+                            <StatusBadge tone={tone as any}>{label}</StatusBadge>
+                          </div>
+
+                          <div className="mt-2.5 flex items-center justify-between border-t border-[color:var(--portal-border-soft)] pt-2.5 text-xs text-[color:var(--portal-ink-500)]">
+                            <div>
+                              <span>{formatDateTime(item.updated_at || item.created_at, locale)}</span>
+                              <span className="ml-1 text-[11px] text-[color:var(--portal-ink-400)]">({relativeTime(item.updated_at || item.created_at, locale)})</span>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              type="button"
+                              className="font-semibold text-emerald-800 hover:text-emerald-950 px-3"
+                              onClick={() => openReviewModal(item.id)}
+                            >
+                              {locale === 'fil' ? 'Review' : 'Review'}
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Desktop View: Table */}
+                  <div className="hidden md:block mt-2 overflow-x-auto rounded-xl border border-[color:var(--portal-border-soft)]">
+                    <table className="w-full text-sm table-fixed min-w-[760px]">
+                      <thead>
+                        <tr className="border-b border-[color:var(--portal-border-soft)] bg-emerald-50/40 text-[color:var(--portal-ink-700)]">
+                          <th className="py-2.5 px-3 align-middle text-left font-bold" style={{ width: '15%' }}>{locale === 'fil' ? 'ID' : 'ID'}</th>
+                          <th className="py-2.5 px-3 align-middle text-left font-bold" style={{ width: '22%' }}>{locale === 'fil' ? 'Pangalan' : 'Name'}</th>
+                          <th className="py-2.5 px-3 align-middle text-left font-bold" style={{ width: '25%' }}>{locale === 'fil' ? 'Email' : 'Email'}</th>
+                          <th className="py-2.5 px-3 align-middle text-center font-bold" style={{ width: '18%' }}>{locale === 'fil' ? 'Huling update' : 'Last updated'}</th>
+                          <th className="py-2.5 px-2 align-middle text-center font-bold" style={{ width: '10%' }}>{locale === 'fil' ? 'Katayuan' : 'Status'}</th>
+                          <th className="py-2.5 px-3 align-middle text-center font-bold" style={{ width: '10%' }}>{locale === 'fil' ? 'Aksyon' : 'Actions'}</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {paginated.map((item) => (
+                          <tr key={item.id} className="border-b border-[color:var(--portal-border-soft)] hover:bg-emerald-50/20">
+                            <td className="py-2.5 px-3 font-mono text-[11px] text-[color:var(--portal-ink-500)] select-all truncate">{item.id}</td>
+                            <td className="py-2.5 px-3 font-semibold text-[color:var(--portal-ink-900)] text-left truncate">{item.full_name}</td>
+                            <td className="py-2.5 px-3 text-[color:var(--portal-ink-700)] text-left truncate">{item.email}</td>
+                            <td className="py-2.5 px-3 text-center align-middle text-xs">
+                              <div>{formatDateTime(item.updated_at || item.created_at, locale)}</div>
+                              <p className="text-[11px] text-[color:var(--portal-ink-500)]">{relativeTime(item.updated_at || item.created_at, locale)}</p>
+                            </td>
+                            <td className="py-2.5 px-2 text-center align-middle">
+                              {(() => {
+                                const status = item.approval_status;
+                                const tone = status === 'staff_forwarded_to_admin' ? 'success' : status === 'staff_rejected' ? 'danger' : 'warning';
+                                const label = status === 'staff_forwarded_to_admin' ? (locale === 'fil' ? 'Aprubado' : 'Approved') : status === 'staff_rejected' ? (locale === 'fil' ? 'Tinanggihan' : 'Declined') : (locale === 'fil' ? 'Pending' : 'Pending');
+                                return <StatusBadge tone={tone as any}>{label}</StatusBadge>;
+                              })()}
+                            </td>
+                            <td className="py-2.5 px-3 text-center align-middle">
+                              <div className="flex justify-center">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  type="button"
+                                  onClick={() => openReviewModal(item.id)}
+                                >
+                                  {locale === 'fil' ? 'Review' : 'Review'}
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
                   {/* pagination controls */}
                   {filtered.length > 0 ? (
-                    <div className="mt-3 flex items-center justify-between">
-                      <div className="text-sm text-[color:var(--portal-ink-500)]">
+                    <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-[color:var(--portal-border-soft)] pt-3">
+                      <div className="text-xs sm:text-sm text-[color:var(--portal-ink-500)] text-center sm:text-left">
                         {filtered.length === 0 ? '' : `Showing ${Math.min(start + 1, filtered.length)}–${Math.min(start + PAGE_SIZE, filtered.length)} of ${filtered.length}`}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button type="button" variant="ghost" disabled={current <= 1} onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}>{locale === 'fil' ? 'Nakaraan' : 'Previous'}</Button>
-                        <div className="text-sm text-[color:var(--portal-ink-600)]">{`${current} / ${totalPages}`}</div>
-                        <Button type="button" variant="ghost" disabled={current >= totalPages} onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}>{locale === 'fil' ? 'Susunod' : 'Next'}</Button>
+                      <div className="flex items-center justify-center gap-2">
+                        <Button type="button" variant="ghost" size="sm" disabled={current <= 1} onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}>{locale === 'fil' ? 'Nakaraan' : 'Previous'}</Button>
+                        <div className="text-xs sm:text-sm font-semibold px-2 text-[color:var(--portal-ink-600)]">{`${current} / ${totalPages}`}</div>
+                        <Button type="button" variant="ghost" size="sm" disabled={current >= totalPages} onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}>{locale === 'fil' ? 'Susunod' : 'Next'}</Button>
                       </div>
                     </div>
                   ) : null}

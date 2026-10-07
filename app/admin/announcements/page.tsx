@@ -299,13 +299,13 @@ export default function AdminAnnouncementsPage() {
           <FieldLabel label={locale === 'fil' ? 'Nilalaman' : 'Body'} className="md:col-span-5">
             <Textarea value={body} onChange={(event) => setBody(event.target.value)} required className="min-h-[100px]" />
           </FieldLabel>
-          <div className="flex items-center justify-between md:col-span-5">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:col-span-5 pt-2">
             <div className="flex items-center">
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="rounded-full px-3 py-1 text-sm text-[color:var(--portal-ink-700)] border-[color:var(--portal-border-soft)]"
+                className="rounded-full px-3 py-1.5 text-xs sm:text-sm text-[color:var(--portal-ink-700)] border border-[color:var(--portal-border-soft)] w-full sm:w-auto justify-center"
                 onClick={() => {
                   setShowPublishedPanel((p) => !p);
                   setCurrentPage(1);
@@ -314,11 +314,11 @@ export default function AdminAnnouncementsPage() {
                 {showPublishedPanel ? (locale === 'fil' ? 'Itago ang Mga Na-publish na Anunsyo' : 'Hide Published Announcements') : (locale === 'fil' ? 'Tingnan ang Mga Na-publish na Anunsyo' : 'View Published Announcements')}
               </Button>
             </div>
-            <div className="flex items-center">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="submit"
                 disabled={isPublishing}
-                className="w-full md:w-auto border border-[color:#14543a] bg-[linear-gradient(180deg,#1d7a53_0%,#155f40_100%)] px-6 text-white shadow-[0_10px_24px_rgba(21,95,64,0.32)] hover:bg-[linear-gradient(180deg,#176745_0%,#114f36_100%)] disabled:opacity-75 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto border border-[color:#14543a] bg-[linear-gradient(180deg,#1d7a53_0%,#155f40_100%)] px-6 text-white shadow-[0_10px_24px_rgba(21,95,64,0.32)] hover:bg-[linear-gradient(180deg,#176745_0%,#114f36_100%)] disabled:opacity-75 disabled:cursor-not-allowed"
               >
                 {isPublishing ? (locale === 'fil' ? 'Nag-pub-publish...' : 'Publishing...') : (locale === 'fil' ? 'I-publish' : 'Publish')}
               </Button>
@@ -326,7 +326,7 @@ export default function AdminAnnouncementsPage() {
                 <Button
                   variant="residentOutlineGray"
                   type="button"
-                  className="ml-2"
+                  className="w-full sm:w-auto"
                   onClick={() => {
                     setEditingId(null);
                     setTitle('');

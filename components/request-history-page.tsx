@@ -222,28 +222,66 @@ function RequestHistoryContent({ role }: { role: 'admin' | 'staff' }) {
           className="mb-1 sm:max-w-sm"
         />
 
-        <div className="overflow-x-auto">
-          <Table className="table-fixed">
+        {/* Mobile View: Cards */}
+        <div className="grid gap-3 sm:hidden mt-3">
+          {pageItems.length === 0 ? (
+            <div className="py-8 text-center text-sm text-[color:var(--portal-ink-500)]">
+              {locale === 'fil' ? 'Walang history sa kategorya o status na ito.' : 'No history matches this category or status.'}
+            </div>
+          ) : (
+            pageItems.map((item) => (
+              <div key={`m-hist-${item.id}`} className="rounded-xl border border-[color:var(--portal-border-soft)] bg-white p-3.5 shadow-xs">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <span className="inline-block rounded-md bg-emerald-100/70 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 uppercase tracking-wider mb-1">
+                      {categoryLabel(item.category, locale)}
+                    </span>
+                    <h4 className="text-sm font-bold text-[color:var(--portal-ink-900)] leading-snug">{item.record}</h4>
+                    {item.detail ? <p className="mt-0.5 text-xs text-[color:var(--portal-ink-600)]">{item.detail}</p> : null}
+                    <p className="mt-1 text-xs font-medium text-[color:var(--portal-ink-700)]">
+                      <span className="text-[color:var(--portal-ink-500)]">{locale === 'fil' ? 'Residente: ' : 'Resident: '}</span>
+                      {item.residentName}
+                    </p>
+                  </div>
+                  <StatusBadge tone={statusToneFromState(item.status)}>{getStatusLabel(item.status, locale, item.category)}</StatusBadge>
+                </div>
+
+                <div className="mt-2.5 flex items-center justify-between border-t border-[color:var(--portal-border-soft)] pt-2 text-xs text-[color:var(--portal-ink-500)]">
+                  <span>{locale === 'fil' ? 'Na-update:' : 'Updated:'}</span>
+                  <span className="font-medium text-[color:var(--portal-ink-700)]">{formatDateTime(item.updatedAt, locale)}</span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop View: Table */}
+        <div className="mt-3 hidden sm:block overflow-x-auto rounded-xl border border-[color:var(--portal-border-soft)]">
+          <Table className="min-w-[760px] table-fixed">
             <TableHeader>
-              <TableRow className="h-11">
-                <TableHead className="w-[20%] text-center">{locale === 'fil' ? 'Pangalan ng residente' : 'Resident name'}</TableHead>
-                <TableHead className="w-[27%] text-center">{locale === 'fil' ? 'Record' : 'Record'}</TableHead>
-                <TableHead className="w-[20%] text-center">{locale === 'fil' ? 'Kategorya' : 'Category'}</TableHead>
-                <TableHead className="w-[18%] text-center">{locale === 'fil' ? 'Status' : 'Status'}</TableHead>
-                <TableHead className="w-[15%] text-center">{locale === 'fil' ? 'Na-update' : 'Updated'}</TableHead>
+              <TableRow className="h-11 bg-emerald-50/40">
+                <TableHead className="w-[20%] text-center font-bold">{locale === 'fil' ? 'Pangalan ng residente' : 'Resident name'}</TableHead>
+                <TableHead className="w-[27%] text-center font-bold">{locale === 'fil' ? 'Record' : 'Record'}</TableHead>
+                <TableHead className="w-[18%] text-center font-bold">{locale === 'fil' ? 'Kategorya' : 'Category'}</TableHead>
+                <TableHead className="w-[17%] text-center font-bold">{locale === 'fil' ? 'Status' : 'Status'}</TableHead>
+                <TableHead className="w-[18%] text-center font-bold">{locale === 'fil' ? 'Na-update' : 'Updated'}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {pageItems.map((item) => (
-                <TableRow key={item.id} className="h-14">
-                  <TableCell className="truncate text-center font-medium" title={item.residentName}>{item.residentName}</TableCell>
+                <TableRow key={item.id} className="h-14 hover:bg-emerald-50/20">
+                  <TableCell className="truncate text-center font-semibold text-[color:var(--portal-ink-900)]" title={item.residentName}>{item.residentName}</TableCell>
                   <TableCell className="text-center">
-                    <p className="truncate font-medium" title={item.record}>{item.record}</p>
+                    <p className="truncate font-medium text-[color:var(--portal-ink-800)]" title={item.record}>{item.record}</p>
                     {item.detail ? <p className="truncate text-xs font-normal text-[color:var(--portal-ink-500)]" title={item.detail}>{item.detail}</p> : null}
                   </TableCell>
-                  <TableCell className="truncate text-center" title={categoryLabel(item.category, locale)}>{categoryLabel(item.category, locale)}</TableCell>
+                  <TableCell className="truncate text-center" title={categoryLabel(item.category, locale)}>
+                    <span className="inline-block rounded-md bg-emerald-100/70 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                      {categoryLabel(item.category, locale)}
+                    </span>
+                  </TableCell>
                   <TableCell className="text-center"><StatusBadge tone={statusToneFromState(item.status)}>{getStatusLabel(item.status, locale, item.category)}</StatusBadge></TableCell>
-                  <TableCell className="whitespace-nowrap text-center">{formatDateTime(item.updatedAt, locale)}</TableCell>
+                  <TableCell className="whitespace-nowrap text-center text-xs text-[color:var(--portal-ink-600)]">{formatDateTime(item.updatedAt, locale)}</TableCell>
                 </TableRow>
               ))}
               {visibleItems.length === 0 ? (
@@ -253,26 +291,21 @@ function RequestHistoryContent({ role }: { role: 'admin' | 'staff' }) {
                   </TableCell>
                 </TableRow>
               ) : null}
-              {Array.from({ length: Math.max(0, pageSize - pageItems.length - (visibleItems.length === 0 ? 1 : 0)) }).map((_, index) => (
-                <TableRow key={`placeholder-${index}`} className="h-14" aria-hidden="true">
-                  <TableCell colSpan={5} className="h-14 p-0" />
-                </TableRow>
-              ))}
             </TableBody>
           </Table>
         </div>
 
         {visibleItems.length > 0 ? (
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-[color:var(--portal-ink-500)]">
+          <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-[color:var(--portal-border-soft)] pt-3">
+            <p className="text-xs sm:text-sm text-[color:var(--portal-ink-500)] text-center sm:text-left">
               {`Showing ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, visibleItems.length)} of ${visibleItems.length}`}
             </p>
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="ghost" size="sm" disabled={page <= 1} onClick={() => setCurrentPage((value) => Math.max(1, value - 1))}>
+            <div className="flex items-center justify-center gap-2">
+              <Button type="button" variant="ghost" size="sm" disabled={page <= 1} onClick={() => setCurrentPage((value) => Math.max(1, value - 1))} className="text-xs sm:text-sm">
                 {locale === 'fil' ? 'Nakaraan' : 'Previous'}
               </Button>
-              <span className="text-sm text-[color:var(--portal-ink-600)]">{page} / {totalPages}</span>
-              <Button type="button" variant="ghost" size="sm" disabled={page >= totalPages} onClick={() => setCurrentPage((value) => Math.min(totalPages, value + 1))}>
+              <span className="text-xs sm:text-sm font-semibold px-2 text-[color:var(--portal-ink-600)]">{page} / {totalPages}</span>
+              <Button type="button" variant="ghost" size="sm" disabled={page >= totalPages} onClick={() => setCurrentPage((value) => Math.min(totalPages, value + 1))} className="text-xs sm:text-sm">
                 {locale === 'fil' ? 'Susunod' : 'Next'}
               </Button>
             </div>

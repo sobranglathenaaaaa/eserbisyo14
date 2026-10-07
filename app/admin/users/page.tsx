@@ -378,45 +378,45 @@ export default function AdminUsersPage() {
           <h3 className="font-semibold text-lg">{locale === 'fil' ? 'Access ng User' : 'User Access'}</h3>
         </div>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div className="flex items-center gap-4">
-            <label className="grid gap-1 text-sm flex-1">
+          <div className="w-full flex-1 md:max-w-[420px]">
+            <label className="grid gap-1 text-sm">
               <span>{locale === 'fil' ? 'Hanapin ang user' : 'Search users'}</span>
               <Input
-                className="w-full max-w-[560px]"
+                className="w-full"
                 value={userSearch}
                 onChange={(event) => setUserSearch(event.target.value)}
                 placeholder={locale === 'fil' ? 'Pangalan, email, o role' : 'Name, email, or role'}
               />
             </label>
           </div>
-            <div className="ml-4 flex items-center gap-2">
-              {!showArchivedOnly ? (
-                <Button
-                  type="button"
-                  variant="residentOutline"
-                  onClick={() => setIsCreateFormOpen(true)}
-                  className="whitespace-nowrap"
-                >
-                  {locale === 'fil' ? 'Gumawa ng Account' : 'Create Account'}
-                </Button>
-              ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {!showArchivedOnly ? (
+              <Button
+                type="button"
+                variant="residentOutline"
+                onClick={() => setIsCreateFormOpen(true)}
+                className="whitespace-nowrap"
+              >
+                {locale === 'fil' ? 'Gumawa ng Account' : 'Create Account'}
+              </Button>
+            ) : null}
             {/* Toggle between viewing deleted accounts and viewing all accounts */}
             <Button
               type="button"
               variant="destructiveOutline"
-                onClick={() => {
-                  setShowArchivedOnly((prev) => !prev);
-                  setOpenActionsForUserId(null);
-                  setCurrentPage(1);
-                  // When switching to archived view, clear status filtering so
-                  // all deleted accounts are shown regardless of previous filter
-                  setStatusFilter('all');
-                }}
+              onClick={() => {
+                setShowArchivedOnly((prev) => !prev);
+                setOpenActionsForUserId(null);
+                setCurrentPage(1);
+                // When switching to archived view, clear status filtering so
+                // all deleted accounts are shown regardless of previous filter
+                setStatusFilter('all');
+              }}
               className="whitespace-nowrap"
             >
-                {showArchivedOnly
-                  ? (locale === 'fil' ? 'Tingnan lahat ng account' : 'View Active Accounts')
-                  : (locale === 'fil' ? 'Mga Tinanggal na Account' : 'Deleted Accounts')}
+              {showArchivedOnly
+                ? (locale === 'fil' ? 'Tingnan lahat ng account' : 'View Active Accounts')
+                : (locale === 'fil' ? 'Mga Tinanggal na Account' : 'Deleted Accounts')}
             </Button>
           </div>
         </div>
@@ -427,7 +427,7 @@ export default function AdminUsersPage() {
               {newestAccountTimestamp ? ` · ${locale === 'fil' ? 'Pinakahuli' : 'Latest'}: ${relativeTime(newestAccountTimestamp, locale)}` : ''}
             </p>
             {!showArchivedOnly ? (
-              <div className="inline-flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 className={`rounded px-3 py-1 text-sm ${statusFilter === 'all' ? 'bg-[color:var(--portal-border-soft)]' : 'hover:bg-[color:var(--portal-border-soft)]'}`}
@@ -522,8 +522,8 @@ export default function AdminUsersPage() {
           </div>
         ) : (
           <>
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full text-sm table-fixed">
+            <div className="mt-3 overflow-x-auto rounded-xl border border-[color:var(--portal-border-soft)]">
+              <table className="w-full text-sm table-fixed min-w-[900px]">
                 <thead>
                   <tr className="border-b border-[color:var(--portal-border-soft)] text-[color:var(--portal-ink-700)]">
                     <th className="py-2 pr-2 align-middle text-center" style={{ width: '12%' }}>ID</th>

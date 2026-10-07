@@ -444,16 +444,27 @@ export default function StaffBDRRMCReportPage() {
       )}
 
       {sessionId ? (
-        <SectionCard
-          title={locale === 'fil' ? 'I-edit ang BDRRMC Report' : 'Edit BDRRMC Report'}
-          description={sessionId}
-        >
-          <ReportEditor
-            sessionId={sessionId}
-            onExport={handleExport}
-            onTitleChange={loadReports}
-          />
-        </SectionCard>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between gap-3">
+            <Button
+              variant="residentOutline"
+              onClick={() => setSessionId(null)}
+              className="flex items-center gap-2 text-sm font-medium"
+            >
+              ← {locale === 'fil' ? 'Bumalik sa Listahan ng Ulat' : 'Back to Reports List'}
+            </Button>
+          </div>
+          <SectionCard
+            title={locale === 'fil' ? 'I-edit ang BDRRMC Report' : 'Edit BDRRMC Report'}
+            description={sessionId}
+          >
+            <ReportEditor
+              sessionId={sessionId}
+              onExport={handleExport}
+              onTitleChange={loadReports}
+            />
+          </SectionCard>
+        </div>
       ) : (
         <SectionCard
           title={locale === 'fil' ? 'Nakaraang BDRRMC Papers' : 'Past BDRRMC Papers'}
@@ -465,53 +476,92 @@ export default function StaffBDRRMCReportPage() {
               description={locale === 'fil' ? 'Gumawa ng bago gamit ang button sa itaas.' : 'Create a new one using the options above.'}
             />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-sm">
-                <thead>
-                  <tr className="border-b border-[color:var(--portal-border-soft)]">
-                    <th className="px-4 py-3 text-left font-semibold text-[color:var(--portal-ink-900)]">
-                      {locale === 'fil' ? 'Pamagat' : 'Title'}
-                    </th>
-                    <th className="px-4 py-3 text-left font-semibold text-[color:var(--portal-ink-900)]">
-                      {locale === 'fil' ? 'Huling Inedit' : 'Last Edited'}
-                    </th>
-                    <th className="px-4 py-3 text-left font-semibold text-[color:var(--portal-ink-900)]">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pastReports.map((r) => (
-                    <tr key={r.id} className="border-b border-[color:var(--portal-border-soft)]">
-                      <td className="px-4 py-3 text-[color:var(--portal-ink-900)]">
-                        <div className="font-semibold">{r.title}</div>
-                        <div className="text-[10px] text-[color:var(--portal-ink-500)] font-mono">{r.id}</div>
-                      </td>
-                      <td className="px-4 py-3 text-[color:var(--portal-ink-700)] text-xs">
-                        {r.date}
-                      </td>
-                      <td className="px-4 py-3 flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => setSessionId(r.id)}
-                        >
-                          {locale === 'fil' ? 'I-edit' : 'Edit'}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                          onClick={(e) => deleteReport(r.id, e)}
-                        >
-                          <Trash2 size={16} />
-                        </Button>
-                      </td>
+            <>
+              {/* Mobile Card View */}
+              <div className="grid gap-3 md:hidden">
+                {pastReports.map((r) => (
+                  <div key={r.id} className="rounded-xl border border-[color:var(--portal-border-soft)] bg-white p-4 shadow-sm flex flex-col gap-3">
+                    <div>
+                      <h4 className="font-semibold text-[color:var(--portal-ink-900)] text-base">{r.title}</h4>
+                      <p className="text-xs text-[color:var(--portal-ink-500)] font-mono mt-0.5">{r.id}</p>
+                      <p className="text-xs text-[color:var(--portal-ink-600)] mt-1.5">
+                        <span className="font-medium">{locale === 'fil' ? 'Huling inedit:' : 'Last edited:'}</span> {r.date}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 pt-2 border-t border-[color:var(--portal-border-soft)]">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="flex-1 justify-center"
+                        onClick={() => setSessionId(r.id)}
+                      >
+                        {locale === 'fil' ? 'I-edit ang Ulat' : 'Edit Report'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 px-3"
+                        onClick={(e) => deleteReport(r.id, e)}
+                        aria-label={locale === 'fil' ? 'Burahin ang ulat' : 'Delete report'}
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b border-[color:var(--portal-border-soft)]">
+                      <th className="px-4 py-3 text-left font-semibold text-[color:var(--portal-ink-900)]">
+                        {locale === 'fil' ? 'Pamagat' : 'Title'}
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold text-[color:var(--portal-ink-900)]">
+                        {locale === 'fil' ? 'Huling Inedit' : 'Last Edited'}
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold text-[color:var(--portal-ink-900)] w-36">
+                        {locale === 'fil' ? 'Aksyon' : 'Action'}
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {pastReports.map((r) => (
+                      <tr key={r.id} className="border-b border-[color:var(--portal-border-soft)]">
+                        <td className="px-4 py-3 text-[color:var(--portal-ink-900)]">
+                          <div className="font-semibold">{r.title}</div>
+                          <div className="text-[10px] text-[color:var(--portal-ink-500)] font-mono">{r.id}</div>
+                        </td>
+                        <td className="px-4 py-3 text-[color:var(--portal-ink-700)] text-xs">
+                          {r.date}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => setSessionId(r.id)}
+                            >
+                              {locale === 'fil' ? 'I-edit' : 'Edit'}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={(e) => deleteReport(r.id, e)}
+                            >
+                              <Trash2 size={16} />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </SectionCard>
       )}

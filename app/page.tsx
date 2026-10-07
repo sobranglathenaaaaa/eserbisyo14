@@ -119,7 +119,7 @@ export default async function HomePage() {
 
           <div className="landing-header__cta">
             <Link className="landing-btn landing-btn--ghost" href="/login">Log In</Link>
-            <Link className="landing-btn" href="/register">Resident Sign Up</Link>
+            <Link className="landing-btn" href="/register">Sign Up</Link>
           </div>
 
           <details className="landing-mobile-menu">
@@ -134,7 +134,7 @@ export default async function HomePage() {
               <a href="#contact">Contact</a>
               <div className="landing-mobile-menu__auth">
                 <Link href="/login">Log In</Link>
-                <Link href="/register">Resident Sign Up</Link>
+                <Link href="/register">Sign Up</Link>
               </div>
             </div>
           </details>

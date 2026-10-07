@@ -519,39 +519,89 @@ function ResidentRequestHistoryPageContent() {
             )}
           />
         ) : (
-          <Table className="table-fixed text-center">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[30%] text-center">{copyText(locale, 'Record', 'Record')}</TableHead>
-                <TableHead className="w-[20%] text-center">{copyText(locale, 'Category', 'Kategorya')}</TableHead>
-                <TableHead className="w-[18%] text-center">{copyText(locale, 'Status', 'Katayuan')}</TableHead>
-                <TableHead className="w-[20%] text-center">{copyText(locale, 'Updated', 'Na-update')}</TableHead>
-                <TableHead className="w-[12%] text-center">{copyText(locale, 'Action', 'Aksyon')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>{visibleCategoryItems.map((item) => renderHistoryRow(item))}</TableBody>
-          </Table>
+          <div>
+            {/* Mobile View: Cards */}
+            <div className="grid gap-3 sm:hidden">
+              {visibleCategoryItems.map((item) => {
+                const categoryText = resolveCategoryLabel(locale, item.category);
+                const titleText = item.kind === 'blotter' || item.kind === 'report-progress'
+                  ? `${item.caseNumber ? `${item.caseNumber} - ` : ''}${item.heading}`
+                  : item.heading;
+
+                return (
+                  <div key={`m-rh-${item.kind}-${item.id}`} className="rounded-xl border border-[color:var(--portal-border-soft)] bg-white p-3.5 shadow-xs">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <span className="inline-block rounded-md bg-emerald-100/70 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 uppercase tracking-wider mb-1">
+                          {categoryText}
+                        </span>
+                        <h4 className="text-sm font-bold text-[color:var(--portal-ink-900)] leading-snug">{titleText}</h4>
+                      </div>
+                      <div>
+                        {item.kind === 'feedback' ? (
+                          <StatusBadge tone="info">{copyText(locale, 'Submitted', 'Naipasa')}</StatusBadge>
+                        ) : item.kind === 'appointments' ? (
+                          <StatusBadge tone={statusToneFromState(item.status)}>{getAppointmentStatusLabel(item.status, locale)}</StatusBadge>
+                        ) : item.kind === 'requests' ? (
+                          <StatusBadge tone={statusToneFromState(item.status)}>{getRequestStatusLabel(item.status, locale)}</StatusBadge>
+                        ) : item.kind === 'reservations' ? (
+                          <StatusBadge tone={statusToneFromState(item.status)}>{getReservationStatusLabel(item.status, locale)}</StatusBadge>
+                        ) : (
+                          <StatusBadge tone={statusToneFromState(item.status)}>{getReportStatusLabel(item.status, locale)}</StatusBadge>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between border-t border-[color:var(--portal-border-soft)] pt-2.5 text-xs text-[color:var(--portal-ink-500)]">
+                      <span>{formatDateTime(item.sortAt, locale)}</span>
+                      <div>{reviewButton(item)}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop View: Table */}
+            <div className="hidden sm:block overflow-x-auto rounded-xl border border-[color:var(--portal-border-soft)]">
+              <Table className="min-w-[760px] table-fixed text-center">
+                <TableHeader>
+                  <TableRow className="bg-emerald-50/40">
+                    <TableHead className="w-[30%] text-center font-bold">{copyText(locale, 'Record', 'Record')}</TableHead>
+                    <TableHead className="w-[20%] text-center font-bold">{copyText(locale, 'Category', 'Kategorya')}</TableHead>
+                    <TableHead className="w-[18%] text-center font-bold">{copyText(locale, 'Status', 'Katayuan')}</TableHead>
+                    <TableHead className="w-[20%] text-center font-bold">{copyText(locale, 'Updated', 'Na-update')}</TableHead>
+                    <TableHead className="w-[12%] text-center font-bold">{copyText(locale, 'Action', 'Aksyon')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>{visibleCategoryItems.map((item) => renderHistoryRow(item))}</TableBody>
+              </Table>
+            </div>
+          </div>
         )}
         {filteredCategoryItems.length > 0 ? (
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-            <div className="text-sm text-[color:var(--portal-ink-500)]">
+          <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-[color:var(--portal-border-soft)] pt-3">
+            <div className="text-xs sm:text-sm text-[color:var(--portal-ink-500)] text-center sm:text-left">
               {`Showing ${(currentPage - 1) * PAGE_SIZE + 1}-${Math.min(currentPage * PAGE_SIZE, filteredCategoryItems.length)} of ${filteredCategoryItems.length}`}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-2">
               <Button
                 type="button"
                 variant="ghost"
+                size="sm"
                 disabled={currentPage <= 1}
                 onClick={() => setHistoryPage((page) => Math.max(1, page - 1))}
+                className="text-xs sm:text-sm"
               >
                 {locale === 'fil' ? 'Nakaraan' : 'Previous'}
               </Button>
-              <div className="text-sm text-[color:var(--portal-ink-600)]">{currentPage} / {totalPages}</div>
+              <div className="text-xs sm:text-sm font-semibold px-2 text-[color:var(--portal-ink-600)]">{currentPage} / {totalPages}</div>
               <Button
                 type="button"
                 variant="ghost"
+                size="sm"
                 disabled={currentPage >= totalPages}
                 onClick={() => setHistoryPage((page) => Math.min(totalPages, page + 1))}
+                className="text-xs sm:text-sm"
               >
                 {locale === 'fil' ? 'Susunod' : 'Next'}
               </Button>

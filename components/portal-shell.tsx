@@ -456,49 +456,54 @@ function PortalShellContent({
 
         return (
           <div className="min-h-screen overflow-x-clip bg-[radial-gradient(circle_at_top,#f7fcf9_0%,#eef6f1_42%,#e6f1ec_100%)] text-[color:var(--portal-ink-900)]">
-            <header className="sticky top-0 z-40 border-b border-[color:var(--portal-shell-border)] bg-[color:rgba(13,53,38,0.94)] text-[color:var(--portal-shell-text)] backdrop-blur">
-              <div className="mx-auto flex min-h-[104px] w-full max-w-[1560px] items-center justify-between gap-3 px-4 py-3 md:px-6">
-                <div className="flex min-w-0 items-center gap-3">
+            <header className="sticky top-0 z-40 border-b border-[color:var(--portal-shell-border)] bg-[color:rgba(13,53,38,0.96)] text-white backdrop-blur">
+              <div className="mx-auto flex min-h-[64px] sm:min-h-[80px] md:min-h-[96px] w-full max-w-[1560px] items-center justify-between gap-2 px-3 py-2 sm:px-4 sm:py-3 md:px-6">
+                <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
                   <Image
                     src="/images/progreso.PNG"
                     alt="eSerbisyo logo"
-                    width={66}
-                    height={66}
-                    sizes="66px"
-                    className="h-[66px] w-[66px] object-contain"
+                    width={56}
+                    height={56}
+                    sizes="(max-width: 640px) 40px, 56px"
+                    className="h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14 object-contain shrink-0"
                     unoptimized
                     priority
                   />
-                  <div className="min-w-0">
-                    <p className="flex flex-col items-start font-heading text-sm font-semibold leading-tight">
-                      <span className="text-[2rem] font-serif">eSerbisyo</span>
-                      <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[color:var(--portal-shell-muted)]">
-                        {locale === 'fil' ? `${roleTitle.fil} Workspace` : `${roleTitle.en} Workspace`} | Service and Record Management System
+                  <div className="min-w-0 flex-1">
+                    <p className="flex flex-col items-start font-heading leading-tight">
+                      <span className="text-xl sm:text-2xl md:text-[2rem] font-serif font-bold tracking-tight text-white">eSerbisyo</span>
+                      <span className="hidden sm:inline-block text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.08em] text-[color:var(--portal-shell-muted)] truncate max-w-[200px] sm:max-w-xs md:max-w-md">
+                        {locale === 'fil' ? `${roleTitle.fil} Workspace` : `${roleTitle.en} Workspace`} | Service & Record System
+                      </span>
+                      <span className="sm:hidden text-[10px] font-medium text-emerald-200/90 truncate">
+                        {locale === 'fil' ? `${roleTitle.fil} Portal` : `${roleTitle.en} Portal`}
                       </span>
                     </p>
                   </div>
                 </div>
 
-                <div className="flex min-w-0 items-center justify-end gap-2">
+                <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-2">
                   <Button
-                    variant="ghost"
+                    variant="headerGhost"
+                    size="sm"
                     type="button"
                     onClick={() => setLocale(locale === 'en' ? 'fil' : 'en')}
-                    className="border-[color:rgba(237,248,243,0.32)] bg-transparent text-[color:var(--portal-shell-text)] hover:bg-[color:rgba(255,255,255,0.12)] portal-focusable text-xs sm:text-sm px-2.5 sm:px-3"
+                    className="h-10 px-2.5 sm:px-3 text-xs sm:text-sm font-semibold text-white hover:text-white shrink-0"
                   >
-                    <Globe size={14} className="mr-1.5 sm:mr-2" />
+                    <Globe size={15} className="mr-1 sm:mr-1.5 text-emerald-200 shrink-0" />
                     <span className="hidden sm:inline">{locale === 'en' ? 'English' : 'Filipino'}</span>
                     <span className="sm:hidden">{locale === 'en' ? 'EN' : 'FIL'}</span>
                   </Button>
 
                   <Button
-                    variant="ghost"
+                    variant="headerGhost"
+                    size="icon"
                     type="button"
                     aria-label={isMobileMenuOpen ? (locale === 'fil' ? 'Isara ang Menu' : 'Close Menu') : (locale === 'fil' ? 'Buksan ang Menu' : 'Open Menu')}
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    className="border-[color:rgba(237,248,243,0.32)] bg-transparent text-[color:var(--portal-shell-text)] hover:bg-[color:rgba(255,255,255,0.12)] portal-focusable lg:hidden px-2.5"
+                    className="text-white hover:text-white shrink-0 lg:hidden"
                   >
-                    {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                    {isMobileMenuOpen ? <X size={20} className="text-white shrink-0" /> : <Menu size={20} className="text-white shrink-0" />}
                   </Button>
                 </div>
               </div>

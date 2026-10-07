@@ -90,40 +90,68 @@ export default function StaffNotificationsPage() {
         title={locale === 'fil' ? 'System Updates' : 'System Updates'}
         description={locale === 'fil' ? 'Mga update at mga importanteng pangyayari.' : 'System updates and important events.'}
       >
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full text-sm table-fixed">
+        {/* Mobile View: Cards */}
+        <div className="block md:hidden space-y-2.5">
+          {visibleEvents.length === 0 ? (
+            <div className="py-6 text-center text-sm text-[color:var(--portal-ink-500)]">
+              {locale === 'fil' ? 'Walang nahanap na mga tala.' : 'No system updates found.'}
+            </div>
+          ) : (
+            visibleEvents.map((item) => (
+              <div key={`sm-${item.id}`} className="rounded-xl border border-[color:var(--portal-border-soft)] bg-[color:var(--portal-surface-1)] p-3 shadow-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-bold text-sm text-[color:var(--portal-ink-900)] truncate">{item.action}</span>
+                  <StatusBadge tone="neutral">{item.actorRole}</StatusBadge>
+                </div>
+                <div className="mt-1.5 text-xs text-[color:var(--portal-ink-700)]">
+                  <span className="font-medium text-[color:var(--portal-ink-500)]">{locale === 'fil' ? 'Target: ' : 'Target: '}</span>
+                  {resolveTargetLabel(item.targetId)}
+                </div>
+                <div className="mt-1 text-[11px] text-[color:var(--portal-ink-500)]">
+                  {formatDateTime(item.createdAt, locale)}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop View: Table */}
+        <div className="mt-3 hidden md:block overflow-x-auto rounded-xl border border-[color:var(--portal-border-soft)]">
+          <table className="w-full text-sm table-fixed min-w-[560px]">
             <thead>
-                <tr className="border-b border-[color:var(--portal-border-soft)] text-[color:var(--portal-ink-700)]">
-                  <th className="py-2 pr-2 align-middle text-center" style={{ width: '30%' }}>{locale === 'fil' ? 'Aksyon' : 'Action'}</th>
-                  <th className="py-2 pr-2 align-middle text-center" style={{ width: '40%' }}>{locale === 'fil' ? 'Target' : 'Target'}</th>
-                  <th className="py-2 pr-2 align-middle text-center" style={{ width: '10%' }}>{locale === 'fil' ? 'Role' : 'Role'}</th>
-                  <th className="py-2 pr-2 align-middle text-center" style={{ width: '20%' }}>{locale === 'fil' ? 'Petsa' : 'Date'}</th>
+                <tr className="border-b border-[color:var(--portal-border-soft)] bg-emerald-50/40 text-[color:var(--portal-ink-700)]">
+                  <th className="py-2.5 px-3 align-middle text-left font-bold" style={{ width: '32%' }}>{locale === 'fil' ? 'Aksyon' : 'Action'}</th>
+                  <th className="py-2.5 px-3 align-middle text-left font-bold" style={{ width: '38%' }}>{locale === 'fil' ? 'Target' : 'Target'}</th>
+                  <th className="py-2.5 px-2 align-middle text-center font-bold" style={{ width: '12%' }}>{locale === 'fil' ? 'Role' : 'Role'}</th>
+                  <th className="py-2.5 px-3 align-middle text-right font-bold" style={{ width: '18%' }}>{locale === 'fil' ? 'Petsa' : 'Date'}</th>
                 </tr>
             </thead>
             <tbody>
               {visibleEvents.map((item) => (
-                <tr key={item.id} className="border-b border-[color:var(--portal-border-soft)]">
-                  <td className="py-2 pr-2 overflow-hidden text-ellipsis whitespace-nowrap max-w-[1px] font-medium text-center">{item.action}</td>
-                  <td className="py-2 pr-2 overflow-hidden text-ellipsis whitespace-nowrap max-w-[1px] text-center">{resolveTargetLabel(item.targetId)}</td>
-                  <td className="py-2 pr-2 text-center align-middle"><StatusBadge tone="neutral">{item.actorRole}</StatusBadge></td>
-                  <td className="py-2 pr-2 text-center align-middle">{formatDateTime(item.createdAt, locale)}</td>
+                <tr key={item.id} className="border-b border-[color:var(--portal-border-soft)] hover:bg-emerald-50/20">
+                  <td className="py-2.5 px-3 font-semibold text-[color:var(--portal-ink-900)] text-left truncate">{item.action}</td>
+                  <td className="py-2.5 px-3 text-[color:var(--portal-ink-700)] text-left truncate">{resolveTargetLabel(item.targetId)}</td>
+                  <td className="py-2.5 px-2 text-center align-middle"><StatusBadge tone="neutral">{item.actorRole}</StatusBadge></td>
+                  <td className="py-2.5 px-3 text-right text-xs text-[color:var(--portal-ink-600)] align-middle">{formatDateTime(item.createdAt, locale)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <div className="mt-3 flex items-center justify-between">
-          <div className="text-sm text-[color:var(--portal-ink-500)]">
+
+        {/* Pagination */}
+        <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-[color:var(--portal-border-soft)] pt-3">
+          <div className="text-xs sm:text-sm text-[color:var(--portal-ink-500)] text-center sm:text-left">
             {displayEvents.length === 0
               ? ''
               : `Showing ${(notifPage - 1) * PAGE_SIZE + 1}–${Math.min(notifPage * PAGE_SIZE, displayEvents.length)} of ${displayEvents.length}`}
           </div>
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="ghost" disabled={notifPage <= 1} onClick={() => setNotifPage((p) => Math.max(1, p - 1))}>
+          <div className="flex items-center justify-center gap-2">
+            <Button type="button" variant="ghost" size="sm" disabled={notifPage <= 1} onClick={() => setNotifPage((p) => Math.max(1, p - 1))} className="text-xs sm:text-sm">
               {locale === 'fil' ? 'Nakaraan' : 'Previous'}
             </Button>
-            <div className="text-sm text-[color:var(--portal-ink-600)]">{`${notifPage} / ${totalPages}`}</div>
-            <Button type="button" variant="ghost" disabled={notifPage >= totalPages} onClick={() => setNotifPage((p) => Math.min(totalPages, p + 1))}>
+            <div className="text-xs sm:text-sm font-semibold px-2 text-[color:var(--portal-ink-600)]">{`${notifPage} / ${totalPages}`}</div>
+            <Button type="button" variant="ghost" size="sm" disabled={notifPage >= totalPages} onClick={() => setNotifPage((p) => Math.min(totalPages, p + 1))} className="text-xs sm:text-sm">
               {locale === 'fil' ? 'Susunod' : 'Next'}
             </Button>
           </div>

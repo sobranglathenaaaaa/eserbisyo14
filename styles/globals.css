@@ -212,8 +212,8 @@ img, video, canvas, svg {
 
 /* Touch-friendly interactive targets for smaller screens */
 @media (max-width: 767px) {
-  button, input, select, textarea, a {
-    min-height: 38px;
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+    min-height: 40px;
   }
 }
 

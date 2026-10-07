@@ -100,34 +100,52 @@ export default function StaffDashboardPage() {
                   }
                 />
               ) : (
-                <div className="hidden md:block">
-                  <div className="mt-3 overflow-x-auto">
-                    <table className="w-full text-sm table-fixed">
-                      <thead>
-                        <tr className="border-b border-[color:var(--portal-border-soft)] text-[color:var(--portal-ink-700)]">
-                          <th className="py-2 pr-2 align-middle text-center" style={{ width: '30%' }}>{locale === 'fil' ? 'Aksyon' : 'Action'}</th>
-                          <th className="py-2 pr-2 align-middle text-center" style={{ width: '40%' }}>{locale === 'fil' ? 'Target' : 'Target'}</th>
-                          <th className="py-2 pr-2 align-middle text-center" style={{ width: '10%' }}>{locale === 'fil' ? 'Role' : 'Role'}</th>
-                          <th className="py-2 pr-2 align-middle text-center" style={{ width: '20%' }}>{locale === 'fil' ? 'Petsa' : 'Date'}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {auditPreview.map((item) => (
-                          <tr key={item.id} className="border-b border-[color:var(--portal-border-soft)]">
-                            <td className="py-2 pr-2 overflow-hidden text-ellipsis whitespace-nowrap max-w-[1px] font-medium text-center">{item.action}</td>
-                            <td className="py-2 pr-2 overflow-hidden text-ellipsis whitespace-nowrap max-w-[1px] text-center">{resolveTargetLabel(item.targetId)}</td>
-                            <td className="py-2 pr-2 align-middle">
-                              <div className="flex items-center justify-center">
-                                <StatusBadge tone="neutral">{item.actorRole}</StatusBadge>
-                              </div>
-                            </td>
-                            <td className="py-2 pr-2 text-center align-middle">{formatDateTime(item.createdAt, locale)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                <>
+                  {/* Mobile View: Cards */}
+                  <div className="grid gap-2.5 md:hidden mt-3">
+                    {auditPreview.map((item) => (
+                      <div key={`sm-act-${item.id}`} className="rounded-xl border border-[color:var(--portal-border-soft)] bg-[color:var(--portal-surface-1)] p-3 shadow-xs">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-sm text-[color:var(--portal-ink-900)] truncate">{item.action}</span>
+                          <StatusBadge tone="neutral">{item.actorRole}</StatusBadge>
+                        </div>
+                        <div className="mt-1 text-xs text-[color:var(--portal-ink-700)]">
+                          <span className="text-[color:var(--portal-ink-500)]">{locale === 'fil' ? 'Target: ' : 'Target: '}</span>
+                          {resolveTargetLabel(item.targetId)}
+                        </div>
+                        <div className="mt-1 text-[11px] text-[color:var(--portal-ink-500)]">
+                          {formatDateTime(item.createdAt, locale)}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
+
+                  {/* Desktop View: Table */}
+                  <div className="hidden md:block">
+                    <div className="mt-3 overflow-x-auto rounded-xl border border-[color:var(--portal-border-soft)]">
+                      <table className="w-full text-sm table-fixed min-w-[560px]">
+                        <thead>
+                          <tr className="border-b border-[color:var(--portal-border-soft)] bg-emerald-50/40 text-[color:var(--portal-ink-700)]">
+                            <th className="py-2.5 px-3 align-middle text-left font-bold" style={{ width: '30%' }}>{locale === 'fil' ? 'Aksyon' : 'Action'}</th>
+                            <th className="py-2.5 px-3 align-middle text-left font-bold" style={{ width: '40%' }}>{locale === 'fil' ? 'Target' : 'Target'}</th>
+                            <th className="py-2.5 px-2 align-middle text-center font-bold" style={{ width: '12%' }}>{locale === 'fil' ? 'Role' : 'Role'}</th>
+                            <th className="py-2.5 px-3 align-middle text-right font-bold" style={{ width: '18%' }}>{locale === 'fil' ? 'Petsa' : 'Date'}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {auditPreview.map((item) => (
+                            <tr key={item.id} className="border-b border-[color:var(--portal-border-soft)] hover:bg-emerald-50/20">
+                              <td className="py-2.5 px-3 font-semibold text-[color:var(--portal-ink-900)] text-left truncate">{item.action}</td>
+                              <td className="py-2.5 px-3 text-[color:var(--portal-ink-700)] text-left truncate">{resolveTargetLabel(item.targetId)}</td>
+                              <td className="py-2.5 px-2 text-center align-middle"><StatusBadge tone="neutral">{item.actorRole}</StatusBadge></td>
+                              <td className="py-2.5 px-3 text-right text-xs text-[color:var(--portal-ink-600)] align-middle">{formatDateTime(item.createdAt, locale)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
               )}
             </DashboardSection>
           </div>

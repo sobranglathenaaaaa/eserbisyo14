@@ -327,9 +327,9 @@ export const ReportEditor: React.FC<ReportEditorProps> = ({ sessionId, onExport,
       </div>
 
       {/* ── Document Page Workspace (Sleek Drafting Table layout) ── */}
-      <div className="bg-gray-100/60 border border-[color:var(--portal-border-soft)] rounded-lg p-8 flex justify-center shadow-inner">
+      <div className="bg-gray-100/60 border border-[color:var(--portal-border-soft)] rounded-lg p-2 sm:p-4 md:p-8 flex justify-center shadow-inner overflow-hidden">
         <div
-          className="bg-white shadow-xl border border-gray-200 p-10 flex flex-col gap-6 transition-all duration-300 w-full animate-fade-in"
+          className="bg-white shadow-xl border border-gray-200 p-3 sm:p-6 md:p-10 flex flex-col gap-6 transition-all duration-300 w-full animate-fade-in"
           style={{ maxWidth: editorMaxWidth, minHeight: '80vh' }}
         >
           {/* ── Rich Header Section ── */}

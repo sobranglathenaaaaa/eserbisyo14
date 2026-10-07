@@ -147,7 +147,7 @@ export default function LoginForm({
 
       {verificationStatusMessage ? <p className={styles.verificationNotice}>{verificationStatusMessage}</p> : null}
 
-      <form className={styles.authForm} onSubmit={onSubmit} noValidate aria-busy={isSubmitting}>
+      <form className={styles.authForm} onSubmit={onSubmit} noValidate aria-busy={isSubmitting} suppressHydrationWarning>
         <div className={styles.formField}>
           <label htmlFor="login-email">Email address</label>
           <input
@@ -160,6 +160,7 @@ export default function LoginForm({
             disabled={isSubmitting}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
+            suppressHydrationWarning
           />
         </div>
 
@@ -176,6 +177,7 @@ export default function LoginForm({
               disabled={isSubmitting}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              suppressHydrationWarning
             />
             <button
               type="button"
@@ -183,6 +185,7 @@ export default function LoginForm({
               onClick={() => setShowPassword((prev) => !prev)}
               aria-label={showPassword ? 'Hide password' : 'Show password'}
               tabIndex={-1}
+              suppressHydrationWarning
             >
               {showPassword ? <EyeOff className={styles.eyeIcon} /> : <Eye className={styles.eyeIcon} />}
             </button>
@@ -198,6 +201,7 @@ export default function LoginForm({
               type="button"
               onClick={() => void onResendVerification()}
               disabled={isResending || isSubmitting}
+              suppressHydrationWarning
             >
               {isResending ? 'Resending...' : 'Resend verification code'}
             </button>
@@ -212,7 +216,7 @@ export default function LoginForm({
           {/* Sign up link removed per request */}
         </div>
 
-        <button className={styles.primaryBtn} type="submit" disabled={isSubmitting}>
+        <button className={styles.primaryBtn} type="submit" disabled={isSubmitting} suppressHydrationWarning>
           <span className={styles.btnLabel}>
             {isSubmitting ? <span className={styles.btnSpinner} aria-hidden="true" /> : null}
             {isSubmitting ? 'Logging in...' : 'Log In'}
