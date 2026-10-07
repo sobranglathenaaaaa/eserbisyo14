@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useState, useEffect } from 'react';
+import { FormEvent, useState, useEffect, useMemo } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import styles from '../auth.module.css';
 import LegalModal from '@/components/legal-modal';
@@ -73,6 +73,143 @@ const initialState: FormState = {
   dataPrivacy: false,
 };
 
+const FIELD_DOM_IDS: Record<string, string> = {
+  firstName: 'first-name',
+  middleName: 'middle-name',
+  lastName: 'last-name',
+  suffix: 'suffix',
+  sex: 'sex',
+  civilStatus: 'civil-status',
+  citizenship: 'citizenship',
+  birthdate: 'birthdate',
+  addressLine: 'address-line',
+  province: 'province',
+  city: 'city',
+  barangay: 'barangay',
+  contactNumber: 'contact-number',
+  email: 'register-email',
+  password: 'register-password',
+  confirmPassword: 'confirm-password',
+  idType: 'id-type',
+  idNumber: 'id-number',
+  idImageFileFront: 'id-image-front-file',
+  idImageFileBack: 'id-image-back-file',
+  terms: 'terms-consent',
+  dataPrivacy: 'privacy-consent',
+};
+
+function getFieldErrors(form: FormState): Record<string, string> {
+  const errors: Record<string, string> = {};
+
+  if (!form.firstName.trim()) {
+    errors.firstName = 'Please enter your first name.';
+  }
+
+  if (!form.lastName.trim()) {
+    errors.lastName = 'Please enter your last name.';
+  }
+
+  if (!form.sex) {
+    errors.sex = 'Please select your sex.';
+  }
+
+  if (!form.civilStatus) {
+    errors.civilStatus = 'Please select your civil status.';
+  }
+
+  if (!form.citizenship.trim()) {
+    errors.citizenship = 'Please enter your citizenship.';
+  }
+
+  if (!form.birthdate.trim()) {
+    errors.birthdate = 'Please enter your birthdate.';
+  } else {
+    const cleanDate = form.birthdate.replace(/-/g, '/');
+    const parts = cleanDate.split('/');
+    if (parts.length !== 3 || parts[0].length !== 4 || parts[1].length !== 2 || parts[2].length !== 2) {
+      errors.birthdate = 'Please enter birthdate in yyyy/mm/dd format.';
+    } else {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10);
+      const day = parseInt(parts[2], 10);
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const selected = new Date(year, month - 1, day);
+
+      if (isNaN(year) || isNaN(month) || isNaN(day) || month < 1 || month > 12) {
+        errors.birthdate = 'Invalid month in birthdate (must be 01-12).';
+      } else {
+        const daysInMonth = new Date(year, month, 0).getDate();
+        if (day < 1 || day > daysInMonth) {
+          errors.birthdate = `Invalid day for the selected month (max ${daysInMonth}).`;
+        } else if (year < 1900) {
+          errors.birthdate = 'Please enter a valid birth year (1900 or later).';
+        } else if (selected > now) {
+          errors.birthdate = 'Birthdate cannot be in the future.';
+        }
+      }
+    }
+  }
+
+  if (!form.addressLine.trim()) {
+    errors.addressLine = 'Please enter your street address.';
+  }
+
+  if (!form.contactNumber.trim()) {
+    errors.contactNumber = 'Please enter your contact number.';
+  } else if (!/^\d{11}$/.test(form.contactNumber.trim())) {
+    errors.contactNumber = 'Contact number must be 11 digits (e.g. 09123456789).';
+  }
+
+  if (!form.email.trim()) {
+    errors.email = 'Please enter your email address.';
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+    errors.email = 'Please enter a valid email address (e.g. name@example.com).';
+  }
+
+  if (!form.password) {
+    errors.password = 'Please enter a password.';
+  } else if (form.password.length < 8) {
+    errors.password = 'Password must be at least 8 characters.';
+  }
+
+  if (!form.confirmPassword) {
+    errors.confirmPassword = 'Please confirm your password.';
+  } else if (form.password && form.confirmPassword !== form.password) {
+    errors.confirmPassword = 'Passwords do not match.';
+  }
+
+  if (!form.idType) {
+    errors.idType = 'Please select your ID type.';
+  }
+
+  if (!form.idNumber.trim()) {
+    errors.idNumber = 'Please enter your ID number.';
+  }
+
+  if (!form.idImageFileFront) {
+    errors.idImageFileFront = 'Upload front picture of ID is required.';
+  } else if (!allowedMimeTypes.has(form.idImageFileFront.type)) {
+    errors.idImageFileFront = 'Only JPG, PNG, or WEBP files are allowed.';
+  }
+
+  if (!form.idImageFileBack) {
+    errors.idImageFileBack = 'Upload back picture of ID is required.';
+  } else if (!allowedMimeTypes.has(form.idImageFileBack.type)) {
+    errors.idImageFileBack = 'Only JPG, PNG, or WEBP files are allowed.';
+  }
+
+  if (!form.terms) {
+    errors.terms = 'Please agree to the Terms and Conditions.';
+  }
+
+  if (!form.dataPrivacy) {
+    errors.dataPrivacy = 'Please accept the Data Privacy Policy.';
+  }
+
+  return errors;
+}
+
 async function clearRegistrationDraft() {
   if (typeof window !== 'undefined') {
     window.localStorage.removeItem(REGISTRATION_DRAFT_KEY);
@@ -87,33 +224,6 @@ function focusFieldById(fieldId: string) {
   if (field instanceof HTMLElement) {
     field.focus();
   }
-}
-
-function getFirstMissingRequiredField(form: FormState): { fieldId: string; message: string } | null {
-  const requiredTextFields: Array<{ fieldId: string; value: string; message: string }> = [
-    { fieldId: 'first-name', value: form.firstName, message: 'Please enter your first name.' },
-    { fieldId: 'last-name', value: form.lastName, message: 'Please enter your last name.' },
-    { fieldId: 'sex', value: form.sex, message: 'Please select your sex.' },
-    { fieldId: 'civil-status', value: form.civilStatus, message: 'Please select your civil status.' },
-    { fieldId: 'birthdate', value: form.birthdate, message: 'Please select your birthdate.' },
-    { fieldId: 'address-line', value: form.addressLine, message: 'Please enter your street address.' },
-    { fieldId: 'province', value: form.province, message: 'Please enter your province.' },
-    { fieldId: 'barangay', value: form.barangay, message: 'Please enter your barangay.' },
-    { fieldId: 'contact-number', value: form.contactNumber, message: 'Please enter your contact number.' },
-    { fieldId: 'register-email', value: form.email, message: 'Please enter your email address.' },
-    { fieldId: 'id-type', value: form.idType, message: 'Please select your ID type.' },
-    { fieldId: 'id-number', value: form.idNumber, message: 'Please enter your ID number.' },
-    { fieldId: 'register-password', value: form.password, message: 'Please enter a password.' },
-    { fieldId: 'confirm-password', value: form.confirmPassword, message: 'Please confirm your password.' },
-  ];
-
-  for (const field of requiredTextFields) {
-    if (!field.value.trim()) {
-      return { fieldId: field.fieldId, message: field.message };
-    }
-  }
-
-  return null;
 }
 
 async function compressImage(file: File): Promise<File> {
@@ -147,7 +257,6 @@ async function compressImage(file: File): Promise<File> {
     let blob: Blob | null = null;
 
     for (const quality of qualitySteps) {
-      // Keep trying lower quality until we hit upload size limits.
       blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, outputType, quality));
       if (blob && blob.size <= MAX_ID_UPLOAD_BYTES) {
         break;
@@ -217,6 +326,10 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
   }, []);
 
   const [form, setForm] = useState<FormState>(initialState);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const fieldErrors = useMemo(() => getFieldErrors(form), [form]);
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [frontPreviewUrl, setFrontPreviewUrl] = useState<string | null>(null);
@@ -224,10 +337,47 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
   const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
-  const today = new Date().toISOString().slice(0, 10);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [legalModalSlug, setLegalModalSlug] = useState<'terms-and-conditions' | 'data-privacy' | null>(null);
   const [initialLegalDocs] = useState(initialLegalDocuments ?? null);
+
+  const handleBlur = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  };
+
+  const handleFieldChange = (field: keyof FormState, value: any) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    // If not in submit mode, clear touched status on active edit to avoid jumpy UI while typing
+    if (!submitAttempted && touched[field]) {
+      setTouched((prev) => ({ ...prev, [field]: false }));
+    }
+  };
+
+  const getVisibleError = (field: string): string | null => {
+    const err = fieldErrors[field];
+    if (!err) return null;
+
+    // If user attempted to submit, reveal all errors
+    if (submitAttempted) return err;
+
+    // Before submit, only reveal error if touched AND the field has an invalid value entered (not empty)
+    if (!touched[field]) return null;
+
+    switch (field) {
+      case 'email':
+        return form.email.trim().length > 0 ? err : null;
+      case 'contactNumber':
+        return form.contactNumber.trim().length > 0 ? err : null;
+      case 'password':
+        return form.password.length > 0 ? err : null;
+      case 'confirmPassword':
+        return form.confirmPassword.length > 0 ? err : null;
+      case 'birthdate':
+        return form.birthdate.trim().length > 0 ? err : null;
+      default:
+        return null;
+    }
+  };
 
   useEffect(() => {
     if (!isDraftReady) return;
@@ -276,7 +426,6 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
 
   function renderMaskedHtml(raw: string) {
     const display = maskBirthdateDisplay(raw);
-    // build HTML with spans for digits/placeholders/slashes
     let out = '';
     for (const ch of display) {
       if (/[0-9]/.test(ch)) {
@@ -290,121 +439,34 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
     return out;
   }
 
-  useEffect(() => {
-    // We only want to auto-revoke when the preview URLs are REPLACED, 
-    // but not strictly on every unmount because the summary modal needs them.
-    // React strict mode + unmount can sometimes prematurely revoke.
-    return () => {
-      // Intentionally empty to keep Blob URLs alive for the session/modal
-    };
-  }, []);
-
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
+    setSubmitAttempted(true);
 
-    const missingField = getFirstMissingRequiredField(form);
-    if (missingField) {
-      setError(missingField.message);
-      focusFieldById(missingField.fieldId);
+    const currentErrors = getFieldErrors(form);
+    const firstErrorKey = Object.keys(currentErrors)[0];
+    if (firstErrorKey) {
+      const domId = FIELD_DOM_IDS[firstErrorKey];
+      if (domId) {
+        focusFieldById(domId);
+      }
       return;
     }
 
-    if (!form.terms) {
-      setError('Please agree to the Terms and Conditions.');
-      focusFieldById('terms-consent');
-      return;
-    }
-
-    // Validate contact number is exactly 11 digits
-    if (!/^\d{11}$/.test(form.contactNumber)) {
-      setError('Contact number must be 11 digits.');
-      focusFieldById('contact-number');
-      return;
-    }
-
-    if (!form.dataPrivacy) {
-      setError('Please accept the Data Privacy Policy.');
-      focusFieldById('privacy-consent');
-      return;
-    }
-
-    if (form.password.length < 8) {
-      setError('Password must be at least 8 characters.');
-      return;
-    }
-
-    if (form.password !== form.confirmPassword) {
-      setError('Passwords do not match.');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
-    // Comprehensive birthdate validation (accepts yyyy/mm/dd or yyyy-mm-dd)
-    if (form.birthdate) {
-      const parts = form.birthdate.replace(/-/g, '/').split('/');
-      const year = parseInt(parts[0]);
-      const month = parseInt(parts[1]);
-      const day = parseInt(parts[2]);
-
-      const selected = new Date(year, month - 1, day);
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-
-      // 1. Basic format / range check (Month 1-12)
-      if (month < 1 || month > 12) {
-        setError('Invalid month in birthdate (must be 01-12).');
-        focusFieldById('birthdate');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (form.idImageFileFront && form.idImageFileBack) {
+      const sameQuick =
+        form.idImageFileFront.name === form.idImageFileBack.name &&
+        form.idImageFileFront.size === form.idImageFileBack.size &&
+        form.idImageFileFront.lastModified === form.idImageFileBack.lastModified;
+      if (sameQuick) {
+        focusFieldById('id-image-back-file');
         return;
       }
-
-      // 2. Validate day of month (catches Feb 30, etc.)
-      const daysInMonth = new Date(year, month, 0).getDate();
-      if (day < 1 || day > daysInMonth) {
-        setError(`Invalid day for the selected month (max ${daysInMonth}).`);
-        focusFieldById('birthdate');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
-      }
-
-      // 3. Prevent future dates
-      if (selected > now) {
-        setError('Birthdate cannot be in the future.');
-        focusFieldById('birthdate');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
-      }
-
-      // 4. Sanity check for extremely old dates (e.g., year 1000)
-      if (year < 1900) {
-        setError('Please enter a valid birth year (1900 or later).');
-        focusFieldById('birthdate');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
-      }
-    }
-
-    if (!(form.idImageFileFront instanceof File)) {
-      setError('Upload front picture of ID is required.');
-      focusFieldById('id-image-front-file');
-      return;
-    }
-
-    if (!(form.idImageFileBack instanceof File)) {
-      setError('Upload back picture of ID is required.');
-      focusFieldById('id-image-back-file');
-      return;
-    }
-
-    if (!allowedMimeTypes.has(form.idImageFileFront.type) || !allowedMimeTypes.has(form.idImageFileBack.type)) {
-      setError('Only JPG, PNG, or WEBP files are allowed for ID upload.');
-      return;
     }
 
     // All validations passed, show summary modal
     setShowSummaryModal(true);
-    // Scroll the entire page to the center so the modal appears focused and centered
     if (typeof window !== 'undefined') {
       window.scrollTo({ 
         top: document.body.scrollHeight / 2 - window.innerHeight / 2, 
@@ -442,7 +504,6 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
       sex: form.sex,
       civilStatus: form.civilStatus,
       citizenship: form.citizenship.trim(),
-      // normalize display yyyy/mm/dd to backend-friendly yyyy-mm-dd
       birthdate: form.birthdate ? form.birthdate.replace(/\//g, '-') : form.birthdate,
       addressLine: form.addressLine.trim(),
       province: 'Metro Manila',
@@ -494,11 +555,6 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
       </header>
 
       <form className={styles.authForm} onSubmit={onSubmit} noValidate>
-        {error ? (
-          <p className={styles.errorBanner} role="alert" aria-live="assertive">
-            {error}
-          </p>
-        ) : null}
 
         <section className={styles.formSection}>
           <h2 className={styles.sectionHeading}>User Information</h2>
@@ -509,14 +565,21 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
                 First Name
               </label>
               <input
-                className={styles.input}
+                className={`${styles.input} ${getVisibleError('firstName') ? styles.inputError : ''}`}
                 id="first-name"
                 type="text"
                 placeholder="Juan"
                 required
                 value={form.firstName}
-                onChange={(event) => setForm((prev) => ({ ...prev, firstName: event.target.value }))}
+                onBlur={() => handleBlur('firstName')}
+                onChange={(event) => {
+                  const noNumbers = event.target.value.replace(/\d/g, '');
+                  handleFieldChange('firstName', noNumbers);
+                }}
               />
+              {getVisibleError('firstName') && (
+                <span className={styles.fieldError} role="alert">{getVisibleError('firstName')}</span>
+              )}
             </div>
             <div className={styles.formField}>
               <label className={styles.fieldLabel} htmlFor="middle-name">
@@ -528,7 +591,10 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
                 type="text"
                 placeholder="Dela"
                 value={form.middleName}
-                onChange={(event) => setForm((prev) => ({ ...prev, middleName: event.target.value }))}
+                onChange={(event) => {
+                  const noNumbers = event.target.value.replace(/\d/g, '');
+                  handleFieldChange('middleName', noNumbers);
+                }}
               />
             </div>
             <div className={styles.formField}>
@@ -536,14 +602,21 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
                 Last Name
               </label>
               <input
-                className={styles.input}
+                className={`${styles.input} ${getVisibleError('lastName') ? styles.inputError : ''}`}
                 id="last-name"
                 type="text"
                 placeholder="Cruz"
                 required
                 value={form.lastName}
-                onChange={(event) => setForm((prev) => ({ ...prev, lastName: event.target.value }))}
+                onBlur={() => handleBlur('lastName')}
+                onChange={(event) => {
+                  const noNumbers = event.target.value.replace(/\d/g, '');
+                  handleFieldChange('lastName', noNumbers);
+                }}
               />
+              {getVisibleError('lastName') && (
+                <span className={styles.fieldError} role="alert">{getVisibleError('lastName')}</span>
+              )}
             </div>
             <div className={styles.formField}>
               <label className={styles.fieldLabel} htmlFor="suffix">
@@ -555,7 +628,10 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
                 type="text"
                 placeholder="Jr., Sr., III"
                 value={form.suffix}
-                onChange={(event) => setForm((prev) => ({ ...prev, suffix: event.target.value }))}
+                onChange={(event) => {
+                  const noNumbers = event.target.value.replace(/\d/g, '');
+                  handleFieldChange('suffix', noNumbers);
+                }}
               />
             </div>
           </div>
@@ -566,27 +642,32 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
                 Sex
               </label>
               <select
-                className={styles.select}
+                className={`${styles.select} ${getVisibleError('sex') ? styles.inputError : ''}`}
                 id="sex"
                 required
                 value={form.sex}
-                onChange={(event) => setForm((prev) => ({ ...prev, sex: event.target.value }))}
+                onBlur={() => handleBlur('sex')}
+                onChange={(event) => handleFieldChange('sex', event.target.value)}
               >
                 <option value="">Select</option>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
               </select>
+              {getVisibleError('sex') && (
+                <span className={styles.fieldError} role="alert">{getVisibleError('sex')}</span>
+              )}
             </div>
             <div className={styles.formField}>
               <label className={styles.fieldLabel} htmlFor="civil-status">
                 Civil Status
               </label>
               <select
-                className={styles.select}
+                className={`${styles.select} ${getVisibleError('civilStatus') ? styles.inputError : ''}`}
                 id="civil-status"
                 required
                 value={form.civilStatus}
-                onChange={(event) => setForm((prev) => ({ ...prev, civilStatus: event.target.value }))}
+                onBlur={() => handleBlur('civilStatus')}
+                onChange={(event) => handleFieldChange('civilStatus', event.target.value)}
               >
                 <option value="">Select</option>
                 <option value="Single">Single</option>
@@ -594,21 +675,31 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
                 <option value="Separated">Separated</option>
                 <option value="Widowed">Widowed</option>
               </select>
+              {getVisibleError('civilStatus') && (
+                <span className={styles.fieldError} role="alert">{getVisibleError('civilStatus')}</span>
+              )}
             </div>
             <div className={styles.formField}>
               <label className={styles.fieldLabel} htmlFor="citizenship">
                 Citizenship
               </label>
               <input
-                className={styles.input}
+                className={`${styles.input} ${getVisibleError('citizenship') ? styles.inputError : ''}`}
                 id="citizenship"
                 type="text"
                 autoComplete="country-name"
                 placeholder="Filipino"
                 value={form.citizenship}
-                onChange={(event) => setForm((prev) => ({ ...prev, citizenship: event.target.value }))}
+                onBlur={() => handleBlur('citizenship')}
+                onChange={(event) => {
+                  const noNumbers = event.target.value.replace(/\d/g, '');
+                  handleFieldChange('citizenship', noNumbers);
+                }}
                 required
               />
+              {getVisibleError('citizenship') && (
+                <span className={styles.fieldError} role="alert">{getVisibleError('citizenship')}</span>
+              )}
             </div>
             <div className={styles.formField}>
               <label className={styles.fieldLabel} htmlFor="birthdate">
@@ -616,18 +707,18 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
               </label>
               <div className={styles.maskWrap}>
                 <input
-                  className={`${styles.input} ${styles.maskInput}`}
+                  className={`${styles.input} ${styles.maskInput} ${getVisibleError('birthdate') ? styles.inputError : ''}`}
                   id="birthdate"
                   type="text"
                   required
                   placeholder="yyyy/mm/dd"
-                  pattern="\\d{4}\/\\d{2}\/\\d{2}"
+                  pattern="\d{4}/\d{2}/\d{2}"
                   title="Enter birthdate in yyyy/mm/dd format"
                   inputMode="numeric"
                   value={form.birthdate}
+                  onBlur={() => handleBlur('birthdate')}
                   onChange={(event) => {
                     const raw = event.target.value;
-                    // Keep digits only, then format as yyyy/mm/dd while typing
                     const digits = raw.replace(/\D/g, '');
                     const y = digits.slice(0, 4);
                     const m = digits.slice(4, 6);
@@ -635,13 +726,15 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
                     let formatted = y;
                     if (m) formatted += `/${m}`;
                     if (d) formatted += `/${d}`;
-                    // enforce max length yyyy/mm/dd
                     formatted = formatted.slice(0, 10);
-                    setForm((prev) => ({ ...prev, birthdate: formatted }));
+                    handleFieldChange('birthdate', formatted);
                   }}
                 />
                 <div className={styles.maskOverlay} dangerouslySetInnerHTML={{ __html: renderMaskedHtml(form.birthdate) }} />
               </div>
+              {getVisibleError('birthdate') && (
+                <span className={styles.fieldError} role="alert">{getVisibleError('birthdate')}</span>
+              )}
             </div>
           </div>
         </section>
@@ -654,14 +747,18 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
               House/Unit/Building/Village/Street
             </label>
             <input
-              className={styles.input}
+              className={`${styles.input} ${getVisibleError('addressLine') ? styles.inputError : ''}`}
               id="address-line"
               type="text"
               placeholder="123 Main St"
               required
               value={form.addressLine}
-              onChange={(event) => setForm((prev) => ({ ...prev, addressLine: event.target.value }))}
+              onBlur={() => handleBlur('addressLine')}
+              onChange={(event) => handleFieldChange('addressLine', event.target.value)}
             />
+            {getVisibleError('addressLine') && (
+              <span className={styles.fieldError} role="alert">{getVisibleError('addressLine')}</span>
+            )}
           </div>
 
           <div className={styles.formGridFour}>
@@ -708,10 +805,10 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
             </div>
             <div className={styles.formField}>
               <label className={styles.fieldLabel} htmlFor="contact-number">
-                Contact
+                Contact Number
               </label>
               <input
-                className={styles.input}
+                className={`${styles.input} ${getVisibleError('contactNumber') ? styles.inputError : ''}`}
                 id="contact-number"
                 type="tel"
                 placeholder="09123456789"
@@ -719,12 +816,15 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
                 inputMode="numeric"
                 pattern="\d{11}"
                 value={form.contactNumber}
+                onBlur={() => handleBlur('contactNumber')}
                 onChange={(event) => {
-                  // allow only digits and limit to 11
                   const digits = event.target.value.replace(/\D/g, '').slice(0, 11);
-                  setForm((prev) => ({ ...prev, contactNumber: digits }));
+                  handleFieldChange('contactNumber', digits);
                 }}
               />
+              {getVisibleError('contactNumber') && (
+                <span className={styles.fieldError} role="alert">{getVisibleError('contactNumber')}</span>
+              )}
             </div>
           </div>
         </section>
@@ -738,14 +838,18 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
                 Email
               </label>
               <input
-                className={styles.input}
+                className={`${styles.input} ${getVisibleError('email') ? styles.inputError : ''}`}
                 id="register-email"
                 type="email"
                 placeholder="john@example.com"
                 required
                 value={form.email}
-                onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
+                onBlur={() => handleBlur('email')}
+                onChange={(event) => handleFieldChange('email', event.target.value)}
               />
+              {getVisibleError('email') && (
+                <span className={styles.fieldError} role="alert">{getVisibleError('email')}</span>
+              )}
             </div>
             <div className={styles.formField}>
               <label className={styles.fieldLabel} htmlFor="register-password">
@@ -753,13 +857,14 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
               </label>
               <div className={styles.passwordWrapper}>
                 <input
-                  className={`${styles.input} ${styles.inputWithToggle}`}
+                  className={`${styles.input} ${styles.inputWithToggle} ${getVisibleError('password') ? styles.inputError : ''}`}
                   id="register-password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="********"
+                  placeholder="At least 8 characters"
                   required
                   value={form.password}
-                  onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
+                  onBlur={() => handleBlur('password')}
+                  onChange={(event) => handleFieldChange('password', event.target.value)}
                 />
                 <button
                   type="button"
@@ -771,6 +876,9 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
                   {showPassword ? <EyeOff className={styles.eyeIcon} /> : <Eye className={styles.eyeIcon} />}
                 </button>
               </div>
+              {getVisibleError('password') && (
+                <span className={styles.fieldError} role="alert">{getVisibleError('password')}</span>
+              )}
             </div>
           </div>
 
@@ -780,11 +888,12 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
                 ID Type
               </label>
               <select
-                className={styles.select}
+                className={`${styles.select} ${getVisibleError('idType') ? styles.inputError : ''}`}
                 id="id-type"
                 required
                 value={form.idType}
-                onChange={(event) => setForm((prev) => ({ ...prev, idType: event.target.value }))}
+                onBlur={() => handleBlur('idType')}
+                onChange={(event) => handleFieldChange('idType', event.target.value)}
               >
                 <option value="">Select government ID</option>
                 <option value="Passport">Passport</option>
@@ -799,6 +908,9 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
                 <option value="PWD ID">PWD ID</option>
                 <option value="Other Government ID">Other Government ID</option>
               </select>
+              {getVisibleError('idType') && (
+                <span className={styles.fieldError} role="alert">{getVisibleError('idType')}</span>
+              )}
             </div>
             <div className={styles.formField}>
               <label className={styles.fieldLabel} htmlFor="confirm-password">
@@ -806,13 +918,14 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
               </label>
               <div className={styles.passwordWrapper}>
                 <input
-                  className={`${styles.input} ${styles.inputWithToggle}`}
+                  className={`${styles.input} ${styles.inputWithToggle} ${getVisibleError('confirmPassword') ? styles.inputError : ''}`}
                   id="confirm-password"
                   type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="********"
+                  placeholder="Repeat password"
                   required
                   value={form.confirmPassword}
-                  onChange={(event) => setForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
+                  onBlur={() => handleBlur('confirmPassword')}
+                  onChange={(event) => handleFieldChange('confirmPassword', event.target.value)}
                 />
                 <button
                   type="button"
@@ -824,6 +937,9 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
                   {showConfirmPassword ? <EyeOff className={styles.eyeIcon} /> : <Eye className={styles.eyeIcon} />}
                 </button>
               </div>
+              {getVisibleError('confirmPassword') && (
+                <span className={styles.fieldError} role="alert">{getVisibleError('confirmPassword')}</span>
+              )}
             </div>
           </div>
 
@@ -833,14 +949,18 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
                 ID Number
               </label>
               <input
-                className={styles.input}
+                className={`${styles.input} ${getVisibleError('idNumber') ? styles.inputError : ''}`}
                 id="id-number"
                 type="text"
                 placeholder="Any valid ID number"
                 required
                 value={form.idNumber}
-                onChange={(event) => setForm((prev) => ({ ...prev, idNumber: event.target.value }))}
+                onBlur={() => handleBlur('idNumber')}
+                onChange={(event) => handleFieldChange('idNumber', event.target.value)}
               />
+              {getVisibleError('idNumber') && (
+                <span className={styles.fieldError} role="alert">{getVisibleError('idNumber')}</span>
+              )}
             </div>
             <div className={styles.formField} />
           </div>
@@ -851,184 +971,197 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
                 Upload Picture of ID (Front)
               </label>
               <div className={styles.fileInputWrap}>
-              <input
-                className={styles.input}
-                id="id-image-front-file"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                required
-                onChange={async (event) => {
-                  const selectedFile = event.target.files?.[0] ?? null;
-                  // quick check: if filenames+size+lastModified equal, treat as same
-                  const other = form.idImageFileBack;
-                  if (selectedFile && other) {
-                    const sameQuick =
-                      selectedFile.name === other.name &&
-                      selectedFile.size === other.size &&
-                      selectedFile.lastModified === other.lastModified;
-                    if (!sameQuick) {
-                      try {
-                        const [h1, h2] = await Promise.all([computeFileHash(selectedFile), computeFileHash(other)]);
-                        if (h1 === h2) {
-                          setError('Front and back images cannot be the same file.');
-                          // clear the newly selected front file
-                          (event.target as HTMLInputElement).value = '';
-                          return;
+                <input
+                  className={`${styles.input} ${getVisibleError('idImageFileFront') ? styles.inputError : ''}`}
+                  id="id-image-front-file"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  required
+                  onChange={async (event) => {
+                    const selectedFile = event.target.files?.[0] ?? null;
+                    const other = form.idImageFileBack;
+                    if (selectedFile && other) {
+                      const sameQuick =
+                        selectedFile.name === other.name &&
+                        selectedFile.size === other.size &&
+                        selectedFile.lastModified === other.lastModified;
+                      if (!sameQuick) {
+                        try {
+                          const [h1, h2] = await Promise.all([computeFileHash(selectedFile), computeFileHash(other)]);
+                          if (h1 === h2) {
+                            setError('Front and back images cannot be the same file.');
+                            (event.target as HTMLInputElement).value = '';
+                            return;
+                          }
+                        } catch (e) {
+                          // hashing failed; fall back to quick check
                         }
+                      } else {
+                        setError('Front and back images cannot be the same file.');
+                        (event.target as HTMLInputElement).value = '';
+                        return;
+                      }
+                    }
+
+                    setForm((prev) => ({ ...prev, idImageFileFront: selectedFile }));
+                    if (selectedFile) {
+                      const prev = frontPreviewUrl;
+                      try {
+                        const url = URL.createObjectURL(selectedFile);
+                        setFrontPreviewUrl(url);
+                        if (prev) URL.revokeObjectURL(prev);
                       } catch (e) {
-                        // hashing failed; fall back to quick check
+                        // ignore
                       }
                     } else {
-                      setError('Front and back images cannot be the same file.');
-                      (event.target as HTMLInputElement).value = '';
-                      return;
+                      if (frontPreviewUrl) {
+                        URL.revokeObjectURL(frontPreviewUrl);
+                        setFrontPreviewUrl(null);
+                      }
                     }
-                  }
-
-                  setForm((prev) => ({ ...prev, idImageFileFront: selectedFile }));
-                  if (selectedFile) {
-                    const prev = frontPreviewUrl;
-                    try {
-                      const url = URL.createObjectURL(selectedFile);
-                      setFrontPreviewUrl(url);
-                      if (prev) URL.revokeObjectURL(prev);
-                    } catch (e) {
-                      // ignore
-                    }
-                  } else {
-                    if (frontPreviewUrl) {
-                      URL.revokeObjectURL(frontPreviewUrl);
-                      setFrontPreviewUrl(null);
-                    }
-                  }
-                }}
-              />
-              {frontPreviewUrl && form.idImageFileFront && (
-                <button
-                  type="button"
-                  className={styles.filePreviewLink}
-                  onClick={() => {
-                    const file = form.idImageFileFront;
-                    if (!file) return;
-
-                    const blobUrl = URL.createObjectURL(file);
-                    window.open(blobUrl, '_blank');
-                    // We don't revoke immediately because the new tab needs it to load
-                    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
                   }}
-                >
-                  Open full image
-                </button>
-              )}
+                />
+                {frontPreviewUrl && form.idImageFileFront && (
+                  <button
+                    type="button"
+                    className={styles.filePreviewLink}
+                    onClick={() => {
+                      const file = form.idImageFileFront;
+                      if (!file) return;
+
+                      const blobUrl = URL.createObjectURL(file);
+                      window.open(blobUrl, '_blank');
+                      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+                    }}
+                  >
+                    Open full image
+                  </button>
+                )}
               </div>
+              {getVisibleError('idImageFileFront') && (
+                <span className={styles.fieldError} role="alert">{getVisibleError('idImageFileFront')}</span>
+              )}
             </div>
             <div className={styles.formField}>
               <label className={styles.fieldLabel} htmlFor="id-image-back-file">
                 Upload Picture of ID (Back)
               </label>
               <div className={styles.fileInputWrap}>
-              <input
-                className={styles.input}
-                id="id-image-back-file"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                required
-                onChange={async (event) => {
-                  const selectedFile = event.target.files?.[0] ?? null;
-                  const other = form.idImageFileFront;
-                  if (selectedFile && other) {
-                    const sameQuick =
-                      selectedFile.name === other.name &&
-                      selectedFile.size === other.size &&
-                      selectedFile.lastModified === other.lastModified;
-                    if (!sameQuick) {
-                      try {
-                        const [h1, h2] = await Promise.all([computeFileHash(selectedFile), computeFileHash(other)]);
-                        if (h1 === h2) {
-                          setError('Front and back images cannot be the same file.');
-                          (event.target as HTMLInputElement).value = '';
-                          return;
+                <input
+                  className={`${styles.input} ${getVisibleError('idImageFileBack') ? styles.inputError : ''}`}
+                  id="id-image-back-file"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  required
+                  onChange={async (event) => {
+                    const selectedFile = event.target.files?.[0] ?? null;
+                    const other = form.idImageFileFront;
+                    if (selectedFile && other) {
+                      const sameQuick =
+                        selectedFile.name === other.name &&
+                        selectedFile.size === other.size &&
+                        selectedFile.lastModified === other.lastModified;
+                      if (!sameQuick) {
+                        try {
+                          const [h1, h2] = await Promise.all([computeFileHash(selectedFile), computeFileHash(other)]);
+                          if (h1 === h2) {
+                            setError('Front and back images cannot be the same file.');
+                            (event.target as HTMLInputElement).value = '';
+                            return;
+                          }
+                        } catch (e) {
+                          // hashing failed; fall back to quick check
                         }
-                      } catch (e) {
-                        // hashing failed; fall back to quick check
+                      } else {
+                        setError('Front and back images cannot be the same file.');
+                        (event.target as HTMLInputElement).value = '';
+                        return;
+                      }
+                    }
+
+                    setForm((prev) => ({ ...prev, idImageFileBack: selectedFile }));
+                    if (selectedFile) {
+                      const prev = backPreviewUrl;
+                      const url = URL.createObjectURL(selectedFile);
+                      setBackPreviewUrl(url);
+                      if (prev) {
+                        try {
+                          URL.revokeObjectURL(prev);
+                        } catch (e) { /* ignore */ }
                       }
                     } else {
-                      setError('Front and back images cannot be the same file.');
-                      (event.target as HTMLInputElement).value = '';
-                      return;
+                      if (backPreviewUrl) {
+                        try {
+                          URL.revokeObjectURL(backPreviewUrl);
+                        } catch (e) { /* ignore */ }
+                        setBackPreviewUrl(null);
+                      }
                     }
-                  }
-
-                  setForm((prev) => ({ ...prev, idImageFileBack: selectedFile }));
-                  if (selectedFile) {
-                    const prev = backPreviewUrl;
-                    const url = URL.createObjectURL(selectedFile);
-                    setBackPreviewUrl(url);
-                    if (prev) {
-                      try {
-                        URL.revokeObjectURL(prev);
-                      } catch (e) { /* ignore */ }
-                    }
-                  } else {
-                    if (backPreviewUrl) {
-                      try {
-                        URL.revokeObjectURL(backPreviewUrl);
-                      } catch (e) { /* ignore */ }
-                      setBackPreviewUrl(null);
-                    }
-                  }
-                }}
-              />
-              {backPreviewUrl && form.idImageFileBack && (
-                <button
-                  type="button"
-                  className={styles.filePreviewLink}
-                  onClick={() => {
-                    const file = form.idImageFileBack;
-                    if (!file) return;
-
-                    const blobUrl = URL.createObjectURL(file);
-                    window.open(blobUrl, '_blank');
-                    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
                   }}
-                >
-                  Open full image
-                </button>
-              )}
+                />
+                {backPreviewUrl && form.idImageFileBack && (
+                  <button
+                    type="button"
+                    className={styles.filePreviewLink}
+                    onClick={() => {
+                      const file = form.idImageFileBack;
+                      if (!file) return;
+
+                      const blobUrl = URL.createObjectURL(file);
+                      window.open(blobUrl, '_blank');
+                      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+                    }}
+                  >
+                    Open full image
+                  </button>
+                )}
               </div>
+              {getVisibleError('idImageFileBack') && (
+                <span className={styles.fieldError} role="alert">{getVisibleError('idImageFileBack')}</span>
+              )}
             </div>
           </div>
           <p className={styles.helperText}>Accepted formats: JPG, PNG, WEBP. Max size after compression: 5MB.</p>
         </section>
 
-        <div className={styles.checkControl}>
-          <input
-            id="terms-consent"
-            type="checkbox"
-            checked={form.terms}
-            onChange={(event) => setForm((prev) => ({ ...prev, terms: event.target.checked }))}
-          />
-          <label htmlFor="terms-consent">
-            I agree to the{' '}
-            <button type="button" className={styles.linkText} onClick={() => setLegalModalSlug('terms-and-conditions')}>
-              Terms and Conditions
-            </button>
-          </label>
+        <div className={styles.formField}>
+          <div className={styles.checkControl}>
+            <input
+              id="terms-consent"
+              type="checkbox"
+              checked={form.terms}
+              onChange={(event) => handleFieldChange('terms', event.target.checked)}
+            />
+            <label htmlFor="terms-consent">
+              I agree to the{' '}
+              <button type="button" className={styles.linkText} onClick={() => setLegalModalSlug('terms-and-conditions')}>
+                Terms and Conditions
+              </button>
+            </label>
+          </div>
+          {getVisibleError('terms') && (
+            <span className={styles.fieldError} role="alert">{getVisibleError('terms')}</span>
+          )}
         </div>
 
-        <div className={styles.checkControl}>
-          <input
-            id="privacy-consent"
-            type="checkbox"
-            checked={form.dataPrivacy}
-            onChange={(event) => setForm((prev) => ({ ...prev, dataPrivacy: event.target.checked }))}
-          />
-          <label htmlFor="privacy-consent">
-            I accept the{' '}
-            <button type="button" className={styles.linkText} onClick={() => setLegalModalSlug('data-privacy')}>
-              Data Privacy Policy
-            </button>
-          </label>
+        <div className={styles.formField}>
+          <div className={styles.checkControl}>
+            <input
+              id="privacy-consent"
+              type="checkbox"
+              checked={form.dataPrivacy}
+              onChange={(event) => handleFieldChange('dataPrivacy', event.target.checked)}
+            />
+            <label htmlFor="privacy-consent">
+              I accept the{' '}
+              <button type="button" className={styles.linkText} onClick={() => setLegalModalSlug('data-privacy')}>
+                Data Privacy Policy
+              </button>
+            </label>
+          </div>
+          {getVisibleError('dataPrivacy') && (
+            <span className={styles.fieldError} role="alert">{getVisibleError('dataPrivacy')}</span>
+          )}
         </div>
 
         <button className={styles.primaryBtn} type="submit" disabled={isSubmitting}>
@@ -1036,7 +1169,6 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
         </button>
       </form>
 
-      {/* Terms and Data Privacy links temporarily disabled in registration */}
       {showSummaryModal && (
         <SummaryModal
           form={form}
@@ -1063,7 +1195,6 @@ export default function RegisterForm({ initialLegalDocuments }: { initialLegalDo
         }}
         initialDocuments={initialLegalDocs}
       />
-
     </>
   );
 }
@@ -1165,7 +1296,7 @@ function SummaryModal({
                 Tap images to zoom
               </p>
 
-              {/* Action Buttons - Moved inside this column to be closer to IDs */}
+              {/* Action Buttons */}
               <div
                 style={{
                   display: 'flex',
@@ -1215,11 +1346,7 @@ function SummaryModal({
             </div>
           </section>
         </div>
-
-        {/* Removed redundant bottom button section */}
       </div>
     </div>
   );
 }
-
-// Modal component removed — links temporarily disabled above
