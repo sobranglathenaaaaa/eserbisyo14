@@ -315,7 +315,7 @@ export default function StaffProcessRequestsPage() {
 
             
 
-            {/* Table */}
+            {/* Table or Cards */}
             {filteredRequests.length === 0 ? (
               <EmptyState
                 title={locale === 'fil' ? 'Walang request' : 'No requests'}
@@ -325,54 +325,96 @@ export default function StaffProcessRequestsPage() {
               />
             ) : (
               <>
-                <div className="overflow-x-auto">
+                {/* Mobile View: Cards */}
+                <div className="block md:hidden space-y-3">
+                  {paginatedRequests.map((request) => (
+                    <div
+                      key={`m-pr-${request.id}`}
+                      className={`rounded-xl border border-[color:var(--portal-border-soft)] bg-white p-3.5 shadow-xs ${
+                        selectedId === request.id ? 'ring-2 ring-[color:var(--portal-accent-strong)]' : ''
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <span className="text-xs font-mono text-[color:var(--portal-ink-500)]">{request.referenceNumber}</span>
+                          <h4 className="text-sm font-bold text-[color:var(--portal-ink-900)] leading-tight mt-0.5">{request.typeLabel}</h4>
+                          <p className="mt-1 text-xs text-[color:var(--portal-ink-700)]">
+                            <span className="text-[color:var(--portal-ink-500)]">{locale === 'fil' ? 'Residente: ' : 'Resident: '}</span>
+                            {request.residentName}
+                          </p>
+                        </div>
+                        <StatusBadge tone={statusToneFromState(request.status)}>
+                          {getRequestStatusLabel(request.status, locale)}
+                        </StatusBadge>
+                      </div>
+
+                      <div className="mt-2.5 flex items-center justify-between border-t border-[color:var(--portal-border-soft)] pt-2.5 text-xs text-[color:var(--portal-ink-700)]">
+                        <span className="font-semibold text-emerald-800">
+                          {request.amount === 0 ? (locale === 'fil' ? 'Libre' : 'Free') : `₱${request.amount.toFixed(2)}`}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="font-semibold text-emerald-800 hover:text-emerald-950 px-4"
+                          onClick={() => setSelectedId(request.id)}
+                        >
+                          {locale === 'fil' ? 'Tingnan' : 'Review'}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop View: Table */}
+                <div className="hidden md:block overflow-x-auto rounded-xl border border-[color:var(--portal-border-soft)]">
                   <table className="w-full min-w-[900px] table-fixed text-sm">
                     <thead>
-                      <tr className="border-b border-[color:var(--portal-border-soft)]">
-                        <th className="w-[12%] px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">ID</th>
-                        <th className="w-[15%] px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">{locale === 'fil' ? 'Reference' : 'Reference'}</th>
-                        <th className="w-[20%] px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">{locale === 'fil' ? 'Resident' : 'Resident'}</th>
-                        <th className="w-[18%] px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">{locale === 'fil' ? 'Type' : 'Type'}</th>
-                        <th className="w-[10%] px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">{locale === 'fil' ? 'Amount' : 'Amount'}</th>
-                        <th className="w-[15%] px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">{locale === 'fil' ? 'Status' : 'Status'}</th>
-                        <th className="w-[10%] px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">{locale === 'fil' ? 'Action' : 'Action'}</th>
+                      <tr className="border-b border-[color:var(--portal-border-soft)] bg-emerald-50/40 text-[color:var(--portal-ink-700)]">
+                        <th className="w-[12%] px-4 py-3 text-center font-bold">ID</th>
+                        <th className="w-[15%] px-4 py-3 text-center font-bold">{locale === 'fil' ? 'Reference' : 'Reference'}</th>
+                        <th className="w-[20%] px-4 py-3 text-center font-bold">{locale === 'fil' ? 'Resident' : 'Resident'}</th>
+                        <th className="w-[18%] px-4 py-3 text-center font-bold">{locale === 'fil' ? 'Type' : 'Type'}</th>
+                        <th className="w-[10%] px-4 py-3 text-center font-bold">{locale === 'fil' ? 'Amount' : 'Amount'}</th>
+                        <th className="w-[15%] px-4 py-3 text-center font-bold">{locale === 'fil' ? 'Status' : 'Status'}</th>
+                        <th className="w-[10%] px-4 py-3 text-center font-bold">{locale === 'fil' ? 'Action' : 'Action'}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {paginatedRequests.map((request, index) => (
                         <tr
                           key={request.id}
-                          className={`border-b border-[color:var(--portal-border-soft)] ${
+                          className={`border-b border-[color:var(--portal-border-soft)] hover:bg-emerald-50/20 ${
                             index % 2 === 0 ? 'bg-white' : 'bg-[color:var(--portal-surface-1)]'
                           }`}
                         >
                           <td className="truncate px-4 py-3 text-center font-mono text-xs text-[color:var(--portal-ink-600)]">
                             {request.id.substring(0, 8)}
                           </td>
-                            <td className="truncate px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-900)]">
+                          <td className="truncate px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-900)]">
                             {request.referenceNumber}
                           </td>
-                            <td className="truncate px-4 py-3 text-center text-[color:var(--portal-ink-700)]">
+                          <td className="truncate px-4 py-3 text-center text-[color:var(--portal-ink-700)]">
                             {request.residentName}
                           </td>
-                            <td className="truncate px-4 py-3 text-center text-[color:var(--portal-ink-700)]">
+                          <td className="truncate px-4 py-3 text-center text-[color:var(--portal-ink-700)]">
                             {request.typeLabel}
                           </td>
-                            <td className="px-4 py-3 text-[color:var(--portal-ink-700)] text-center">
+                          <td className="px-4 py-3 text-[color:var(--portal-ink-700)] text-center">
                             {request.amount === 0 ? (locale === 'fil' ? 'Libre' : 'Free') : `₱${request.amount.toFixed(2)}`}
                           </td>
-                            <td className="px-4 py-3 text-center">
-                              <StatusBadge tone={statusToneFromState(request.status)}>
+                          <td className="px-4 py-3 text-center">
+                            <StatusBadge tone={statusToneFromState(request.status)}>
                               {getRequestStatusLabel(request.status, locale)}
-                              </StatusBadge>
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              <div className="flex justify-center">
-                                <Button type="button" variant="ghost" onClick={() => setSelectedId(request.id)}>
-                                  {locale === 'fil' ? 'Tingnan' : 'Review'}
-                                </Button>
-                              </div>
-                            </td>
+                            </StatusBadge>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <div className="flex justify-center">
+                              <Button type="button" variant="ghost" size="sm" className="font-semibold text-emerald-800 hover:text-emerald-950 px-3" onClick={() => setSelectedId(request.id)}>
+                                {locale === 'fil' ? 'Tingnan' : 'Review'}
+                              </Button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

@@ -223,7 +223,7 @@ function RequestHistoryContent({ role }: { role: 'admin' | 'staff' }) {
         />
 
         {/* Mobile View: Cards */}
-        <div className="grid gap-3 sm:hidden mt-3">
+        <div className="block md:hidden space-y-3 mt-3">
           {pageItems.length === 0 ? (
             <div className="py-8 text-center text-sm text-[color:var(--portal-ink-500)]">
               {locale === 'fil' ? 'Walang history sa kategorya o status na ito.' : 'No history matches this category or status.'}
@@ -256,7 +256,7 @@ function RequestHistoryContent({ role }: { role: 'admin' | 'staff' }) {
         </div>
 
         {/* Desktop View: Table */}
-        <div className="mt-3 hidden sm:block overflow-x-auto rounded-xl border border-[color:var(--portal-border-soft)]">
+        <div className="mt-3 hidden md:block overflow-x-auto rounded-xl border border-[color:var(--portal-border-soft)]">
           <Table className="min-w-[760px] table-fixed">
             <TableHeader>
               <TableRow className="h-11 bg-emerald-50/40">

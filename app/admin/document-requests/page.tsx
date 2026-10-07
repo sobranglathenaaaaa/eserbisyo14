@@ -240,25 +240,68 @@ export default function AdminDocumentRequestsPage() {
               </div>
             </div>
 
-            {/* Document Requests Table */}
-            <div className="mt-3 overflow-x-auto">
+            {/* Mobile View: Cards */}
+            <div className="block md:hidden space-y-3 mt-3">
+              {pageItems.length === 0 ? (
+                <div className="py-8 text-center text-sm text-[color:var(--portal-ink-500)]">
+                  {locale === 'fil' ? 'Walang nahanap na tugmang requests.' : 'No matching document requests found.'}
+                </div>
+              ) : (
+                pageItems.map((item) => {
+                  const isSelected = selectedRequest?.id === item.id;
+
+                  return (
+                    <div
+                      key={`m-dr-${item.id}`}
+                      className={`rounded-xl border border-[color:var(--portal-border-soft)] bg-white p-3.5 shadow-xs ${
+                        isSelected ? 'ring-2 ring-[color:var(--portal-accent-strong)]' : ''
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <span className="text-xs font-mono text-[color:var(--portal-ink-500)]">{item.referenceNumber}</span>
+                          <h4 className="text-sm font-bold text-[color:var(--portal-ink-900)] leading-tight mt-0.5">{item.typeLabel}</h4>
+                          <p className="mt-1 text-xs text-[color:var(--portal-ink-700)]">
+                            <span className="text-[color:var(--portal-ink-500)]">{locale === 'fil' ? 'Residente: ' : 'Resident: '}</span>
+                            {item.residentName}
+                          </p>
+                        </div>
+                        <StatusBadge tone={statusToneFromState(item.status)}>
+                          {getRequestStatusLabel(item.status, locale)}
+                        </StatusBadge>
+                      </div>
+
+                      <div className="mt-2.5 flex items-center justify-between border-t border-[color:var(--portal-border-soft)] pt-2.5 text-xs text-[color:var(--portal-ink-700)]">
+                        <span className="font-semibold text-emerald-800">
+                          {item.amount === 0 ? (locale === 'fil' ? 'Libre' : 'Free') : `₱${item.amount.toLocaleString()}`}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          type="button"
+                          className="font-semibold text-emerald-800 hover:text-emerald-950 px-4"
+                          onClick={() => openReview(item.id)}
+                        >
+                          {locale === 'fil' ? 'Suriin' : 'Review'}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Desktop View: Table */}
+            <div className="mt-3 hidden md:block overflow-x-auto rounded-xl border border-[color:var(--portal-border-soft)]">
               <table className="w-full min-w-[900px] table-fixed text-sm">
-                <colgroup>
-                  <col className="w-[16%]" />
-                  <col className="w-[19%]" />
-                  <col className="w-[25%]" />
-                  <col className="w-[13%]" />
-                  <col className="w-[13%]" />
-                  <col className="w-[14%]" />
-                </colgroup>
                 <thead>
-                  <tr className="border-b border-[color:var(--portal-border-soft)]">
-                    <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">Reference</th>
-                    <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">Resident</th>
-                    <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">Document Type</th>
-                    <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">Amount</th>
-                    <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">Status</th>
-                    <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">Action</th>
+                  <tr className="border-b border-[color:var(--portal-border-soft)] bg-emerald-50/40 text-[color:var(--portal-ink-700)]">
+                    <th className="w-[16%] px-4 py-3 text-center font-bold">Reference</th>
+                    <th className="w-[19%] px-4 py-3 text-center font-bold">Resident</th>
+                    <th className="w-[25%] px-4 py-3 text-center font-bold">Document Type</th>
+                    <th className="w-[13%] px-4 py-3 text-center font-bold">Amount</th>
+                    <th className="w-[13%] px-4 py-3 text-center font-bold">Status</th>
+                    <th className="w-[14%] px-4 py-3 text-center font-bold">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -273,7 +316,7 @@ export default function AdminDocumentRequestsPage() {
                       const isSelected = selectedRequest?.id === item.id;
 
                       return (
-                        <tr key={item.id} className={`border-b border-[color:var(--portal-border-soft)] ${isSelected ? 'bg-[color:var(--portal-surface-3)] font-medium' : index % 2 === 0 ? 'bg-white hover:bg-[color:var(--portal-surface-1)] transition-colors' : 'bg-[color:var(--portal-surface-1)] hover:bg-[color:var(--portal-surface-2)] transition-colors'}`}>
+                        <tr key={item.id} className={`border-b border-[color:var(--portal-border-soft)] ${isSelected ? 'bg-[color:var(--portal-surface-3)] font-medium' : index % 2 === 0 ? 'bg-white hover:bg-emerald-50/20 transition-colors' : 'bg-[color:var(--portal-surface-1)] hover:bg-emerald-50/20 transition-colors'}`}>
                           <td className="truncate px-4 py-3 text-center align-middle text-xs text-[color:var(--portal-ink-600)]" title={item.referenceNumber}>
                             {item.referenceNumber}
                           </td>
@@ -302,7 +345,9 @@ export default function AdminDocumentRequestsPage() {
                             <div className="flex items-center justify-center">
                               <Button
                                 variant="ghost"
+                                size="sm"
                                 type="button"
+                                className="font-semibold text-emerald-800 hover:text-emerald-950 px-3"
                                 onClick={() => openReview(item.id)}
                               >
                                 {locale === 'fil' ? 'Suriin' : 'Review'}

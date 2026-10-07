@@ -266,63 +266,122 @@ export default function StaffReservationsPage() {
               </div>
             </div>
 
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="py-2 pr-2 align-middle text-center text-sm text-[color:var(--portal-ink-700)] normal-case tracking-normal" style={{ width: '15%' }}>Resource</TableHead>
-                  <TableHead className="py-2 pr-2 align-middle text-center text-sm text-[color:var(--portal-ink-700)] normal-case tracking-normal" style={{ width: '20%' }}>Resident</TableHead>
-                  <TableHead className="py-2 pr-2 align-middle text-center text-sm text-[color:var(--portal-ink-700)] normal-case tracking-normal" style={{ width: '25%' }}>Date & Time</TableHead>
-                  <TableHead className="py-2 pr-2 align-middle text-center text-sm text-[color:var(--portal-ink-700)] normal-case tracking-normal" style={{ width: '15%' }}>{locale === 'fil' ? 'Status' : 'Status'}</TableHead>
-                  <TableHead className="py-2 pr-2 align-middle text-center text-sm text-[color:var(--portal-ink-700)] normal-case tracking-normal" style={{ width: '8%' }}>{locale === 'fil' ? 'Aksyon' : 'Action'}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pageItems.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="py-8 text-center text-sm text-[color:var(--portal-ink-500)]">
-                      {locale === 'fil' ? 'Walang resulta' : 'No matching reservations'}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  pageItems.map((item) => (
-                    <TableRow
-                      key={item.id}
-                      className={selectedReservation?.id === item.id ? 'bg-[color:var(--portal-surface-3)]' : ''}
-                    >
-                      <TableCell className="py-2 pr-2 text-center align-middle">
-                        {item.resource === 'equipment' && item.itemName ? item.itemName : getResourceLabel(item.resource)}
-                      </TableCell>
-                      <TableCell className="py-2 pr-2 text-center align-middle text-sm">{item.residentName}</TableCell>
-                      <TableCell className="py-2 pr-2 text-center align-middle text-sm">
-                        {item.startAt && item.endAt ? (
-                          <div>
-                            <div>{formatDateTime(item.startAt, locale)}</div>
-                            <div className="text-xs text-[color:var(--portal-ink-500)]">to {formatDateTime(item.endAt, locale)}</div>
-                          </div>
-                        ) : (
-                          '-'
-                        )}
-                      </TableCell>
-                      <TableCell className="py-2 pr-2 text-center align-middle">
-                        <StatusBadge tone={statusToneFromState(item.status)}>{getStatusLabel(item.status)}</StatusBadge>
-                      </TableCell>
-                      <TableCell className="py-2 pr-2 text-center align-middle">
-                        <div className="flex justify-center">
-                          <Button
-                            variant="ghost"
-                            type="button"
-                            className="rounded-full border border-[color:var(--portal-border-soft)] bg-[color:var(--portal-surface-1)] px-5 hover:bg-[color:var(--portal-surface-3)]"
-                            onClick={() => openReview(item.id)}
-                          >
-                            {locale === 'fil' ? 'Suriin' : 'Review'}
-                          </Button>
+            {/* Mobile View: Cards */}
+            <div className="block md:hidden space-y-3">
+              {pageItems.length === 0 ? (
+                <div className="py-8 text-center text-sm text-[color:var(--portal-ink-500)]">
+                  {locale === 'fil' ? 'Walang resulta' : 'No matching reservations'}
+                </div>
+              ) : (
+                pageItems.map((item) => (
+                  <div
+                    key={`m-res-${item.id}`}
+                    className={`rounded-xl border border-[color:var(--portal-border-soft)] bg-white p-3.5 shadow-xs ${
+                      selectedReservation?.id === item.id ? 'ring-2 ring-[color:var(--portal-accent-strong)]' : ''
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-sm font-bold text-[color:var(--portal-ink-900)] leading-tight">
+                          {item.resource === 'equipment' && item.itemName ? item.itemName : getResourceLabel(item.resource)}
+                        </h4>
+                        <p className="mt-0.5 text-xs text-[color:var(--portal-ink-700)]">
+                          <span className="text-[color:var(--portal-ink-500)]">{locale === 'fil' ? 'Residente: ' : 'Resident: '}</span>
+                          {item.residentName}
+                        </p>
+                      </div>
+                      <StatusBadge tone={statusToneFromState(item.status)}>{getStatusLabel(item.status)}</StatusBadge>
+                    </div>
+
+                    <div className="mt-2 text-xs text-[color:var(--portal-ink-600)]">
+                      {item.startAt && item.endAt ? (
+                        <div>
+                          <span>{formatDateTime(item.startAt, locale)}</span>
+                          <span className="text-[color:var(--portal-ink-400)]"> — </span>
+                          <span>{formatDateTime(item.endAt, locale)}</span>
                         </div>
+                      ) : (
+                        '-'
+                      )}
+                    </div>
+
+                    <div className="mt-2.5 flex items-center justify-end border-t border-[color:var(--portal-border-soft)] pt-2.5">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        className="font-semibold text-emerald-800 hover:text-emerald-950 px-4"
+                        onClick={() => openReview(item.id)}
+                      >
+                        {locale === 'fil' ? 'Suriin' : 'Review'}
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Desktop View: Table */}
+            <div className="hidden md:block overflow-x-auto rounded-xl border border-[color:var(--portal-border-soft)]">
+              <Table className="min-w-[760px]">
+                <TableHeader>
+                  <tr className="border-b border-[color:var(--portal-border-soft)] bg-emerald-50/40 text-[color:var(--portal-ink-700)]">
+                    <TableHead className="py-2.5 px-3 align-middle text-center font-bold" style={{ width: '18%' }}>Resource</TableHead>
+                    <TableHead className="py-2.5 px-3 align-middle text-center font-bold" style={{ width: '22%' }}>Resident</TableHead>
+                    <TableHead className="py-2.5 px-3 align-middle text-center font-bold" style={{ width: '28%' }}>Date & Time</TableHead>
+                    <TableHead className="py-2.5 px-2 align-middle text-center font-bold" style={{ width: '18%' }}>{locale === 'fil' ? 'Status' : 'Status'}</TableHead>
+                    <TableHead className="py-2.5 px-3 align-middle text-center font-bold" style={{ width: '14%' }}>{locale === 'fil' ? 'Aksyon' : 'Action'}</TableHead>
+                  </tr>
+                </TableHeader>
+                <TableBody>
+                  {pageItems.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="py-8 text-center text-sm text-[color:var(--portal-ink-500)]">
+                        {locale === 'fil' ? 'Walang resulta' : 'No matching reservations'}
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    pageItems.map((item) => (
+                      <TableRow
+                        key={item.id}
+                        className={`border-b border-[color:var(--portal-border-soft)] hover:bg-emerald-50/20 ${selectedReservation?.id === item.id ? 'bg-[color:var(--portal-surface-3)]' : ''}`}
+                      >
+                        <TableCell className="py-2.5 px-3 text-center align-middle font-medium">
+                          {item.resource === 'equipment' && item.itemName ? item.itemName : getResourceLabel(item.resource)}
+                        </TableCell>
+                        <TableCell className="py-2.5 px-3 text-center align-middle text-sm">{item.residentName}</TableCell>
+                        <TableCell className="py-2.5 px-3 text-center align-middle text-xs">
+                          {item.startAt && item.endAt ? (
+                            <div>
+                              <div>{formatDateTime(item.startAt, locale)}</div>
+                              <div className="text-xs text-[color:var(--portal-ink-500)]">to {formatDateTime(item.endAt, locale)}</div>
+                            </div>
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                        <TableCell className="py-2.5 px-2 text-center align-middle">
+                          <StatusBadge tone={statusToneFromState(item.status)}>{getStatusLabel(item.status)}</StatusBadge>
+                        </TableCell>
+                        <TableCell className="py-2.5 px-3 text-center align-middle">
+                          <div className="flex justify-center">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              type="button"
+                              className="font-semibold text-emerald-800 hover:text-emerald-950 px-3"
+                              onClick={() => openReview(item.id)}
+                            >
+                              {locale === 'fil' ? 'Suriin' : 'Review'}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
 
             <div className="mt-3 flex items-center justify-between">
               <p className="text-xs text-[color:var(--portal-ink-500)]">

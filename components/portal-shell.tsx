@@ -510,13 +510,13 @@ function PortalShellContent({
             </header>
 
             {isMobileMenuOpen && (
-              <div className="fixed inset-0 z-50 flex lg:hidden">
+              <div className="fixed inset-0 z-50 flex justify-end lg:hidden">
                 <div
                   className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
                   onClick={() => setIsMobileMenuOpen(false)}
                   aria-hidden="true"
                 />
-                <div className="relative z-10 flex w-[280px] sm:w-[320px] flex-col bg-[color:var(--portal-surface-1)] p-4 shadow-2xl overflow-y-auto max-h-screen">
+                <div className="relative z-10 flex w-[280px] sm:w-[320px] flex-col bg-[color:var(--portal-surface-1)] p-4 shadow-2xl overflow-y-auto max-h-screen animate-in slide-in-from-right duration-200">
                   <div className="flex items-center justify-between border-b border-[color:var(--portal-border-soft)] pb-3">
                     <div className="flex items-center gap-2">
                       <Image

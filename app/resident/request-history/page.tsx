@@ -521,10 +521,10 @@ function ResidentRequestHistoryPageContent() {
         ) : (
           <div>
             {/* Mobile View: Cards */}
-            <div className="grid gap-3 sm:hidden">
+            <div className="block md:hidden space-y-3">
               {visibleCategoryItems.map((item) => {
                 const categoryText = resolveCategoryLabel(locale, item.category);
-                const titleText = item.kind === 'blotter' || item.kind === 'report-progress'
+                const titleText = item.kind === 'report-progress'
                   ? `${item.caseNumber ? `${item.caseNumber} - ` : ''}${item.heading}`
                   : item.heading;
 
@@ -562,7 +562,7 @@ function ResidentRequestHistoryPageContent() {
             </div>
 
             {/* Desktop View: Table */}
-            <div className="hidden sm:block overflow-x-auto rounded-xl border border-[color:var(--portal-border-soft)]">
+            <div className="hidden md:block overflow-x-auto rounded-xl border border-[color:var(--portal-border-soft)]">
               <Table className="min-w-[760px] table-fixed text-center">
                 <TableHeader>
                   <TableRow className="bg-emerald-50/40">

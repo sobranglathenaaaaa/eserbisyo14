@@ -704,113 +704,161 @@ export function IncidentsConcernsPage({ role }: { role: 'staff' | 'admin' }) {
           title={locale === 'fil' ? 'Mga Kaso at Concern ng Barangay' : 'Barangay Cases & Concerns'}
           description={locale === 'fil' ? 'Subaybayan, i-review, at pamahalaan ang lahat ng blotter at community concern reports.' : 'Review, manage, and process incident blotters and community concerns.'}
         >
-          <div className="grid gap-2">
-            <div className="relative w-full sm:w-[190px]">
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={locale === 'fil' ? 'Case No., pangalan, lokasyon' : 'Case No., name, location'}
-                className="h-11 w-full pr-8 text-sm"
-              />
-              {search && (
-                <button
-                  type="button"
-                  onClick={() => setSearch('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-full"
-                  aria-label="Clear search"
-                >
-                  <X size={13} />
-                </button>
-              )}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="w-full flex-1 md:max-w-[420px]">
+              <div className="relative">
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={locale === 'fil' ? 'Case No., pangalan, lokasyon' : 'Search by Case No., name, location...'}
+                  className="h-10 w-full pr-8 text-sm"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5 rounded-full"
+                    aria-label="Clear search"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <span className="text-xs text-[color:var(--portal-ink-500)]">
-                {locale === 'fil'
-                  ? `Ipinapakita ang ${filteredReports.length} sa ${reports.length} kaso`
-                  : `${filteredReports.length} cases | Sorted by most recent`}
-              </span>
-              <div className="flex items-center gap-2">
-                <label htmlFor="staff-stage-filter" className="sr-only">
-                  {locale === 'fil' ? 'I-filter ayon sa yugto o katayuan' : 'Filter by stage or status'}
-                </label>
-                <Select
-                  id="staff-stage-filter"
-                  value={stageFilter}
-                  onChange={(e) => setStageFilter(e.target.value as StageFilter)}
-                  className="h-9 w-[190px] min-w-[190px] max-w-[190px] text-xs"
-                >
-                  {STAGE_OPTIONS.map((o) => {
-                    const c = stageCounts[o.value];
-                    return (
-                      <option key={o.value} value={o.value}>
-                        {o.value === 'all'
-                          ? `${locale === 'fil' ? 'Lahat' : 'All'} (${c})`
-                          : `${locale === 'fil' ? o.fil : o.en} (${c})`}
-                      </option>
-                    );
-                  })}
-                </Select>
-                <button
-                  type="button"
-                  aria-label={locale === 'fil' ? 'Ipakita ang mga pending na ulat' : 'Show pending reports'}
-                  title={locale === 'fil' ? 'Ipakita ang mga pending na ulat' : 'Show pending reports'}
-                  onClick={() => setStageFilter('pending')}
-                  className="relative inline-flex h-9 w-9 items-center justify-center rounded-md border-0 bg-[color:var(--portal-surface-1)] text-[color:var(--portal-ink-700)] outline-none hover:bg-[color:var(--portal-border-soft)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--portal-accent)]"
-                >
-                  <Filter size={16} aria-hidden />
-                  {stageCounts.pending > 0 ? (
-                    <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-red-600 ring-2 ring-white" aria-hidden />
-                  ) : null}
-                </button>
-              </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <label htmlFor="staff-stage-filter" className="sr-only">
+                {locale === 'fil' ? 'I-filter ayon sa yugto o katayuan' : 'Filter by stage or status'}
+              </label>
+              <Select
+                id="staff-stage-filter"
+                value={stageFilter}
+                onChange={(e) => setStageFilter(e.target.value as StageFilter)}
+                className="h-10 w-full sm:w-[220px] text-xs"
+              >
+                {STAGE_OPTIONS.map((o) => {
+                  const c = stageCounts[o.value];
+                  return (
+                    <option key={o.value} value={o.value}>
+                      {o.value === 'all'
+                        ? `${locale === 'fil' ? 'Lahat' : 'All'} (${c})`
+                        : `${locale === 'fil' ? o.fil : o.en} (${c})`}
+                    </option>
+                  );
+                })}
+              </Select>
+              <button
+                type="button"
+                aria-label={locale === 'fil' ? 'Ipakita ang mga pending na ulat' : 'Show pending reports'}
+                title={locale === 'fil' ? 'Ipakita ang mga pending na ulat' : 'Show pending reports'}
+                onClick={() => setStageFilter('pending')}
+                className={`relative inline-flex h-10 px-3 items-center justify-center rounded-lg border text-xs font-semibold transition-colors ${stageFilter === 'pending' ? 'bg-amber-100/70 border-amber-300 text-amber-900' : 'border-[color:var(--portal-border-soft)] bg-white text-[color:var(--portal-ink-700)] hover:bg-gray-50'}`}
+              >
+                <Filter size={14} className="mr-1.5" aria-hidden />
+                {locale === 'fil' ? 'Pending' : 'Pending'} ({stageCounts.pending})
+                {stageCounts.pending > 0 ? (
+                  <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-red-600 ring-2 ring-white" aria-hidden />
+                ) : null}
+              </button>
             </div>
           </div>
 
-          {/* Cases Table */}
-          <div className="mt-3 overflow-x-auto">
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-xs text-[color:var(--portal-ink-500)]">
+              {locale === 'fil'
+                ? `Ipinapakita ang ${filteredReports.length} sa ${reports.length} kaso · Nakaayos mula pinakabago`
+                : `${filteredReports.length} of ${reports.length} cases · Sorted by most recent`}
+            </p>
+          </div>
+
+          {/* Mobile View: Cards */}
+          <div className="block md:hidden space-y-3 mt-3">
+            {!filteredReports.length ? (
+              <div className="py-8 text-center">
+                <EmptyState title={locale === 'fil' ? 'Walang nahanap na kaso' : 'No matching cases'} description={copyText(locale, 'Adjust search or filters.', 'Ayusin ang search o filter.')} />
+              </div>
+            ) : (
+              paginatedReports.map((item) => (
+                <div key={`mob-inc-${item.id}`} className="rounded-xl border border-[color:var(--portal-border-soft)] bg-white p-3.5 shadow-xs">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                        <span className="font-mono text-[10px] text-[color:var(--portal-ink-500)] bg-[color:var(--portal-surface-2)] px-1.5 py-0.5 rounded">
+                          {formatIncidentCaseNumber(item.id, item.createdAt)}
+                        </span>
+                        <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${item.trackType === 'community_concern' ? 'bg-blue-100/80 text-blue-800' : 'bg-emerald-100/80 text-emerald-800'}`}>
+                          {item.trackType === 'community_concern' ? 'Concern' : 'Incident'}
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-bold text-[color:var(--portal-ink-900)] leading-snug">{item.title}</h4>
+                      <p className="mt-0.5 text-xs text-[color:var(--portal-ink-600)] truncate">
+                        <span className="font-medium">{locale === 'fil' ? 'Residente:' : 'Resident:'}</span> {item.residentName}
+                      </p>
+                    </div>
+                    <StatusBadge tone={statusToneFromState(item.status)}>{getReportStatusLabel(item.status, locale)}</StatusBadge>
+                  </div>
+
+                  <div className="mt-2.5 flex items-center justify-between border-t border-[color:var(--portal-border-soft)] pt-2.5 text-xs text-[color:var(--portal-ink-500)]">
+                    <span>{formatDateTime(item.createdAt, locale)}</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      type="button"
+                      className="font-semibold text-emerald-800 hover:text-emerald-950 px-3"
+                      onClick={() => openReview(item.id)}
+                    >
+                      {isEnded(item.status) ? (locale === 'fil' ? 'Tingnan' : 'Preview') : (locale === 'fil' ? 'Suriin' : 'Review')}
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop View: Table */}
+          <div className="mt-3 hidden md:block overflow-x-auto rounded-xl border border-[color:var(--portal-border-soft)]">
             <table className="w-full min-w-[900px] table-fixed text-sm">
                 <colgroup>
-                  <col className="w-[14%]" />
-                  <col className="w-[14%]" />
-                  <col className="w-[25%]" />
+                  <col className="w-[15%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[26%]" />
                   <col className="w-[18%]" />
-                  <col className="w-[13%]" />
-                  <col className="w-[16%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[15%]" />
                 </colgroup>
                 <thead>
-                  <tr className="border-b border-[color:var(--portal-border-soft)]">
-                    <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">Case No.</th>
-                    <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">Track</th>
-                    <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">Title</th>
-                    <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">Resident</th>
-                    <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">Status</th>
-                    <th className="px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-700)]">Action</th>
+                  <tr className="border-b border-[color:var(--portal-border-soft)] bg-emerald-50/40 text-[color:var(--portal-ink-700)]">
+                    <th className="py-2.5 px-3 text-center font-bold">Case No.</th>
+                    <th className="py-2.5 px-3 text-center font-bold">Track</th>
+                    <th className="py-2.5 px-3 text-left font-bold">Title</th>
+                    <th className="py-2.5 px-3 text-left font-bold">Resident</th>
+                    <th className="py-2.5 px-3 text-center font-bold">Status</th>
+                    <th className="py-2.5 px-3 text-center font-bold">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredReports.length ? paginatedReports.map((item, index) => (
                     <tr
                       key={item.id}
-                      className={`border-b border-[color:var(--portal-border-soft)] ${selectedReport?.id === item.id ? 'bg-[color:var(--portal-surface-3)] font-medium' : index % 2 === 0 ? 'bg-white' : 'bg-[color:var(--portal-surface-1)]'}`}
+                      className={`border-b border-[color:var(--portal-border-soft)] hover:bg-emerald-50/20 ${selectedReport?.id === item.id ? 'bg-emerald-50/30 font-medium' : index % 2 === 0 ? 'bg-white' : 'bg-[color:var(--portal-surface-1)]'}`}
                     >
-                      <td className="truncate px-4 py-3 text-center font-mono text-xs text-[color:var(--portal-ink-600)]">
+                      <td className="truncate py-2.5 px-3 text-center font-mono text-xs text-[color:var(--portal-ink-600)]">
                         {formatIncidentCaseNumber(item.id, item.createdAt)}
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="py-2.5 px-3 text-center">
                         <div className="flex justify-center">
                           <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${item.trackType === 'community_concern' ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-emerald-100 text-emerald-800 border-emerald-200'}`}>
                             {item.trackType === 'community_concern' ? 'Concern' : 'Incident'}
                           </span>
                         </div>
                       </td>
-                      <td className="truncate px-4 py-3 text-center font-semibold text-[color:var(--portal-ink-900)]" title={item.title}>{item.title}</td>
-                      <td className="truncate px-4 py-3 text-center text-[color:var(--portal-ink-700)]" title={item.residentName}>{item.residentName}</td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="truncate py-2.5 px-3 text-left font-semibold text-[color:var(--portal-ink-900)]" title={item.title}>{item.title}</td>
+                      <td className="truncate py-2.5 px-3 text-left text-[color:var(--portal-ink-700)]" title={item.residentName}>{item.residentName}</td>
+                      <td className="py-2.5 px-3 text-center">
                         <StatusBadge tone={statusToneFromState(item.status)}>{getReportStatusLabel(item.status, locale)}</StatusBadge>
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        <Button type="button" variant="ghost" onClick={() => openReview(item.id)}>
+                      <td className="py-2.5 px-3 text-center">
+                        <Button type="button" variant="ghost" size="sm" onClick={() => openReview(item.id)}>
                           {isEnded(item.status) ? (locale === 'fil' ? 'Tingnan' : 'Preview') : (locale === 'fil' ? 'Suriin' : 'Review')}
                         </Button>
                       </td>
@@ -823,19 +871,21 @@ export function IncidentsConcernsPage({ role }: { role: 'staff' | 'admin' }) {
                 </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
           {filteredReports.length > 0 ? (
-            <div className="flex items-center justify-between pt-2">
-              <div className="text-sm text-[color:var(--portal-ink-600)]">
+            <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-[color:var(--portal-border-soft)] pt-3">
+              <div className="text-xs sm:text-sm text-[color:var(--portal-ink-500)] text-center sm:text-left">
                 {locale === 'fil'
                   ? `Ipinapakita ang ${startIndex + 1}-${Math.min(endIndex, filteredReports.length)} sa ${filteredReports.length}`
                   : `Showing ${startIndex + 1}-${Math.min(endIndex, filteredReports.length)} of ${filteredReports.length}`}
               </div>
-              <div className="flex items-center gap-2">
-                <Button type="button" variant="ghost" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage <= 1}>
+              <div className="flex items-center justify-center gap-2">
+                <Button type="button" variant="ghost" size="sm" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage <= 1} className="text-xs sm:text-sm">
                   {locale === 'fil' ? 'Nakaraan' : 'Previous'}
                 </Button>
-                <div className="text-sm text-[color:var(--portal-ink-600)]">{currentPage} / {totalPages}</div>
-                <Button type="button" variant="ghost" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={currentPage >= totalPages}>
+                <div className="text-xs sm:text-sm font-semibold px-2 text-[color:var(--portal-ink-600)]">{currentPage} / {totalPages}</div>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={currentPage >= totalPages} className="text-xs sm:text-sm">
                   {locale === 'fil' ? 'Susunod' : 'Next'}
                 </Button>
               </div>

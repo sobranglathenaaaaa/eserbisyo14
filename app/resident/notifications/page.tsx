@@ -14,6 +14,7 @@ import { getResidentNotificationContext } from '@/features/resident/model/notifi
 import { ResidentSection } from '@/features/resident/view/resident-primitives';
 import { ResidentShell } from '@/features/resident/view/resident-shell';
 import { getRolePageCopy, resolveRoleCopy, resolveSteps } from '@/lib/content/role-pages';
+import { cn } from '@/lib/utils';
 
 export default function ResidentNotificationsPage() {
   const { state, user, locale } = useAppState();

@@ -726,105 +726,153 @@ export default function StaffAppointmentsPage() {
             />
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[960px] table-fixed">
-                  <colgroup>
-                    <col className="w-[19%]" />
-                    <col className="w-[14%]" />
-                    <col className="w-[12%]" />
-                    <col className="w-[16%]" />
-                    <col className="w-[19%]" />
-                    <col className="w-[10%]" />
-                    <col className="w-[10%]" />
-                  </colgroup>
-                  <thead>
-                    <tr className="border-b border-[color:var(--portal-border-soft)]">
-                      <th className="px-3 py-2 text-center text-xs font-semibold text-[color:var(--portal-ink-700)]">
-                        {locale === 'fil' ? 'Resident' : 'Resident'}
-                      </th>
-                      <th className="px-3 py-2 text-center text-xs font-semibold text-[color:var(--portal-ink-700)]">
-                        {locale === 'fil' ? 'Doktor' : 'Doctor'}
-                      </th>
-                      <th className="px-3 py-2 text-center text-xs font-semibold text-[color:var(--portal-ink-700)]">
-                        {locale === 'fil' ? 'Petsa' : 'Date'}
-                      </th>
-                      <th className="px-3 py-2 text-center text-xs font-semibold text-[color:var(--portal-ink-700)]">
-                        {locale === 'fil' ? 'Oras' : 'Time'}
-                      </th>
-                      <th className="px-3 py-2 text-center text-xs font-semibold text-[color:var(--portal-ink-700)]">
-                        {locale === 'fil' ? 'Dahilan' : 'Reason'}
-                      </th>
-                      <th className="px-3 py-2 text-center text-xs font-semibold text-[color:var(--portal-ink-700)]">
-                        {locale === 'fil' ? 'Status' : 'Status'}
-                      </th>
-                      <th className="px-3 py-2 text-center text-xs font-semibold text-[color:var(--portal-ink-700)]">
-                        {locale === 'fil' ? 'Aksyon' : 'Actions'}
-                      </th>
-                    </tr>
-                  </thead>
+            {/* Mobile View: Cards */}
+            <div className="block md:hidden space-y-3">
+              {paginatedAppointments.map((appointment) => {
+                const slot = state.doctorAvailabilitySlots.find((s) => s.id === appointment.slotId);
 
-                  <tbody>
-                    {paginatedAppointments.map((appointment) => {
-                      const slot = state.doctorAvailabilitySlots.find(
-                        (s) => s.id === appointment.slotId
-                      );
-                      const isPending = appointment.status === 'pending';
+                return (
+                  <div
+                    key={`m-appt-${appointment.id}`}
+                    className={`rounded-xl border border-[color:var(--portal-border-soft)] bg-white p-3.5 shadow-xs ${
+                      selectedAppointmentId === appointment.id ? 'ring-2 ring-[color:var(--portal-accent-strong)]' : ''
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-sm font-bold text-[color:var(--portal-ink-900)] leading-tight">{appointment.residentName}</h4>
+                        <p className="mt-0.5 text-xs text-emerald-800 font-medium">
+                          Dr. {slot?.doctorName ?? '-'}
+                        </p>
+                      </div>
+                      <StatusBadge tone={statusToneFromState(appointment.status)}>
+                        {appointment.status}
+                      </StatusBadge>
+                    </div>
 
-                      return (
-                        <tr
-                          key={appointment.id}
-                          className="border-b border-[color:var(--portal-border-soft)]"
+                    <div className="mt-2 text-xs text-[color:var(--portal-ink-600)] space-y-0.5">
+                      <p>
+                        <span className="text-[color:var(--portal-ink-400)]">{locale === 'fil' ? 'Iskedyul: ' : 'Schedule: '}</span>
+                        {slot?.date ?? '-'} ({slot ? slotLabel(slot.startAt, slot.endAt) : '-'})
+                      </p>
+                      {appointment.reason ? (
+                        <p className="truncate">
+                          <span className="text-[color:var(--portal-ink-400)]">{locale === 'fil' ? 'Dahilan: ' : 'Reason: '}</span>
+                          {appointment.reason}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <div className="mt-2.5 flex items-center justify-end border-t border-[color:var(--portal-border-soft)] pt-2.5">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="font-semibold text-emerald-800 hover:text-emerald-950 px-4"
+                        onClick={() => openReviewModal(appointment.id)}
+                      >
+                        {locale === 'fil' ? 'Tingnan' : 'Review'}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop View: Table */}
+            <div className="hidden md:block overflow-x-auto rounded-xl border border-[color:var(--portal-border-soft)]">
+              <table className="w-full min-w-[960px] table-fixed text-sm">
+                <thead>
+                  <tr className="border-b border-[color:var(--portal-border-soft)] bg-emerald-50/40 text-[color:var(--portal-ink-700)]">
+                    <th className="w-[19%] px-3 py-2.5 text-center font-bold">
+                      {locale === 'fil' ? 'Resident' : 'Resident'}
+                    </th>
+                    <th className="w-[14%] px-3 py-2.5 text-center font-bold">
+                      {locale === 'fil' ? 'Doktor' : 'Doctor'}
+                    </th>
+                    <th className="w-[12%] px-3 py-2.5 text-center font-bold">
+                      {locale === 'fil' ? 'Petsa' : 'Date'}
+                    </th>
+                    <th className="w-[16%] px-3 py-2.5 text-center font-bold">
+                      {locale === 'fil' ? 'Oras' : 'Time'}
+                    </th>
+                    <th className="w-[19%] px-3 py-2.5 text-center font-bold">
+                      {locale === 'fil' ? 'Dahilan' : 'Reason'}
+                    </th>
+                    <th className="w-[10%] px-3 py-2.5 text-center font-bold">
+                      {locale === 'fil' ? 'Status' : 'Status'}
+                    </th>
+                    <th className="w-[10%] px-3 py-2.5 text-center font-bold">
+                      {locale === 'fil' ? 'Aksyon' : 'Actions'}
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {paginatedAppointments.map((appointment) => {
+                    const slot = state.doctorAvailabilitySlots.find(
+                      (s) => s.id === appointment.slotId
+                    );
+
+                    return (
+                      <tr
+                        key={appointment.id}
+                        className="border-b border-[color:var(--portal-border-soft)] hover:bg-emerald-50/20"
+                      >
+                        <td className="px-3 py-2.5 text-center text-sm font-semibold text-[color:var(--portal-ink-900)]">
+                          {appointment.residentName}
+                        </td>
+
+                        <td className="px-3 py-2.5 text-center text-sm text-[color:var(--portal-ink-700)]">
+                          Dr. {slot?.doctorName ?? '-'}
+                        </td>
+
+                        <td className="px-3 py-2.5 text-center text-sm text-[color:var(--portal-ink-700)]">
+                          {slot?.date ?? '-'}
+                        </td>
+
+                        <td className="px-3 py-2.5 text-center text-sm text-[color:var(--portal-ink-700)]">
+                          {slot
+                            ? slotLabel(slot.startAt, slot.endAt)
+                            : '-'}
+                        </td>
+
+                        <td
+                          className="max-w-[200px] truncate px-3 py-2.5 text-center text-sm text-[color:var(--portal-ink-700)]"
+                          title={appointment.reason}
                         >
-                          <td className="px-3 py-2 text-center text-sm font-medium text-[color:var(--portal-ink-900)]">
-                            {appointment.residentName}
-                          </td>
+                          {appointment.reason}
+                        </td>
 
-                          <td className="px-3 py-2 text-center text-sm text-[color:var(--portal-ink-700)]">
-                            Dr. {slot?.doctorName ?? '-'}
-                          </td>
-
-                          <td className="px-3 py-2 text-center text-sm text-[color:var(--portal-ink-700)]">
-                            {slot?.date ?? '-'}
-                          </td>
-
-                          <td className="px-3 py-2 text-center text-sm text-[color:var(--portal-ink-700)]">
-                            {slot
-                              ? slotLabel(slot.startAt, slot.endAt)
-                              : '-'}
-                          </td>
-
-                          <td
-                            className="max-w-[200px] truncate px-3 py-2 text-center text-sm text-[color:var(--portal-ink-700)]"
-                            title={appointment.reason}
+                        <td className="px-3 py-2.5 text-center">
+                          <StatusBadge
+                            tone={statusToneFromState(appointment.status)}
                           >
-                            {appointment.reason}
-                          </td>
+                            {appointment.status}
+                          </StatusBadge>
+                        </td>
 
-                          <td className="px-3 py-2 text-center">
-                            <StatusBadge
-                              tone={statusToneFromState(appointment.status)}
-                            >
-                              {appointment.status}
-                            </StatusBadge>
-                          </td>
-
-                          <td className="px-3 py-2 text-center">
+                        <td className="px-3 py-2.5 text-center">
+                          <div className="flex justify-center">
                             <Button
                               type="button"
                               variant="ghost"
+                              size="sm"
+                              className="font-semibold text-emerald-800 hover:text-emerald-950 px-3"
                               onClick={() =>
                                 openReviewModal(appointment.id)
                               }
                             >
                               {locale === 'fil' ? 'Tingnan' : 'Review'}
                             </Button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
               <div className="mt-4 flex items-center justify-between border-t border-[color:var(--portal-border-soft)] pt-3">
                 <div className="text-xs text-[color:var(--portal-ink-500)]">

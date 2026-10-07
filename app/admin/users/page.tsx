@@ -522,35 +522,116 @@ export default function AdminUsersPage() {
           </div>
         ) : (
           <>
-            <div className="mt-3 overflow-x-auto rounded-xl border border-[color:var(--portal-border-soft)]">
+            {/* Mobile View: Cards */}
+            <div className="block md:hidden space-y-3 mt-3">
+              {paginatedUsers.map((item) => {
+                const cls = classifyStatus(item.approvalStatus, item.isDeleted);
+                const tone = cls === 'approved' ? 'success' : cls === 'rejected' || cls === 'archived' ? 'danger' : 'warning';
+                const label = cls === 'approved'
+                  ? (locale === 'fil' ? 'Aprubado' : 'Approved')
+                  : cls === 'rejected'
+                    ? (locale === 'fil' ? 'Tinanggihan' : 'Rejected')
+                    : cls === 'archived'
+                      ? (locale === 'fil' ? 'Nabura' : 'Deleted')
+                      : (locale === 'fil' ? 'Pending' : 'Pending');
+
+                return (
+                  <div key={`mob-user-${item.id}`} className="rounded-xl border border-[color:var(--portal-border-soft)] bg-white p-3.5 shadow-xs">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                          <span className="font-mono text-[10px] text-[color:var(--portal-ink-500)] bg-[color:var(--portal-surface-2)] px-1.5 py-0.5 rounded select-all">
+                            {item.id}
+                          </span>
+                          <StatusBadge tone="neutral">{item.role}</StatusBadge>
+                          <StatusBadge tone={item.isVerified ? 'success' : 'warning'}>
+                            {item.isVerified ? (locale === 'fil' ? 'Verified' : 'Verified') : locale === 'fil' ? 'Unverified' : 'Unverified'}
+                          </StatusBadge>
+                        </div>
+                        <h4 className="text-sm font-bold text-[color:var(--portal-ink-900)] leading-tight">{item.fullName}</h4>
+                        <p className="mt-0.5 text-xs text-[color:var(--portal-ink-600)] truncate">{item.email}</p>
+                      </div>
+                      <StatusBadge tone={tone}>{label}</StatusBadge>
+                    </div>
+
+                    <div className="mt-2.5 flex items-center justify-between border-t border-[color:var(--portal-border-soft)] pt-2.5 text-xs text-[color:var(--portal-ink-500)]">
+                      <div>
+                        <span>{formatDateTime(item.updatedAt || item.createdAt, locale)}</span>
+                        <span className="ml-1 text-[11px] text-[color:var(--portal-ink-400)]">({relativeTime(item.updatedAt || item.createdAt, locale)})</span>
+                      </div>
+                      <div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          type="button"
+                          className="font-semibold text-emerald-800 hover:text-emerald-950 px-3"
+                          onClick={(e) => {
+                            const button = e.currentTarget as HTMLElement;
+                            const rect = button.getBoundingClientRect();
+                            const menuWidth = 224;
+                            const menuEstimateHeight = 200;
+                            let left = rect.right - menuWidth;
+                            left = Math.min(Math.max(left, 12), window.innerWidth - 12 - menuWidth);
+
+                            const spaceBelow = window.innerHeight - rect.bottom;
+                            const spaceAbove = rect.top;
+                            const placeBelow = spaceBelow >= menuEstimateHeight + 12;
+
+                            const isOpening = openActionsForUserId !== item.id;
+                            setOpenActionsForUserId(isOpening ? item.id : null);
+                            if (isOpening) {
+                              if (placeBelow) {
+                                setMenuPlacement('below');
+                                setMenuCoords({ left, top: rect.bottom + 12 });
+                              } else {
+                                setMenuPlacement('above');
+                                setMenuCoords({ left, top: rect.top - 12 });
+                              }
+                            } else {
+                              setMenuCoords(null);
+                            }
+                          }}
+                          disabled={item.id === user?.id}
+                          data-action-btn={item.id}
+                        >
+                          {locale === 'fil' ? 'Aksyon' : 'Actions'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop View: Table */}
+            <div className="mt-3 hidden md:block overflow-x-auto rounded-xl border border-[color:var(--portal-border-soft)]">
               <table className="w-full text-sm table-fixed min-w-[900px]">
                 <thead>
-                  <tr className="border-b border-[color:var(--portal-border-soft)] text-[color:var(--portal-ink-700)]">
-                    <th className="py-2 pr-2 align-middle text-center" style={{ width: '12%' }}>ID</th>
-                    <th className="py-2 pr-2 align-middle text-center" style={{ width: '18%' }}>{locale === 'fil' ? 'Pangalan' : 'Name'}</th>
-                    <th className="py-2 pr-2 align-middle text-center" style={{ width: '22%' }}>{locale === 'fil' ? 'Email' : 'Email'}</th>
-                    <th className="py-2 pr-2 align-middle text-center" style={{ width: '8%' }}>{locale === 'fil' ? 'Role' : 'Role'}</th>
-                    <th className="py-2 pr-2 align-middle text-center" style={{ width: '14%' }}>{locale === 'fil' ? 'Huling update' : 'Last updated'}</th>
-                    <th className="py-2 pr-2 align-middle text-center" style={{ width: '8%' }}>{locale === 'fil' ? 'Verification' : 'Verification'}</th>
-                    <th className="py-2 pr-2 align-middle text-center" style={{ width: '8%' }}>{locale === 'fil' ? 'Katayuan' : 'Status'}</th>
-                    {/* Archived column removed per request */}
-                    <th className="py-2 pr-2 align-middle text-center" style={{ width: '10%' }}>{locale === 'fil' ? 'Aksyon' : 'Actions'}</th>
+                  <tr className="border-b border-[color:var(--portal-border-soft)] bg-emerald-50/40 text-[color:var(--portal-ink-700)]">
+                    <th className="py-2.5 px-3 align-middle text-left font-bold" style={{ width: '12%' }}>ID</th>
+                    <th className="py-2.5 px-3 align-middle text-left font-bold" style={{ width: '18%' }}>{locale === 'fil' ? 'Pangalan' : 'Name'}</th>
+                    <th className="py-2.5 px-3 align-middle text-left font-bold" style={{ width: '22%' }}>{locale === 'fil' ? 'Email' : 'Email'}</th>
+                    <th className="py-2.5 px-2 align-middle text-center font-bold" style={{ width: '8%' }}>{locale === 'fil' ? 'Role' : 'Role'}</th>
+                    <th className="py-2.5 px-3 align-middle text-center font-bold" style={{ width: '14%' }}>{locale === 'fil' ? 'Huling update' : 'Last updated'}</th>
+                    <th className="py-2.5 px-2 align-middle text-center font-bold" style={{ width: '8%' }}>{locale === 'fil' ? 'Verification' : 'Verification'}</th>
+                    <th className="py-2.5 px-2 align-middle text-center font-bold" style={{ width: '8%' }}>{locale === 'fil' ? 'Katayuan' : 'Status'}</th>
+                    <th className="py-2.5 px-3 align-middle text-center font-bold" style={{ width: '10%' }}>{locale === 'fil' ? 'Aksyon' : 'Actions'}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedUsers.map((item, index) => (
-                    <tr key={item.id} className="border-b border-[color:var(--portal-border-soft)]">
-                      <td className="py-2 pr-2 overflow-hidden text-ellipsis whitespace-nowrap max-w-[1px] font-mono text-[10px] text-[color:var(--portal-ink-500)] select-all">{item.id}</td>
-                      <td className="py-2 pr-2 overflow-hidden text-ellipsis whitespace-nowrap max-w-[1px] text-center">{item.fullName}</td>
-                      <td className="py-2 pr-2 overflow-hidden text-ellipsis whitespace-nowrap max-w-[1px] text-center">{item.email}</td>
-                      <td className="py-2 pr-2 text-center align-middle">
+                  {paginatedUsers.map((item) => (
+                    <tr key={item.id} className="border-b border-[color:var(--portal-border-soft)] hover:bg-emerald-50/20">
+                      <td className="py-2.5 px-3 font-mono text-[10px] text-[color:var(--portal-ink-500)] select-all truncate">{item.id}</td>
+                      <td className="py-2.5 px-3 font-semibold text-[color:var(--portal-ink-900)] text-left truncate">{item.fullName}</td>
+                      <td className="py-2.5 px-3 text-[color:var(--portal-ink-700)] text-left truncate">{item.email}</td>
+                      <td className="py-2.5 px-2 text-center align-middle">
                         <StatusBadge tone="neutral">{item.role}</StatusBadge>
                       </td>
-                      <td className="py-2 pr-2 text-center align-middle">
+                      <td className="py-2.5 px-3 text-center align-middle text-xs">
                         <div>{formatDateTime(item.updatedAt || item.createdAt, locale)}</div>
-                        <p className="text-xs text-[color:var(--portal-ink-500)]">{relativeTime(item.updatedAt || item.createdAt, locale)}</p>
+                        <p className="text-[11px] text-[color:var(--portal-ink-500)]">{relativeTime(item.updatedAt || item.createdAt, locale)}</p>
                       </td>
-                      <td className="py-2 pr-2 text-center align-middle">
+                      <td className="py-2.5 px-2 text-center align-middle">
                         <StatusBadge tone={item.isVerified ? 'success' : 'warning'}>
                           {item.isVerified ? (locale === 'fil' ? 'Verified' : 'Verified') : locale === 'fil' ? 'Pending' : 'Pending'}
                         </StatusBadge>
@@ -800,27 +881,32 @@ export default function AdminUsersPage() {
                 </tbody>
               </table>
             </div>
-            <div className="mt-3 flex items-center justify-between">
-              <div className="text-sm text-[color:var(--portal-ink-500)]">
+            {/* Pagination */}
+            <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-[color:var(--portal-border-soft)] pt-3">
+              <div className="text-xs sm:text-sm text-[color:var(--portal-ink-500)] text-center sm:text-left">
                 {statusFilteredUsers.length === 0
                   ? ''
                   : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, statusFilteredUsers.length)} of ${statusFilteredUsers.length}`}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center gap-2">
                 <Button
                   type="button"
                   variant="ghost"
+                  size="sm"
                   disabled={currentPage <= 1}
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className="text-xs sm:text-sm"
                 >
                   {locale === 'fil' ? 'Nakaraan' : 'Previous'}
                 </Button>
-                <div className="text-sm text-[color:var(--portal-ink-600)]">{`${currentPage} / ${totalPages}`}</div>
+                <div className="text-xs sm:text-sm font-semibold px-2 text-[color:var(--portal-ink-600)]">{`${currentPage} / ${totalPages}`}</div>
                 <Button
                   type="button"
                   variant="ghost"
+                  size="sm"
                   disabled={currentPage >= totalPages}
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  className="text-xs sm:text-sm"
                 >
                   {locale === 'fil' ? 'Susunod' : 'Next'}
                 </Button>
