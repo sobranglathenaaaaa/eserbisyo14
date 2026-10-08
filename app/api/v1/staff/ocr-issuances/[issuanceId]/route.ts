@@ -118,10 +118,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         .eq('id', templateKey)
         .maybeSingle();
       if (dbTemplate) {
-        const { buildDynamicOcrTemplateDefinition } = await import('@/lib/ocr/templates');
-        dynamicDef = buildDynamicOcrTemplateDefinition({
+        const { buildAdminTemplateOcrDefinition } = await import('@/lib/ocr/templates');
+        dynamicDef = buildAdminTemplateOcrDefinition({
           id: dbTemplate.id,
           name: dbTemplate.name,
+          documentType: dbTemplate.body?.match(/"documentType":"([^"]+)"/)?.[1],
           body: dbTemplate.body,
           dynamicFields: dbTemplate.dynamic_fields ?? [],
         });

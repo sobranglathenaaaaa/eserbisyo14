@@ -8,14 +8,6 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
     <main className={styles.authPage}>
       <section className={styles.authShell} aria-label="Resident account access">
         <aside className={styles.visualPane} aria-label="Resident-first online services">
-          <Image
-            src="/images/login-hall.jpg"
-            alt="Barangay hall entrance"
-            fill
-            priority
-            sizes="(max-width: 1080px) 100vw, 58vw"
-            className={styles.visualImage}
-          />
           <div className={styles.visualBrand}>
             <Link className={styles.brandLink} href="/" aria-label="Back to eSerbisyo homepage">
               <Image

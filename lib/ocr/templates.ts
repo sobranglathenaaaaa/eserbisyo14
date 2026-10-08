@@ -509,6 +509,23 @@ export function getCategoryDefaultOcrTemplate(categoryId: string): OcrTemplateDe
   }
 }
 
+export function buildAdminTemplateOcrDefinition(docTemplate: {
+  id: string;
+  name: string;
+  documentType?: string | null;
+  body?: string;
+  dynamicFields?: string[];
+}): OcrTemplateDefinition {
+  const category = getCategoryForDocType(docTemplate.documentType, docTemplate.name);
+  const categoryTemplate = getCategoryDefaultOcrTemplate(category);
+  return {
+    ...categoryTemplate,
+    key: docTemplate.id,
+    name: docTemplate.name,
+    documentLabel: docTemplate.name,
+  };
+}
+
 export function getOcrTemplateByKey(templateKey: string | null | undefined) {
   if (!templateKey) return null;
   if (TEMPLATES_BY_KEY[templateKey]) return TEMPLATES_BY_KEY[templateKey];

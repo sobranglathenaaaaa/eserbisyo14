@@ -89,9 +89,10 @@ export default function StaffOcrIssuancePage() {
         (t) => t.documentType === cat.id || getCategoryForDocType(t.documentType, t.name) === cat.id
       );
 
-      const definition: OcrTemplateDefinition = matchedDb
-        ? buildDynamicOcrTemplateDefinition(matchedDb)
-        : getCategoryDefaultOcrTemplate(cat.id);
+      // The OCR schema must remain category-specific so it includes checkbox
+      // fields such as reasonIndigency. The Admin template is only the final
+      // printable layout and must not replace the OCR intake field map.
+      const definition: OcrTemplateDefinition = getCategoryDefaultOcrTemplate(cat.id);
 
       return {
         // Persist the selected Admin template ID so issuance rendering can use

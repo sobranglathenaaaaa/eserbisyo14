@@ -85,7 +85,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const parsedFields = normalizeStandaloneParsedFields(issuance.parsed_fields);
-  const { getOcrTemplateByKey, buildDynamicOcrTemplateDefinition, getTemplateOrDefault } = await import('@/lib/ocr/templates');
+  const { getOcrTemplateByKey, buildAdminTemplateOcrDefinition, getTemplateOrDefault } = await import('@/lib/ocr/templates');
   let template: import('@/lib/ocr/templates').OcrTemplateDefinition;
 
   if (!getOcrTemplateByKey(issuance.template_key)) {
@@ -96,9 +96,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
       .maybeSingle();
 
     if (dbTemplate) {
-      template = buildDynamicOcrTemplateDefinition({
+      template = buildAdminTemplateOcrDefinition({
         id: dbTemplate.id,
         name: dbTemplate.name,
+        documentType: dbTemplate.body?.match(/"documentType":"([^"]+)"/)?.[1],
         body: dbTemplate.body,
         dynamicFields: dbTemplate.dynamic_fields ?? [],
       });

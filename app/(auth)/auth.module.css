@@ -664,21 +664,20 @@
 .visualPane {
   position: relative;
   min-height: 100%;
-  background: #0f3448;
+  background:
+    radial-gradient(520px 420px at 18% 18%, rgba(132, 211, 165, 0.42), transparent 68%),
+    radial-gradient(460px 360px at 88% 82%, rgba(8, 83, 58, 0.5), transparent 72%),
+    linear-gradient(145deg, #0e4936 0%, #176b4f 48%, #0b3b2c 100%);
   overflow: hidden;
-}
-
-.visualImage {
-  object-fit: cover;
-  object-position: top center;
 }
 
 .visualOverlay {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 84% 16%, rgba(169, 228, 199, 0.1), transparent 42%),
-    linear-gradient(145deg, rgba(7, 23, 32, 0.36), rgba(11, 41, 30, 0.22) 52%, rgba(8, 36, 24, 0.28));
+    radial-gradient(circle at 20% 22%, rgba(220, 250, 229, 0.18), transparent 28%),
+    radial-gradient(circle at 84% 78%, rgba(4, 35, 24, 0.22), transparent 34%),
+    linear-gradient(135deg, transparent 0 48%, rgba(207, 239, 218, 0.07) 48% 49%, transparent 49% 100%);
 }
 
 .visualBadge {
@@ -696,12 +695,12 @@
   backdrop-filter: blur(3px);
 }
 
-/* Brand overlay placed on top of the visual image */
+/* Brand mark for the green civic panel */
 .visualBrand {
   position: absolute;
-  top: clamp(7rem, 28vh, 18rem);
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -723,10 +722,10 @@
 }
 
 .visualBrand .brandLogo {
-  width: clamp(56px, 10vw, 120px);
+  width: clamp(120px, 16vw, 190px);
   height: auto;
   display: block;
-  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.7));
+  filter: drop-shadow(0 10px 22px rgba(3, 35, 23, 0.42));
 }
 
 .visualBrand .brandName {
@@ -736,7 +735,7 @@
   letter-spacing: 0.02em;
   color: #fff;
   line-height: 1.02;
-  text-shadow: 0 8px 28px rgba(0, 0, 0, 0.88);
+  text-shadow: 0 6px 22px rgba(3, 35, 23, 0.45);
 }
 
 /* Dark green welcome when header is centered */
@@ -998,4 +997,3 @@
   width: 1.15rem;
   height: 1.15rem;
 }
-
