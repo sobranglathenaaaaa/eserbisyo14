@@ -6,11 +6,11 @@ import { renderConstructionPermitFromDocx } from '@/lib/documents/construction-p
 import type { CertificateFieldMap } from '@/lib/documents/indigency-certificate';
 import { renderIndigencyCertificateFromDocx } from '@/lib/documents/indigency-docx';
 import { renderLuponSummonsFromDocx } from '@/lib/documents/lupon-summons-docx';
+import { getCategoryForDocType } from '@/lib/documents/document-catalog-constants';
 import {
   BARANGAY_CERTIFICATE_TEMPLATE_KEY,
   BUSINESS_PERMIT_TEMPLATE_KEY,
   CONSTRUCTION_PERMIT_TEMPLATE_KEY,
-  getOcrTemplateByKey,
   INDIGENCY_TEMPLATE_KEY,
   LUPON_SUMMONS_TEMPLATE_KEY,
   resolveTemplateForDocumentType,
@@ -26,6 +26,13 @@ type OcrDocumentRenderer = (
   doc: { residentName: string; dateIssued: string },
   fields: CertificateFieldMap,
 ) => Promise<RenderedOcrDocument>;
+
+type StoredDocumentTemplate = {
+  id: string;
+  name: string;
+  body: string | null;
+  dynamic_fields: string[] | null;
+};
 
 const RENDERERS_BY_TEMPLATE_KEY: Record<string, OcrDocumentRenderer> = {
   [INDIGENCY_TEMPLATE_KEY]: renderIndigencyCertificateFromDocx,
@@ -43,7 +50,9 @@ export function resolvePrintableTemplateKey(
   templateKey: string | null | undefined,
   documentType: string | null | undefined,
 ) {
-  if (templateKey && getOcrTemplateByKey(templateKey) && RENDERERS_BY_TEMPLATE_KEY[templateKey]) {
+  // Custom Admin templates use their database ID as the key. Keep it intact
+  // so renderOcrTemplateFromDocx can load the exact saved document body.
+  if (templateKey) {
     return templateKey;
   }
   const resolved = resolveTemplateForDocumentType(documentType);
@@ -91,6 +100,78 @@ export function resolvePurposeFromReasons(fields: Record<string, string>): strin
   return 'For whatever legal purpose it may serve';
 }
 
+function getTemplateMetadata(body: string | null) {
+  if (!body) return null;
+  const match = body.match(/<!-- TEMPLATE_META:([\s\S]*?) -->$/);
+  if (!match) return null;
+  try {
+    return JSON.parse(match[1]) as { documentType?: unknown; isActive?: unknown };
+  } catch {
+    return null;
+  }
+}
+
+function isLikelyOcrIntakeTemplate(template: StoredDocumentTemplate) {
+  return /\b(intake|ocr)\b/i.test(template.name);
+}
+
+function hasMarkedReason(value: string | undefined) {
+  const normalized = (value ?? '').trim().toLowerCase();
+  return Boolean(normalized && !['0', 'false', 'no', 'none', 'n/a'].includes(normalized));
+}
+
+const CHECKED_FIELD_TEMPLATE_ALIASES: Record<string, string[]> = {
+  reasonGeneralCert: ['barangay certification', 'barangay certificate', 'general certification'],
+  reasonIndigency: ['indigency'],
+  reasonResidency: ['residency', 'resident certificate'],
+  reasonGoodMoral: ['good moral'],
+  reasonEmployment: ['employment'],
+  reasonSchoolReference: ['school', 'scholarship'],
+  reasonSrCitizenId: ['senior', 'sr citizen', 'pwd'],
+  reasonSjHealthCard: ['health card', 'medical clearance'],
+  reasonPoliceNbi: ['police', 'nbi', 'court clearance'],
+  reasonPostalId: ['postal', 'passport', 'visa'],
+  reasonBurialAssistance: ['burial'],
+  reasonSssGsisPhilhealth: ['sss', 'gsis', 'philhealth'],
+  reasonFinancialAssistance: ['financial assistance'],
+  reasonMedicalAssistance: ['medical assistance'],
+  reasonTransferResidence: ['transfer', 'residence transfer'],
+  reasonNoOperation: ['no operation'],
+  reasonNonResident: ['non-resident', 'non resident'],
+  permitMayorsBusiness: ["mayor's business", 'business permit'],
+  permitBuilding: ['building permit'],
+  permitOccupancy: ['occupancy permit'],
+  permitExcavation: ['excavation permit'],
+  permitDemolition: ['demolition permit'],
+  permitRenovationRepair: ['renovation', 'repair permit'],
+  permitConstruction: ['construction permit'],
+  permitHauling: ['hauling permit'],
+  permitSignageBillboards: ['signage', 'billboard'],
+};
+
+function findCheckedAdminTemplate(
+  templates: StoredDocumentTemplate[],
+  fields: CertificateFieldMap,
+) {
+  const checkedField = Object.keys(CHECKED_FIELD_TEMPLATE_ALIASES).find((field) => hasMarkedReason(fields[field]));
+  if (!checkedField) return null;
+  const aliases = CHECKED_FIELD_TEMPLATE_ALIASES[checkedField];
+  return templates.find((template) => {
+    if (isLikelyOcrIntakeTemplate(template)) return false;
+    const metadata = getTemplateMetadata(template.body);
+    const haystack = `${metadata?.documentType ?? ''} ${template.name}`.toLowerCase();
+    return aliases.some((alias) => haystack.includes(alias));
+  }) ?? null;
+}
+
+function getStoredTemplateCategory(template: StoredDocumentTemplate) {
+  const metadata = getTemplateMetadata(template.body);
+  return getCategoryForDocType(
+    typeof metadata?.documentType === 'string' ? metadata.documentType : null,
+    template.name,
+  );
+}
+
 export async function renderOcrTemplateFromDocx(
   templateKey: string,
   doc: { residentName: string; dateIssued: string },
@@ -103,12 +184,23 @@ export async function renderOcrTemplateFromDocx(
       .from('document_templates')
       .select('id, name, body, dynamic_fields')
       .order('updated_at', { ascending: false });
+    const storedTemplates = (dbTemplates ?? []) as StoredDocumentTemplate[];
 
     const keyLower = templateKey.toLowerCase();
     const isLuponKey = keyLower.includes('lupon') || keyLower.includes('summons') || keyLower.includes('cfa') || keyLower.includes('notice');
-    const customDbTemplate = (dbTemplates || []).find((t) => {
-      if (t.id === templateKey) return true;
-      if (t.body?.includes(`"documentType":"${templateKey}"`)) return true;
+    const exactDbTemplate = storedTemplates.find((template) => template.id === templateKey);
+    const checkedTemplate = findCheckedAdminTemplate(storedTemplates, fields);
+    const metadataDbTemplate = storedTemplates.find((template) => {
+      const metadata = getTemplateMetadata(template.body);
+      if (isLikelyOcrIntakeTemplate(template)) return false;
+      if (metadata?.documentType === templateKey) return true;
+      return (
+        typeof metadata?.documentType === 'string' &&
+        getStoredTemplateCategory(template) === getCategoryForDocType(templateKey)
+      );
+    });
+    const customDbTemplate = checkedTemplate ?? exactDbTemplate ?? metadataDbTemplate ?? storedTemplates.find((t) => {
+      if (!t.body || isLikelyOcrIntakeTemplate(t)) return false;
       const nameLower = (t.name || '').toLowerCase();
       if (isLuponKey) {
         if (keyLower.includes('cfa') && (nameLower.includes('cfa') || nameLower.includes('file action'))) return true;

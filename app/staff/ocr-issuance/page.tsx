@@ -94,7 +94,9 @@ export default function StaffOcrIssuancePage() {
         : getCategoryDefaultOcrTemplate(cat.id);
 
       return {
-        key: cat.id,
+        // Persist the selected Admin template ID so issuance rendering can use
+        // the exact saved document body instead of only the OCR category.
+        key: matchedDb?.id ?? cat.id,
         label: locale === 'fil' ? cat.labelFil : cat.labelEn,
         category: cat.id,
         definition,
@@ -139,6 +141,71 @@ export default function StaffOcrIssuancePage() {
     if (matchedDb) return buildDynamicOcrTemplateDefinition(matchedDb);
     return availableDocumentTypes[0]?.definition ?? getDefaultOcrTemplate();
   }, [issuance?.templateKey, selectedTemplateKey, availableDocumentTypes, state.documentTemplates]);
+
+  const resolveDetectedAdminTemplateKey = (detectedTemplateKey: string | null) => {
+    if (!detectedTemplateKey) return null;
+    const detectedPreset = getOcrTemplateByKey(detectedTemplateKey);
+    const detectedDocumentType = detectedPreset?.documentLabel ?? detectedTemplateKey;
+    const matchingAdminTemplate = (state.documentTemplates ?? []).find((template) => {
+      const haystack = `${template.documentType ?? ''} ${template.name}`.toLowerCase();
+      const target = detectedDocumentType.toLowerCase();
+      return (
+        !/\b(intake|ocr)\b/i.test(template.name) &&
+        (template.documentType === detectedTemplateKey ||
+          haystack.includes(target) ||
+          (detectedTemplateKey === INDIGENCY_TEMPLATE_KEY && haystack.includes('indigency')))
+      );
+    });
+    return matchingAdminTemplate?.id ?? detectedTemplateKey;
+  };
+
+  const resolveCheckedCertificateTemplateKey = (parsedFields: Record<string, string>) => {
+    const checkedFieldAliases: Record<string, string[]> = {
+      reasonGeneralCert: ['barangay certification', 'barangay certificate', 'general certification'],
+      reasonIndigency: ['indigency'],
+      reasonResidency: ['residency', 'resident certificate'],
+      reasonGoodMoral: ['good moral'],
+      reasonEmployment: ['employment'],
+      reasonSchoolReference: ['school', 'scholarship'],
+      reasonSrCitizenId: ['senior', 'sr citizen', 'pwd'],
+      reasonSjHealthCard: ['health card', 'medical clearance'],
+      reasonPoliceNbi: ['police', 'nbi', 'court clearance'],
+      reasonPostalId: ['postal', 'passport', 'visa'],
+      reasonBurialAssistance: ['burial'],
+      reasonSssGsisPhilhealth: ['sss', 'gsis', 'philhealth'],
+      reasonFinancialAssistance: ['financial assistance'],
+      reasonMedicalAssistance: ['medical assistance'],
+      reasonTransferResidence: ['transfer', 'residence transfer'],
+      reasonNoOperation: ['no operation'],
+      reasonNonResident: ['non-resident', 'non resident'],
+      permitMayorsBusiness: ["mayor's business", 'business permit'],
+      permitBuilding: ['building permit'],
+      permitOccupancy: ['occupancy permit'],
+      permitExcavation: ['excavation permit'],
+      permitDemolition: ['demolition permit'],
+      permitRenovationRepair: ['renovation', 'repair permit'],
+      permitConstruction: ['construction permit'],
+      permitHauling: ['hauling permit'],
+      permitSignageBillboards: ['signage', 'billboard'],
+    };
+    const checked = Object.keys(checkedFieldAliases).find((field) => {
+      const value = (parsedFields[field] ?? '').trim().toLowerCase();
+      return value && !['0', 'false', 'no', 'none', 'n/a'].includes(value);
+    });
+    if (!checked) return null;
+
+    const aliases = checkedFieldAliases[checked];
+    const matchingAdminTemplate = (state.documentTemplates ?? []).find((template) => {
+      if (/\b(intake|ocr)\b/i.test(template.name)) return false;
+      const haystack = `${template.documentType ?? ''} ${template.name}`.toLowerCase();
+      return aliases.some((alias) => haystack.includes(alias));
+    });
+    return matchingAdminTemplate?.id ?? (checked === 'reasonIndigency' ? INDIGENCY_TEMPLATE_KEY : null);
+  };
+
+  const selectedValidationKey =
+    availableDocumentTypes.find((documentType) => documentType.key === selectedTemplateKey)?.category ??
+    selectedTemplateKey;
 
   const missingFieldKeys = useMemo(
     () => {
@@ -261,7 +328,19 @@ export default function StaffOcrIssuancePage() {
       setFieldDraft(updated.parsedFields ?? {});
       setSelectedFile(null);
 
-      const validation = validateOcrTemplateMatch(selectedTemplateKey, updated.extractedText ?? '', locale);
+      const validation = validateOcrTemplateMatch(selectedValidationKey, updated.extractedText ?? '', locale);
+      const detectedAdminTemplateKey =
+        resolveCheckedCertificateTemplateKey(updated.parsedFields ?? {}) ??
+        resolveDetectedAdminTemplateKey(validation.detectedTemplateKey ?? null);
+      if (detectedAdminTemplateKey && detectedAdminTemplateKey !== activeIssuance.templateKey) {
+        const switchedIssuance = await patchStandaloneOcrIssuance(activeIssuance.id, {
+          templateKey: detectedAdminTemplateKey,
+        });
+        setIssuance(switchedIssuance);
+        setSelectedTemplateKey(detectedAdminTemplateKey);
+        setFieldDraft(switchedIssuance.parsedFields ?? updated.parsedFields ?? {});
+      }
+
       if (!validation.isMatch && validation.errorMessage) {
         setFeedback({ tone: 'danger', text: validation.errorMessage });
         setHasScanCompleted(false);
@@ -275,7 +354,7 @@ export default function StaffOcrIssuancePage() {
       console.error('OCR Error:', error);
       let errorMessage = error instanceof Error ? error.message : 'Unable to run OCR scan.';
       if (issuance?.extractedText) {
-        const check = validateOcrTemplateMatch(selectedTemplateKey, issuance.extractedText, locale);
+        const check = validateOcrTemplateMatch(selectedValidationKey, issuance.extractedText, locale);
         if (!check.isMatch && check.errorMessage) {
           errorMessage = check.errorMessage;
         }
@@ -587,4 +666,3 @@ export default function StaffOcrIssuancePage() {
     </PortalShell>
   );
 }
-
