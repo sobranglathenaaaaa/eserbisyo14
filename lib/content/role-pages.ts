@@ -413,7 +413,7 @@ const rolePageCopy: Record<string, RolePageCopy> = {
     },
   },
   'resident/document-requests': {
-    title: { en: 'Get Documents', fil: 'Kumuha ng Dokumento' },
+    title: { en: 'Request Documents', fil: 'Mag-request ng Dokumento' },
     description: {
       en: 'Send a request and track its progress.',
       fil: 'Magpadala ng kahilingan at subaybayan ang progreso.',

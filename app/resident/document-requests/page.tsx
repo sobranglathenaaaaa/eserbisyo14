@@ -24,7 +24,6 @@ import {
   getCategoryForDocType,
   getCategoryLabel,
   loadDocumentTypesCatalog,
-  getPurposesForDocumentType,
 } from '@/lib/documents/document-catalog-constants';
 
 const DRAFT_KEY = 'eserbisyo.draft.document-request';
@@ -314,10 +313,6 @@ export default function ResidentDocumentRequestsPage() {
   useBodyScrollLock(proxyModalOpen || confirmSubmitOpen || Boolean(summaryRequestId));
 
   const selected = documentTypes.find((item) => item.optionId === selectedOptionId);
-  const availablePurposes = useMemo(() => {
-    if (!selected) return [];
-    return getPurposesForDocumentType(selected.type, selected.category);
-  }, [selected]);
   const summaryRequest = myRequests.find((item) => item.id === summaryRequestId) ?? null;
   const selectedDoc = myDocs.find((item) => item.id === selectedDocId) ?? myDocs[0] ?? null;
 
@@ -651,48 +646,24 @@ export default function ResidentDocumentRequestsPage() {
           </div>
 
           <label className="grid gap-3 text-sm">
-            <span className="font-medium text-[color:#123726]">{copyText(locale, 'Purpose / Notes *', 'Layunin / Mga Tala *')}</span>
+            <span className="font-medium text-[color:#123726]">{copyText(locale, 'Notes', 'Mga Tala')}</span>
             <Textarea
               value={purpose}
               onChange={(event) => setPurpose(event.target.value)}
               placeholder={copyText(
                 locale,
-                'Select a suggested purpose below or type your specific request reason...',
-                'Pumili sa mga mungkahing layunin sa ibaba o i-type ang iyong partikular na dahilan...',
+                'Type your specific request reason...',
+                'I-type ang iyong partikular na dahilan ng request...',
               )}
               className="min-h-[110px]"
               required
               aria-describedby="document-purpose-help"
             />
-            {availablePurposes.length > 0 && (
-              <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                <span className="text-[11px] font-semibold text-[color:#123726] shrink-0">
-                  {copyText(locale, 'Suggested Purposes:', 'Mga Mungkahing Layunin:')}
-                </span>
-                {availablePurposes.map((p) => {
-                  const isSelected = purpose === p;
-                  return (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => setPurpose(p)}
-                      className={`rounded-full px-2.5 py-1 text-xs transition-colors border cursor-pointer ${
-                        isSelected
-                          ? 'bg-emerald-700 text-white border-emerald-800 font-semibold shadow-xs'
-                          : 'bg-emerald-50 text-emerald-900 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300'
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
             <span id="document-purpose-help" className="text-xs leading-5 text-[color:#557968]">
               {copyText(
                 locale,
-                'Click any suggested option above or freely edit/type your specific purpose.',
-                'I-click ang alinman sa mga opsyon sa itaas o malayang i-type ang iyong partikular na layunin.',
+                'Type your specific purpose or request details.',
+                'I-type ang iyong partikular na layunin o detalye ng request.',
               )}
             </span>
           </label>

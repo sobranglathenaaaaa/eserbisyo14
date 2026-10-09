@@ -223,8 +223,8 @@ export function buildRequestTemplateDefaultFields(
 
   if (templateKey === BUSINESS_PERMIT_TEMPLATE_KEY || templateKey.includes('business')) {
     return {
-      establishmentName: additional.businessName || clean(source.purpose) || '',
-      businessName: additional.businessName || clean(source.purpose) || '',
+      establishmentName: additional.businessName || '',
+      businessName: additional.businessName || '',
       ownerName: residentName,
       postalAddress: additional.businessAddress || address,
       businessAddress: additional.businessAddress || address,

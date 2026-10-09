@@ -67,7 +67,7 @@ const navConfig: Record<UserRole, NavSection[]> = {
       items: [
         {
           href: '/resident/document-requests',
-          label: { en: 'Get Documents', fil: 'Kumuha ng Dokumento' },
+          label: { en: 'Request Documents', fil: 'Mag-request ng Dokumento' },
           hint: { en: 'Request and track', fil: 'Mag-request at subaybayan' },
         },
         {

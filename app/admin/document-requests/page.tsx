@@ -454,11 +454,11 @@ export default function AdminDocumentRequestsPage() {
                     <span className="font-semibold text-slate-900">{locale === 'fil' ? 'Pangalan ng Residente' : 'Resident Name'}:</span> {selectedRequest.residentName}
                   </p>
                   <p>
-                    <span className="font-semibold text-slate-900">{locale === 'fil' ? 'Layunin / Purpose' : 'Purpose / Notes'}:</span> {selectedRequest.purpose || '—'}
+                    <span className="font-semibold text-slate-900">{locale === 'fil' ? 'Layunin / Purpose' : 'Notes'}:</span> {selectedRequest.purpose || '—'}
                   </p>
                   {selectedRequest.adminDecisionReason && (
                     <p className="rounded bg-amber-50 p-2 border border-amber-200 text-amber-900">
-                      <span className="font-semibold">{locale === 'fil' ? 'Naunang Dahilan / Tala' : 'Existing Reason / Note'}:</span> {selectedRequest.adminDecisionReason}
+                      <span className="font-semibold">{locale === 'fil' ? 'Naunang Dahilan / Tala' : 'Note'}:</span> {selectedRequest.adminDecisionReason}
                     </p>
                   )}
                 </div>

@@ -548,23 +548,42 @@ export function getDefaultTemplateStructure(docTypeKey: string): TemplateStructu
   }
 
   if (normalized.includes('business')) {
+    const businessClassification = normalized.includes('renew')
+      ? 'FOR: BUSINESS CLEARANCE RENEWAL - EXISTING ENTERPRISE'
+      : normalized.includes('large') || normalized.includes('corporate')
+      ? 'FOR: LARGE ENTERPRISE / CORPORATE BUSINESS'
+      : normalized.includes('medium')
+      ? 'FOR: MEDIUM ENTERPRISE'
+      : normalized.includes('micro') || normalized.includes('small')
+      ? 'FOR: MICRO / SMALL ENTERPRISE'
+      : 'FOR: BUSINESS ENTERPRISE';
+    const businessOperationWording = normalized.includes('large') || normalized.includes('corporate')
+      ? 'This clearance specifically covers the operation of the large business enterprise.'
+      : normalized.includes('medium')
+      ? 'This clearance specifically covers the operation of the medium business enterprise.'
+      : normalized.includes('micro') || normalized.includes('small')
+      ? 'This clearance specifically covers the operation of the micro or small business enterprise.'
+      : 'This clearance specifically covers the operation of the business enterprise.';
     return {
       docTitle: 'BARANGAY BUSINESS CLEARANCE',
       salutation: '',
-      body: `[CENTER]<u style="font-weight:bold;font-size:16px;">{{business_name}}</u>
-(Name of Establishment)
-
+      body: `[CENTER]<span style="display:block;font-size:13px;font-weight:bold;letter-spacing:0.6px;margin:0 0 16px;">${businessClassification}</span>
 is issued to
 
-<u style="font-weight:bold;font-size:16px;">{{resident_name}}</u>
+<span style="display:inline-block;width:280px;min-width:280px;box-sizing:border-box;text-align:center;border-bottom:1.5px solid #000;font-weight:bold;font-size:16px;padding:0 8px 2px;">{{business_name}}</span>
+(Name of Establishment)
+
+of
+
+<span style="display:inline-block;width:240px;min-width:240px;box-sizing:border-box;text-align:center;border-bottom:1.5px solid #000;font-weight:bold;font-size:16px;padding:0 8px 2px;">{{resident_name}}</span>
 (Name of Owner)
 
 With postal address at
 
-<u style="font-weight:bold;font-size:15px;">{{resident_address}}, {{city}}</u>
+<span style="display:inline-block;width:360px;min-width:360px;box-sizing:border-box;text-align:center;border-bottom:1.5px solid #000;font-weight:bold;font-size:15px;padding:0 8px 2px;">{{resident_address}}, {{city}}</span>
 (Postal Address)[/CENTER]
 
-This clearance specifically covers the operation of the business enterprise ({{purpose}}).
+${businessOperationWording}
 
 This clearance is issued upon the request of the aforementioned name, provided that no law, city ordinance, or resolution shall be violated during the operation. For renewal applications, no renewal shall be granted if the business is found to be in violation of applicable rules.`,
       closingClause: 'Issued this {{date_issued}} at {{barangay_name}}, {{city}}.',
@@ -986,7 +1005,7 @@ function buildDefaultHtmlLayout(
     .map((p) => p.trim())
     .filter(Boolean);
 
-  const bodyWordingHtml = paragraphs
+  let bodyWordingHtml = paragraphs
     .map((p) => {
       // If paragraph contains [center]...[/center] or <center>...</center>
       if (
@@ -1014,6 +1033,41 @@ function buildDefaultHtmlLayout(
       return `<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">${withBr}</p>`;
     })
     .join('\n');
+
+  const isBusinessTemplate =
+    docTypeKey.toLowerCase().includes('business') ||
+    finalDocTitle.toLowerCase().includes('business clearance');
+  if (isBusinessTemplate) {
+    const normalizedBusinessKey = docTypeKey.toLowerCase();
+    const businessClassification = normalizedBusinessKey.includes('renew')
+      ? 'FOR: BUSINESS CLEARANCE RENEWAL - EXISTING ENTERPRISE'
+      : normalizedBusinessKey.includes('large') || normalizedBusinessKey.includes('corporate')
+      ? 'FOR: LARGE ENTERPRISE / CORPORATE BUSINESS'
+      : normalizedBusinessKey.includes('medium')
+      ? 'FOR: MEDIUM ENTERPRISE'
+      : normalizedBusinessKey.includes('micro') || normalizedBusinessKey.includes('small')
+      ? 'FOR: MICRO / SMALL ENTERPRISE'
+      : 'FOR: BUSINESS ENTERPRISE';
+    bodyWordingHtml = bodyWordingHtml.replace(
+      /(?:\(\s*)?FOR:\s*(?:BUSINESS\s+CLEARANCE\s*(?:-\s*)?(?:RENEWAL|LARGE|MEDIUM|MICRO|SMALL)(?:\s+ENTERPRISE)?(?:\s*\/\s*CORPORATE\s+BUSINESS)?|BUSINESS\s+ENTERPRISE|LARGE\s+ENTERPRISE\s*\/\s*CORPORATE\s+BUSINESS|MEDIUM\s+ENTERPRISE|MICRO\s*\/\s*SMALL\s+ENTERPRISE|BUSINESS\s+CLEARANCE\s+RENEWAL\s*-\s*EXISTING\s+ENTERPRISE)(?:\s*\))?/gi,
+      '',
+    );
+    const businessOperationWording = normalizedBusinessKey.includes('large') || normalizedBusinessKey.includes('corporate')
+      ? 'This clearance specifically covers the operation of the large business enterprise.'
+      : normalizedBusinessKey.includes('medium')
+      ? 'This clearance specifically covers the operation of the medium business enterprise.'
+      : normalizedBusinessKey.includes('micro') || normalizedBusinessKey.includes('small')
+      ? 'This clearance specifically covers the operation of the micro or small business enterprise.'
+      : 'This clearance specifically covers the operation of the business enterprise.';
+    bodyWordingHtml = bodyWordingHtml.replace(
+      /This\s+clearance\s+specifically\s+covers\s+the\s+operation\s+of\s+[^<.\n]*(?:\.[^<]*)?/gi,
+      businessOperationWording,
+    );
+    bodyWordingHtml = `<div style="text-align:center;line-height:1.9;">
+      <p style="font-size:13px;font-weight:bold;letter-spacing:0.6px;margin:0 0 16px;text-align:center;">${businessClassification}</p>
+      ${bodyWordingHtml.replace(/\[\/?center\]/gi, '').replaceAll('text-align:justify', 'text-align:center')}
+    </div>`;
+  }
 
   // LUPON NG MGA TAGAPAMAYAPA (PATAWAG, HEARING NOTICE, CFA) DEDICATED FULL-PAGE STRUCTURE
   if (
@@ -1239,7 +1293,7 @@ function buildDefaultHtmlLayout(
       
       <!-- MAIN CONTENT LAYER -->
       <div style="position:relative;z-index:2;">
-        <h2 style="text-align:center;font-size:23px;font-weight:800;font-family:'Times New Roman',serif;letter-spacing:1.8px;color:#000;text-transform:uppercase;margin:6px 0 28px 0;">
+        <h2 style="text-align:center;font-size:23px;font-weight:800;font-family:'Times New Roman',serif;letter-spacing:1.8px;color:#000;text-transform:uppercase;text-decoration:${isBusinessTemplate ? 'underline' : 'none'};text-underline-offset:3px;margin:6px 0 28px 0;">
           ${finalDocTitle}
         </h2>
 
@@ -1306,7 +1360,7 @@ function buildDefaultHtmlLayout(
   <div style="position:relative;z-index:2;">
     ${headerHtml}
     <hr style="border:none;border-top:2px solid #000;margin:14px 0 28px 0;" />
-    <h2 style="text-align:center;font-size:23px;font-weight:800;letter-spacing:1.8px;color:#000;text-transform:uppercase;margin:20px 0 28px 0;">
+    <h2 style="text-align:center;font-size:23px;font-weight:800;letter-spacing:1.8px;color:#000;text-transform:uppercase;text-decoration:${isBusinessTemplate ? 'underline' : 'none'};text-underline-offset:3px;margin:20px 0 28px 0;">
       ${finalDocTitle}
     </h2>
     ${finalSalutation ? `<p style="font-size:14.5px;font-weight:bold;margin-bottom:22px;">${finalSalutation}</p>` : ''}
@@ -2027,7 +2081,7 @@ export default function AdminDocumentTemplatesPage() {
   // Resolved Rich HTML Document Preview String (Substituting All Dynamic Variables from System Inputs)
   const liveRenderedPreviewHtml = useMemo(() => {
     let html = buildDefaultHtmlLayout(
-      editorDocType || activeTemplate?.documentType || 'barangay_certification',
+      `${editorDocType || activeTemplate?.documentType || 'barangay_certification'} ${editorName} ${editorPurposes.join(' ')}`,
       sealAlignment,
       layoutStyle,
       sideColumnVerticalSpacing,
@@ -2680,7 +2734,7 @@ export default function AdminDocumentTemplatesPage() {
       for (const purpose of editorPurposes) {
         const templateName = `${docName} - ${purpose}`;
         const autoCompiledHtml = buildDefaultHtmlLayout(
-          editorDocType,
+          `${editorDocType} ${templateName}`,
           sealAlignment,
           layoutStyle,
           sideColumnVerticalSpacing,
@@ -2761,7 +2815,7 @@ export default function AdminDocumentTemplatesPage() {
 
     const dynamicFields = dynamicFieldsInput.split(',').map((f) => f.trim()).filter(Boolean);
     const autoCompiledHtml = buildDefaultHtmlLayout(
-      editorDocType,
+      `${editorDocType} ${finalName}`,
       sealAlignment,
       layoutStyle,
       sideColumnVerticalSpacing,

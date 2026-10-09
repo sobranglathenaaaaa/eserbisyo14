@@ -1,6 +1,6 @@
 'use client';
 
-import { ChangeEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import PortalShell from '@/components/portal-shell';
 import { FormFeedback, PageGuide, SectionCard } from '@/components/portal-ui';
 import { Button } from '@/components/ui/button';
@@ -287,6 +287,8 @@ export default function StaffOcrIssuancePage() {
 
   const [issuance, setIssuance] = useState<StandaloneOcrIssuance | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFilePreviewUrl, setSelectedFilePreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [selectedTemplateKey, setSelectedTemplateKey] = useState('tpl_brgy_clearance');
   const todayIso = new Date().toISOString().slice(0, 10);
@@ -299,6 +301,20 @@ export default function StaffOcrIssuancePage() {
   const [hasScanCompleted, setHasScanCompleted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isIssuing, setIsIssuing] = useState(false);
+
+  useEffect(() => {
+    if (!selectedFile || !selectedFile.type.startsWith('image/')) {
+      setSelectedFilePreviewUrl(null);
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(selectedFile);
+    setSelectedFilePreviewUrl(previewUrl);
+
+    return () => {
+      URL.revokeObjectURL(previewUrl);
+    };
+  }, [selectedFile]);
 
   // Admin Document Types Catalog (Synced with Admin Configuration)
   const [docTypesCatalog, setDocTypesCatalog] = useState<DocumentTypeCatalogItem[]>([]);
@@ -800,7 +816,7 @@ export default function StaffOcrIssuancePage() {
                 >
                   {templatesList.map((tpl) => (
                     <option key={tpl.id} value={tpl.id}>
-                      {tpl.name} {tpl.sourceType === 'custom' || tpl.sourceType === 'uploaded' ? '(Admin Custom)' : ''}
+                      {tpl.name}
                     </option>
                   ))}
                 </Select>
@@ -821,15 +837,41 @@ export default function StaffOcrIssuancePage() {
 
             {/* Upload Box */}
             <div className="grid gap-3 rounded-(--portal-radius-md) border border-(--portal-border-soft) bg-(--portal-bg-card) p-4">
-              <label className="grid gap-1.5 text-sm text-(--portal-ink-800)">
+              <div className="grid gap-1.5 text-sm text-(--portal-ink-800)">
                 <span className="font-semibold">Upload Returned Intake Form (Image / Scan)</span>
-                <Input
+                <input
+                  ref={fileInputRef}
                   key={fileInputKey}
                   type="file"
                   accept="image/png,image/jpeg,image/jfif,image/webp,.jfif"
                   onChange={handleFileChange}
+                  className="sr-only"
+                  tabIndex={-1}
+                  aria-hidden="true"
                 />
-              </label>
+                <div className="flex min-h-11 items-center gap-3 rounded-(--portal-radius-md) border border-(--portal-border-soft) bg-white px-3 py-2 text-xs text-(--portal-ink-600)">
+                  <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                    Choose File
+                  </Button>
+                  {selectedFile && selectedFilePreviewUrl ? (
+                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                      <a
+                        href={selectedFilePreviewUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Preview ${selectedFile.name}`}
+                        title="Preview image"
+                        className="break-all font-semibold text-[#176b48] underline underline-offset-2 hover:text-[#114b30]"
+                      >
+                        {selectedFile.name}
+                      </a>
+                      <span>({(selectedFile.size / 1024).toFixed(1)} KB)</span>
+                    </div>
+                  ) : (
+                    <span>No file chosen</span>
+                  )}
+                </div>
+              </div>
 
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 <Button

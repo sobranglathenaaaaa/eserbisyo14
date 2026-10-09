@@ -19,6 +19,7 @@ import type { UIStatusTone } from '../../../lib/types/ui';
 import type { RequestStatus } from '@/lib/types/models';
 
 const PROCESSABLE_STATUSES: RequestStatus[] = ['pending', 'approved', 'ready_for_pickup', 'completed'];
+const STAFF_PREVIEWABLE_STATUSES: RequestStatus[] = ['approved', 'processing', 'ready_for_pickup', 'completed'];
 
 function formatFileSize(bytes: number | undefined) {
   if (!bytes) return '';
@@ -122,6 +123,7 @@ export default function StaffProcessRequestsPage() {
     statusCounts.approved > 0 || statusCounts.ready_for_pickup > 0;
 
   const selected = filteredRequests.find((item) => item.id === selectedId) ?? filteredRequests[0] ?? null;
+  const canPreviewSelected = Boolean(selected && STAFF_PREVIEWABLE_STATUSES.includes(selected.status));
   const selectedResident = selected ? state.users.find((user) => user.id === selected.residentId) ?? null : null;
   const selectedTemplate = selected ? resolveTemplateForDocumentType(selected.typeLabel, selected.category) : null;
   const activeTemplate = selectedTemplate ? getTemplateOrDefault(selectedTemplate.key) : null;
@@ -570,16 +572,17 @@ export default function StaffProcessRequestsPage() {
               ) : null}
 
               <div className="flex flex-wrap items-center justify-end gap-2">
-                {/* PREVIEW DOCUMENT BUTTON */}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setPreviewRequestId(selected.id)}
-                  className="gap-1.5 text-xs text-blue-700 border-blue-200 hover:bg-blue-50"
-                >
-                  <Eye className="h-3.5 w-3.5 text-blue-600" />
-                  {locale === 'fil' ? 'Silipin ang Dokumento' : 'Preview Document'}
-                </Button>
+                {canPreviewSelected ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setPreviewRequestId(selected.id)}
+                    className="gap-1.5 text-xs text-blue-700 border-blue-200 hover:bg-blue-50"
+                  >
+                    <Eye className="h-3.5 w-3.5 text-blue-600" />
+                    {locale === 'fil' ? 'Silipin ang Dokumento' : 'Preview Document'}
+                  </Button>
+                ) : null}
 
                 {selected.status === 'approved' ? (
                   <Button
@@ -626,7 +629,7 @@ export default function StaffProcessRequestsPage() {
       
       {/* AUTHENTIC DOCUMENT PREVIEW MODAL */}
       <DocumentRequestPreviewModal
-        open={Boolean(previewRequestId)}
+        open={Boolean(previewRequestId && canPreviewSelected)}
         onOpenChange={(open) => {
           if (!open) setPreviewRequestId(null);
         }}

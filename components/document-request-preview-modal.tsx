@@ -6,10 +6,57 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { StatusBadge, statusToneFromState } from '@/components/portal-ui';
 import { getRequestStatusLabel } from '@/lib/formatters';
-import { getRequestedPersonDetails } from '@/lib/documents/request-template-fields';
+import { extractAdditionalDetails, getRequestedPersonDetails } from '@/lib/documents/request-template-fields';
 import { getBarangayOfficialSettings } from '@/lib/documents/barangay-settings';
 import { stripPriceFromPurpose } from '@/lib/documents/official-template-builder';
 import type { DocumentRequest, DocumentTemplate, User } from '@/lib/types/models';
+
+function underlinePreviewValue(value: string, minWidth = 'auto') {
+  const widthStyle = minWidth === 'auto' ? '' : `width:${minWidth};`;
+  return `<span style="display:inline-block;${widthStyle}min-width:${minWidth === 'auto' ? '0' : '0'};box-sizing:border-box;text-align:center;font-weight:bold;border-bottom:1.5px solid #000;line-height:1.35;padding:0 8px 2px;text-decoration:none;vertical-align:middle;">${value || '&nbsp;'}</span>`;
+}
+
+function getBusinessClassification(requestedLabel: string, purpose: string) {
+  const combined = `${requestedLabel} ${purpose}`.toLowerCase();
+  if (combined.includes('renewal') || combined.includes('renew')) return 'FOR: BUSINESS CLEARANCE RENEWAL - EXISTING ENTERPRISE';
+  if (combined.includes('large') || combined.includes('corporate')) return 'FOR: LARGE ENTERPRISE / CORPORATE BUSINESS';
+  if (combined.includes('medium')) return 'FOR: MEDIUM ENTERPRISE';
+  if (combined.includes('micro') || combined.includes('small')) return 'FOR: MICRO / SMALL ENTERPRISE';
+  return 'FOR: BUSINESS ENTERPRISE';
+}
+
+function getBusinessOperationWording(requestedLabel: string, purpose: string) {
+  const combined = `${requestedLabel} ${purpose}`.toLowerCase();
+  if (combined.includes('large') || combined.includes('corporate')) {
+    return 'This clearance specifically covers the operation of the large business enterprise.';
+  }
+  if (combined.includes('medium')) {
+    return 'This clearance specifically covers the operation of the medium business enterprise.';
+  }
+  if (combined.includes('micro') || combined.includes('small')) {
+    return 'This clearance specifically covers the operation of the micro or small business enterprise.';
+  }
+  return 'This clearance specifically covers the operation of the business enterprise.';
+}
+
+function getDocumentPurpose(request: DocumentRequest, fallbackPurpose: string) {
+  const requestedLabel = (request.selectedTypeLabel || request.typeLabel || '').trim();
+  const purposeFromType = requestedLabel
+    .replace(/^barangay\s+(?:certification|clearance)\s*[-:]\s*/i, '')
+    .trim();
+  const genericLabels = new Set([
+    'barangay certification',
+    'barangay certification (general)',
+    'barangay clearance',
+    'barangay certification / clearance',
+  ]);
+
+  if (purposeFromType && !genericLabels.has(purposeFromType.toLowerCase())) {
+    return stripPriceFromPurpose(purposeFromType);
+  }
+
+  return stripPriceFromPurpose(fallbackPurpose.split(/\n\s*\n|\[Additional Details\]/i)[0]) || 'Official legal requirements';
+}
 
 interface DocumentRequestPreviewModalProps {
   open: boolean;
@@ -39,7 +86,19 @@ export default function DocumentRequestPreviewModal({
   // Normalize document type key
   const docTypeKey = useMemo(() => {
     if (!request) return 'barangay_certification';
-    const combined = `${request.typeLabel || ''} ${request.category || ''} ${request.purpose || ''}`.toLowerCase();
+    const requestedLabel = (request.selectedTypeLabel || request.typeLabel || '').toLowerCase();
+    const category = (request.category || '').toLowerCase();
+    const purpose = (request.purpose || '').toLowerCase();
+    const isGenericBarangayCertification =
+      requestedLabel === 'barangay certification' ||
+      requestedLabel === 'barangay certification (general)' ||
+      requestedLabel === 'barangay clearance' ||
+      requestedLabel === 'barangay certification / clearance';
+    // The selected document type is authoritative. Only use the purpose to
+    // resolve a subtype when the request itself is the generic certification.
+    const combined = isGenericBarangayCertification
+      ? `${requestedLabel} ${category} ${purpose}`
+      : `${requestedLabel} ${category}`;
 
     // 2. Transient Employees & Worker Certification
     if (
@@ -202,7 +261,18 @@ export default function DocumentRequestPreviewModal({
     (request as Record<string, unknown> | null)?.projectLocation as string ||
     residentAddress;
   const rawPurpose = fieldDraft.purpose || fieldDraft.reasonText || request?.purpose || request?.typeLabel || 'Official legal requirements';
-  const purpose = stripPriceFromPurpose(rawPurpose) || 'Official legal requirements';
+  const purpose = request ? getDocumentPurpose(request, rawPurpose) : 'Official legal requirements';
+  const additionalDetails = extractAdditionalDetails(request?.purpose);
+  const businessName =
+    fieldDraft.businessName ||
+    fieldDraft.business_name ||
+    additionalDetails.businessName ||
+    '';
+  const businessAddress =
+    fieldDraft.businessAddress ||
+    fieldDraft.business_address ||
+    additionalDetails.businessAddress ||
+    residentAddress;
   const dateIssued =
     fieldDraft.issuedDate ||
     fieldDraft.dateIssued ||
@@ -246,6 +316,7 @@ export default function DocumentRequestPreviewModal({
     const dynamicWatermarkHtml = `<img src="${settings.watermarkLogoUrl || settings.barangayLogoUrl}" class="doc-watermark" style="position:absolute;left:50%;top:50%;width:560px;max-width:88%;transform:translate(-50%, -50%);opacity:0.12;filter:contrast(115%);pointer-events:none;z-index:1;user-select:none;-webkit-user-select:none;" alt="Barangay Seal Watermark" />`;
 
     const currentDocKey = docTypeKey as string;
+    const isBusinessPreview = currentDocKey === 'business_clearance' || currentDocKey === 'business_permit';
     const isLuponType =
       currentDocKey === 'lupon_cfa' ||
       currentDocKey === 'lupon_notice' ||
@@ -253,9 +324,40 @@ export default function DocumentRequestPreviewModal({
       currentDocKey === 'lupon_tagapamayapa';
 
     const reqTypeLabelLower = (request.selectedTypeLabel || request.typeLabel || '').trim().toLowerCase();
-    const matchingCustomTemplate = (documentTemplates || []).find((t) => {
-      const nameLower = (t.name || '').trim().toLowerCase();
-      const docTypeLower = (t.documentType || '').trim().toLowerCase();
+    const purposeLower = purpose.toLowerCase();
+    const businessClassification = getBusinessClassification(reqTypeLabelLower, purposeLower);
+    const purposeFamilies = [
+      ['indigency', 'financial assistance', 'medical assistance', 'educational assistance', 'burial assistance', 'tulong'],
+      ['residency', 'proof of address', 'paninirahan', 'tirahan'],
+      ['good moral', 'moral character', 'mabuting asal'],
+      ['employment', 'employer', 'trabaho'],
+      ['school', 'student', 'education'],
+      ['business', 'negosyo', 'commercial'],
+    ];
+    const requestPurposeFamily = purposeFamilies.find((family) =>
+      family.some((term) => purposeLower.includes(term)),
+    );
+    const matchingCustomTemplate = (documentTemplates || [])
+      .slice()
+      .sort((a, b) => {
+        const score = (template: DocumentTemplate) => {
+          const nameLower = (template.name || '').trim().toLowerCase();
+          const docTypeLower = (template.documentType || '').trim().toLowerCase();
+          const templateText = `${nameLower} ${template.body || ''} ${(template.htmlBody || '').toLowerCase()}`;
+          const matchesPurposeFamily = requestPurposeFamily?.some((term) => templateText.includes(term)) ?? false;
+          let result = 0;
+          if (matchesPurposeFamily) result += 200;
+          if (docTypeLower === currentDocKey) result += 100;
+          if (template.id === request.typeId) result += 90;
+          if (reqTypeLabelLower && nameLower === reqTypeLabelLower) result += 80;
+          if (reqTypeLabelLower && (reqTypeLabelLower.includes(nameLower) || nameLower.includes(reqTypeLabelLower))) result += 40;
+          return result;
+        };
+        return score(b) - score(a);
+      })
+      .find((t) => {
+        const nameLower = (t.name || '').trim().toLowerCase();
+        const docTypeLower = (t.documentType || '').trim().toLowerCase();
 
       // If it's a Lupon document request, make sure it matches the exact Lupon sub-type!
       if (isLuponType) {
@@ -295,10 +397,17 @@ export default function DocumentRequestPreviewModal({
         return false;
       }
 
-      if (reqTypeLabelLower && (nameLower === reqTypeLabelLower || reqTypeLabelLower.includes(nameLower) || nameLower.includes(reqTypeLabelLower))) return true;
-      if (t.id === request.typeId) return true;
       if (t.documentType === currentDocKey) return true;
-      if ((currentDocKey === 'certificate_indigency' || currentDocKey === 'barangay_certification') && (nameLower.includes('indigency') || nameLower.includes('barangay') || nameLower.includes('clearance') || nameLower.includes('certification'))) return true;
+      if (reqTypeLabelLower && nameLower === reqTypeLabelLower) return true;
+      const templateText = `${nameLower} ${t.body || ''} ${(t.htmlBody || '').toLowerCase()}`;
+      if (requestPurposeFamily?.some((term) => templateText.includes(term))) return true;
+      if (currentDocKey === 'certificate_indigency' && nameLower.includes('indigency')) return true;
+      if (
+        currentDocKey === 'barangay_certification' &&
+        (nameLower === 'barangay certification (general)' || nameLower === 'barangay certification') &&
+        !nameLower.includes('business') &&
+        !nameLower.includes('indigency')
+      ) return true;
       if (currentDocKey === 'transient_employees' && (nameLower.includes('transient') || nameLower.includes('worker'))) return true;
       if ((currentDocKey === 'business_clearance' || currentDocKey === 'business_permit') && (nameLower.includes('business') || nameLower.includes('negosyo'))) return true;
       if ((currentDocKey === 'construction_clearances' || currentDocKey === 'construction_permit') && (nameLower.includes('construction') || nameLower.includes('building') || nameLower.includes('renovation'))) return true;
@@ -307,7 +416,7 @@ export default function DocumentRequestPreviewModal({
       if (currentDocKey === 'certificate_residency' && nameLower.includes('residency')) return true;
       if (currentDocKey === 'good_moral' && nameLower.includes('moral')) return true;
       return false;
-    });
+      });
 
     if (matchingCustomTemplate && (matchingCustomTemplate.htmlBody || matchingCustomTemplate.body)) {
       let customHtml = matchingCustomTemplate.htmlBody || matchingCustomTemplate.body;
@@ -318,15 +427,37 @@ export default function DocumentRequestPreviewModal({
         if (metaMatch) {
           customHtml = customHtml.replace(/<!-- TEMPLATE_META:([\s\S]*?) -->$/, '').trim();
         }
+        if (isBusinessPreview && isLegacySidebar) {
+          let businessTitleSeen = false;
+          customHtml = customHtml.replace(/BARANGAY BUSINESS CLEARANCE/gi, (match) => {
+            if (businessTitleSeen) return '';
+            businessTitleSeen = true;
+            return match;
+          });
+          customHtml = `
+<style>
+  .doc-frame > div:last-child > div:first-child,
+  .doc-frame > div:last-child > div:first-child p,
+  .doc-frame > div:last-child > div:first-child h1,
+  .doc-frame > div:last-child > div:first-child h2,
+  .doc-frame > div:last-child > div:first-child h3 {
+    text-align: center !important;
+  }
+</style>
+${customHtml}`;
+        }
         if (customHtml.includes('{{') || customHtml.includes('<div') || customHtml.includes('<p')) {
           let rendered = customHtml;
-          rendered = rendered.replaceAll('{{resident_name}}', residentName);
-          rendered = rendered.replaceAll('{{resident_address}}', residentAddress);
-          rendered = rendered.replaceAll('{{add_where}}', addWhere);
-          rendered = rendered.replaceAll('{{addWhere}}', addWhere);
-          rendered = rendered.replaceAll('{{location}}', addWhere);
-          rendered = rendered.replaceAll('{{site_address}}', addWhere);
-          rendered = rendered.replaceAll('{{project_location}}', addWhere);
+          rendered = rendered.replaceAll('{{resident_name}}', underlinePreviewValue(residentName));
+          rendered = rendered.replaceAll('{{resident_address}}', underlinePreviewValue(residentAddress));
+          rendered = rendered.replaceAll('{{business_name}}', underlinePreviewValue(businessName, '280px'));
+          rendered = rendered.replaceAll('{{business_address}}', underlinePreviewValue(businessAddress, '360px'));
+          rendered = rendered.replaceAll('{{business_classification}}', businessClassification);
+          rendered = rendered.replaceAll('{{add_where}}', underlinePreviewValue(addWhere));
+          rendered = rendered.replaceAll('{{addWhere}}', underlinePreviewValue(addWhere));
+          rendered = rendered.replaceAll('{{location}}', underlinePreviewValue(addWhere));
+          rendered = rendered.replaceAll('{{site_address}}', underlinePreviewValue(addWhere));
+          rendered = rendered.replaceAll('{{project_location}}', underlinePreviewValue(addWhere));
           const d = fieldDraft.issuedDate || fieldDraft.dateIssued ? new Date(fieldDraft.issuedDate || fieldDraft.dateIssued) : new Date();
           const validD = isNaN(d.getTime()) ? new Date() : d;
           const dayN = validD.getDate();
@@ -336,14 +467,14 @@ export default function DocumentRequestPreviewModal({
           const fYear = String(validD.getFullYear());
           const fDateIssued = `${fDay} day of ${fMonth}, ${fYear}`;
 
-          rendered = rendered.replaceAll('{{purpose}}', purpose);
-          rendered = rendered.replaceAll('{{date_issued}}', fDateIssued);
-          rendered = rendered.replaceAll('{{day}}', fDay);
-          rendered = rendered.replaceAll('{{month}}', fMonth);
-          rendered = rendered.replaceAll('{{year}}', fYear);
-          rendered = rendered.replaceAll('{{dateIssued}}', fDateIssued);
-          rendered = rendered.replaceAll('{{issuedDate}}', fDateIssued);
-          rendered = rendered.replaceAll('{{reference_number}}', request.referenceNumber || '');
+          rendered = rendered.replaceAll('{{purpose}}', underlinePreviewValue(purpose));
+          rendered = rendered.replaceAll('{{date_issued}}', underlinePreviewValue(fDateIssued));
+          rendered = rendered.replaceAll('{{day}}', underlinePreviewValue(fDay));
+          rendered = rendered.replaceAll('{{month}}', underlinePreviewValue(fMonth));
+          rendered = rendered.replaceAll('{{year}}', underlinePreviewValue(fYear));
+          rendered = rendered.replaceAll('{{dateIssued}}', underlinePreviewValue(fDateIssued));
+          rendered = rendered.replaceAll('{{issuedDate}}', underlinePreviewValue(fDateIssued));
+          rendered = rendered.replaceAll('{{reference_number}}', underlinePreviewValue(request.referenceNumber || ''));
           rendered = rendered.replaceAll('{{punong_barangay}}', settings.punongBarangay);
           rendered = rendered.replaceAll('{{barangay_secretary}}', settings.barangaySecretary);
           rendered = rendered.replaceAll('{{barangay_treasurer}}', settings.barangayTreasurer);
@@ -358,6 +489,27 @@ export default function DocumentRequestPreviewModal({
           rendered = rendered.replaceAll('{{barangay_email}}', settings.barangayEmail);
           rendered = rendered.replaceAll('{{barangay_phone}}', settings.barangayPhone);
           rendered = rendered.replaceAll('{{official_seal}}', '<div style="display:inline-block;border:2px solid #1e3a8a;color:#1e3a8a;padding:4px 10px;border-radius:9999px;font-weight:bold;font-size:10px;">[ OFFICIAL BARANGAY SEAL ]</div>');
+          rendered = rendered.replace(/\{\{[^}]+\}\}/g, '');
+          if (isBusinessPreview) {
+            rendered = rendered.replace(
+              /(?:\(\s*)?FOR:\s*(?:BUSINESS\s+CLEARANCE\s*(?:-\s*)?(?:RENEWAL|LARGE|MEDIUM|MICRO|SMALL)(?:\s+ENTERPRISE)?(?:\s*\/\s*CORPORATE\s+BUSINESS)?|BUSINESS\s+ENTERPRISE|LARGE\s+ENTERPRISE\s*\/\s*CORPORATE\s+BUSINESS|MEDIUM\s+ENTERPRISE|MICRO\s*\/\s*SMALL\s+ENTERPRISE|BUSINESS\s+CLEARANCE\s+RENEWAL\s*-\s*EXISTING\s+ENTERPRISE)(?:\s*\))?/gi,
+              '',
+            );
+            rendered = rendered.replace(
+              /This\s+clearance\s+specifically\s+covers\s+the\s+operation\s+of\s+[^<.\n]*(?:\.[^<]*)?/gi,
+              getBusinessOperationWording(reqTypeLabelLower, purposeLower),
+            );
+            if (!/This\s+clearance\s+specifically\s+covers/i.test(rendered)) {
+              rendered = rendered.replace(
+                /(<\/div>\s*<\/div>\s*<\/div>\s*)/i,
+                `$1<p style="font-size:14.5px;line-height:2.1;margin:28px 0 24px;text-align:center;">${getBusinessOperationWording(reqTypeLabelLower, purposeLower)}</p>`,
+              );
+            }
+            rendered = rendered.replace(
+              /(<\/h2>)/i,
+              `$1<p style="text-align:center;font-size:13px;font-weight:bold;letter-spacing:0.6px;margin:0 0 16px 0;">${businessClassification}</p>`,
+            );
+          }
           return rendered;
         }
       }
@@ -460,16 +612,45 @@ export default function DocumentRequestPreviewModal({
       case 'business_clearance':
       case 'business_permit':
         docTitleUpper = 'BARANGAY BUSINESS CLEARANCE';
+        const businessClassification = getBusinessClassification(
+          request.selectedTypeLabel || request.typeLabel || '',
+          purpose,
+        );
+        const businessOperationWording = getBusinessOperationWording(
+          request.selectedTypeLabel || request.typeLabel || '',
+          purpose,
+        );
         bodyWordingHtml = `
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  Barangay clearance is hereby granted to <u style="font-weight:bold;">${residentName}</u> to operate business located at <u style="font-weight:bold;">${residentAddress}</u>, ${settings.barangayName}, ${settings.cityName}.
-</p>
-<p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
-  Subject to compliance with all existing barangay ordinances and municipal health laws.
-</p>
-<p style="font-size:14.5px;margin-top:28px;margin-bottom:36px;color:#000;">
-  Issued this <u style="font-weight:bold;">${dateIssued}</u> for <u style="font-weight:bold;">${purpose}</u>.
-</p>
+<div style="text-align:center;color:#000;margin:8px auto 0;max-width:680px;">
+  <p style="font-size:13px;font-weight:bold;letter-spacing:0.6px;margin:0 0 16px;">${businessClassification}</p>
+  <p style="font-size:16px;line-height:1.6;margin:0 0 10px;">
+    is issued to
+  </p>
+  <p style="font-size:21px;line-height:1.35;font-weight:bold;text-decoration:underline;text-underline-offset:3px;margin:0 auto 4px;min-height:29px;">
+    <span style="display:inline-block;width:280px;min-width:280px;box-sizing:border-box;text-align:center;border-bottom:1.5px solid #000;line-height:1.35;padding:0 8px 2px;">${businessName || '&nbsp;'}</span>
+  </p>
+  <p style="font-size:18px;line-height:1.5;margin:0 0 18px;">
+    Name of Establishment
+  </p>
+  <p style="font-size:16px;line-height:1.5;margin:0 0 8px;">
+    of
+  </p>
+  <p style="font-size:21px;line-height:1.35;font-weight:bold;text-decoration:underline;text-underline-offset:3px;margin:0 auto 4px;">
+    <span style="display:inline-block;width:240px;min-width:240px;box-sizing:border-box;text-align:center;border-bottom:1.5px solid #000;line-height:1.35;padding:0 8px 2px;">${residentName || '&nbsp;'}</span>
+  </p>
+  <p style="font-size:18px;line-height:1.5;margin:0 0 22px;">
+    Name of Owner
+  </p>
+  <p style="font-size:17px;line-height:1.5;font-weight:bold;margin:0 0 8px;">
+    With postal address at
+  </p>
+  <p style="font-size:20px;line-height:1.35;font-weight:bold;text-decoration:underline;text-underline-offset:3px;margin:0 auto;min-height:28px;">
+    <span style="display:inline-block;width:360px;min-width:360px;box-sizing:border-box;text-align:center;border-bottom:1.5px solid #000;line-height:1.35;padding:0 8px 2px;">${businessAddress || '&nbsp;'}</span>
+  </p>
+  <p style="font-size:14.5px;line-height:2.1;margin:28px 0 24px;text-align:center;">
+    ${businessOperationWording}
+  </p>
+</div>
 `;
         break;
 
@@ -705,7 +886,7 @@ export default function DocumentRequestPreviewModal({
       case 'barangay_certificate':
       case 'barangay_certification':
       default:
-        docTitleUpper = (request.selectedTypeLabel || request.typeLabel || 'BARANGAY CERTIFICATION').toUpperCase();
+        docTitleUpper = 'BARANGAY CERTIFICATION';
         bodyWordingHtml = `
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
   This is to certify that <u style="font-weight:bold;">${residentName}</u> whose residence at <u style="font-weight:bold;">${residentAddress}</u> is within the jurisdiction of ${settings.barangayName}, ${settings.cityName}.
@@ -776,13 +957,15 @@ export default function DocumentRequestPreviewModal({
     <div style="flex:1;padding:26px 30px 18px 30px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;box-sizing:border-box;background:transparent;">
       <!-- MAIN CONTENT LAYER -->
       <div style="position:relative;z-index:2;">
-        <h2 style="text-align:center;font-size:23px;font-weight:800;font-family:'Times New Roman',serif;letter-spacing:1.8px;color:#000;text-transform:uppercase;margin:6px 0 28px 0;">
+        <h2 style="text-align:center;font-size:${docTypeKey === 'business_clearance' || docTypeKey === 'business_permit' ? '22px' : '23px'};font-weight:800;font-family:'Times New Roman',serif;letter-spacing:1.8px;color:#000;text-transform:uppercase;text-decoration:${docTypeKey === 'business_clearance' || docTypeKey === 'business_permit' ? 'underline' : 'none'};text-underline-offset:3px;margin:6px 0 28px 0;">
           ${docTitleUpper}
         </h2>
 
-        <p style="font-size:14.5px;font-weight:bold;margin-bottom:24px;color:#000;">
-          TO WHOM IT MAY CONCERN:
-        </p>
+        ${
+          docTypeKey === 'business_clearance' || docTypeKey === 'business_permit'
+            ? ''
+            : `<p style="font-size:14.5px;font-weight:bold;margin-bottom:24px;color:#000;">TO WHOM IT MAY CONCERN:</p>`
+        }
 
         ${bodyWordingHtml}
       </div>
@@ -824,7 +1007,20 @@ export default function DocumentRequestPreviewModal({
   </div>
 </div>
 `.trim();
-  }, [request, docTypeKey, residentName, residentAddress, purpose, dateIssued, locale]);
+  }, [
+    request,
+    docTypeKey,
+    residentName,
+    residentAddress,
+    purpose,
+    dateIssued,
+    locale,
+    documentTemplates,
+    fieldDraft,
+    addWhere,
+    businessName,
+    businessAddress,
+  ]);
 
   // Handle Isolated Printing
   const handlePrint = () => {
@@ -939,30 +1135,6 @@ export default function DocumentRequestPreviewModal({
               <Printer className="h-3.5 w-3.5 text-[color:#1b6b46]" />
               {locale === 'fil' ? 'I-print / PDF' : 'Print / PDF'}
             </Button>
-
-            {request.status === 'approved' && onMarkReadyForPickup && (
-              <Button
-                type="button"
-                size="sm"
-                disabled={isMarkingReady}
-                onClick={async () => {
-                  if (onMarkReadyForPickup) {
-                    await onMarkReadyForPickup();
-                    onOpenChange(false);
-                  }
-                }}
-                className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
-              >
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                {isMarkingReady
-                  ? locale === 'fil'
-                    ? 'Inihahanda'
-                    : 'Processing'
-                  : locale === 'fil'
-                  ? 'I-release bilang Ready for Pickup'
-                  : 'Mark Ready for Pickup'}
-              </Button>
-            )}
 
             <Button
               type="button"
