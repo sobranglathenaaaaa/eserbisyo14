@@ -45,6 +45,7 @@ export default function AdminUsersPage() {
   const [menuCoords, setMenuCoords] = useState<{ left: number; top: number } | null>(null);
   const [menuPlacement, setMenuPlacement] = useState<'above' | 'below'>('above');
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const menuTriggerRef = useRef<HTMLElement | null>(null);
   const [actionFeedback, setActionFeedback] = useState<{ tone: 'success' | 'error' | 'info'; text: string } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<
     | { open: false }
@@ -170,7 +171,7 @@ export default function AdminUsersPage() {
     if (!openActionsForUserId) return;
 
     function recompute() {
-      const btn = document.querySelector<HTMLElement>(`[data-action-btn=\"${openActionsForUserId}\"]`);
+      const btn = menuTriggerRef.current;
       if (!btn) return;
       const rect = btn.getBoundingClientRect();
       const menuWidth = 224;
@@ -192,10 +193,11 @@ export default function AdminUsersPage() {
     function onDocClick(ev: MouseEvent) {
       const target = ev.target as Node;
       if (!menuRef.current) return;
-      const btn = document.querySelector<HTMLElement>(`[data-action-btn=\"${openActionsForUserId}\"]`);
+      const btn = menuTriggerRef.current;
       if (btn && (btn === target || btn.contains(target))) return;
       if (menuRef.current && !menuRef.current.contains(target)) {
         setOpenActionsForUserId(null);
+        menuTriggerRef.current = null;
         setMenuCoords(null);
       }
     }
@@ -567,6 +569,7 @@ export default function AdminUsersPage() {
                           className="font-semibold text-emerald-800 hover:text-emerald-950 px-3"
                           onClick={(e) => {
                             const button = e.currentTarget as HTMLElement;
+                            menuTriggerRef.current = button;
                             const rect = button.getBoundingClientRect();
                             const menuWidth = 224;
                             const menuEstimateHeight = 200;
@@ -588,6 +591,7 @@ export default function AdminUsersPage() {
                                 setMenuCoords({ left, top: rect.top - 12 });
                               }
                             } else {
+                              menuTriggerRef.current = null;
                               setMenuCoords(null);
                             }
                           }}
@@ -658,6 +662,7 @@ export default function AdminUsersPage() {
                             type="button"
                             onClick={(e) => {
                               const button = e.currentTarget as HTMLElement;
+                              menuTriggerRef.current = button;
                               const rect = button.getBoundingClientRect();
                               const menuWidth = 224; // matches w-56
                               const menuEstimateHeight = 200; // approx height
@@ -679,6 +684,7 @@ export default function AdminUsersPage() {
                                   setMenuCoords({ left, top: rect.top - 12 });
                                 }
                               } else {
+                                menuTriggerRef.current = null;
                                 setMenuCoords(null);
                               }
                             }}

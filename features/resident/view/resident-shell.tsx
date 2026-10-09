@@ -759,7 +759,7 @@ function ResidentNotificationBell() {
           ref={panelRef}
           role="dialog"
           aria-label={locale === 'fil' ? 'Mga abiso' : 'Notifications'}
-          className="absolute right-0 top-[calc(100%+0.5rem)] z-[70] w-[min(94vw,360px)] overflow-hidden rounded-[var(--resident-radius-lg)] border border-[color:rgba(237,248,243,0.22)] bg-[color:rgba(9,36,27,0.98)] shadow-[var(--resident-shadow-3)]"
+          className="fixed left-3 right-3 top-[calc(64px+0.5rem)] z-[70] max-h-[calc(100dvh-5rem)] w-auto overflow-hidden rounded-[var(--resident-radius-lg)] border border-[color:rgba(237,248,243,0.22)] bg-[color:rgba(9,36,27,0.98)] shadow-[var(--resident-shadow-3)] sm:absolute sm:left-auto sm:right-0 sm:top-[calc(100%+0.5rem)] sm:max-h-none sm:w-[min(94vw,360px)]"
         >
           <div className="flex items-center justify-between border-b border-[color:rgba(237,248,243,0.18)] px-3 py-2.5">
             <p className="text-sm font-semibold text-[color:var(--resident-shell-text)]">
@@ -775,7 +775,7 @@ function ResidentNotificationBell() {
             ) : null}
           </div>
 
-          <div className="max-h-[min(62vh,460px)] overflow-y-auto p-2">
+          <div className="max-h-[min(62vh,460px)] overflow-y-auto overscroll-contain p-2">
             {latestNotifications.length ? (
               <ul className="grid gap-1.5" role="menu" aria-label={locale === 'fil' ? 'Listahan ng mga abiso' : 'Notifications list'}>
                 {latestNotifications.map((notification) => (
@@ -784,7 +784,7 @@ function ResidentNotificationBell() {
                       type="button"
                       role="menuitem"
                       className={cn(
-                        'w-full rounded-[var(--resident-radius-sm)] border px-2.5 py-2 text-left transition-colors resident-focusable',
+                        'w-full min-w-0 rounded-[var(--resident-radius-sm)] border px-2.5 py-2 text-left transition-colors resident-focusable',
                         notification.read
                           ? 'border-[color:rgba(237,248,243,0.08)] bg-[color:rgba(255,255,255,0.02)] text-[color:rgba(237,248,243,0.88)] hover:bg-[color:rgba(255,255,255,0.06)]'
                           : 'border-[color:rgba(244,178,92,0.38)] bg-[color:rgba(244,178,92,0.12)] text-[color:#fef6e8] hover:bg-[color:rgba(244,178,92,0.2)]'
@@ -799,12 +799,12 @@ function ResidentNotificationBell() {
                       }
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-semibold leading-tight">{notification.title}</p>
+                        <p className="min-w-0 break-words text-sm font-semibold leading-tight">{notification.title}</p>
                         {!notification.read ? (
                           <span className="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[color:#f4b25c]" aria-hidden />
                         ) : null}
                       </div>
-                      <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[inherit]/85">{notification.message}</p>
+                      <p className="mt-1 break-words line-clamp-3 text-xs leading-relaxed text-[inherit]/85">{notification.message}</p>
                       <p className="mt-1.5 text-[11px] text-[inherit]/70">{formatDateTime(notification.createdAt, locale)}</p>
                     </button>
                   </li>
