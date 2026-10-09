@@ -1,10 +1,10 @@
-# 🏛️ eSerbisyo — Service and Record Management System
+# eSerbisyo — Service and Record Management System
 
 A modern web application designed for Barangay Progreso to streamline document requests, resident management, and community services.
 
 ---
 
-## 🌟 What is eSerbisyo?
+## What is eSerbisyo?
 
 **eSerbisyo** is an all-in-one digital governance platform that connects barangay residents, staff, and administrators in a single, easy-to-use system. It replaces slow physical queues with fast online transactions, automated document generation, and real-time status updates.
 
