@@ -24,6 +24,36 @@ function clean(value: string | null | undefined) {
   return value?.trim() ?? '';
 }
 
+export function extractAdditionalDetails(purpose: string | null | undefined) {
+  const details: {
+    businessName?: string;
+    businessAddress?: string;
+    addWhere?: string;
+    projectLocation?: string;
+    respondentName?: string;
+    complainantName?: string;
+  } = {};
+
+  if (!purpose) return details;
+
+  purpose.split('\n').forEach((line) => {
+    const match = line.match(/^(Business Name|Business Address|Project Location|Site Location|Respondent Name|Complainant Name):\s*(.*)$/i);
+    if (!match) return;
+    const key = match[1].toLowerCase();
+    const val = match[2].trim();
+    if (key.includes('business name')) details.businessName = val;
+    if (key.includes('business address')) details.businessAddress = val;
+    if (key.includes('project location') || key.includes('site location')) {
+      details.addWhere = val;
+      details.projectLocation = val;
+    }
+    if (key.includes('respondent name')) details.respondentName = val;
+    if (key.includes('complainant name')) details.complainantName = val;
+  });
+
+  return details;
+}
+
 export function getRequestedPersonDetails(purpose: string | null | undefined) {
   const details = {
     fullName: '',
@@ -142,6 +172,7 @@ export function buildRequestTemplateDefaultFields(
   source: RequestTemplateFieldSource,
 ): Record<string, string> {
   const requestedPerson = getRequestedPersonDetails(source.purpose);
+  const additional = extractAdditionalDetails(source.purpose);
   const residentName = clean(requestedPerson.fullName) || clean(source.residentName) || 'Resident';
   const address = clean(requestedPerson.address) || resolveResidentAddress(source);
 
@@ -174,10 +205,10 @@ export function buildRequestTemplateDefaultFields(
     return {
       barangayCaseNumber: '',
       dateFiled: source.issuedDate,
-      complainants: residentName,
+      complainants: additional.complainantName || residentName,
       complaintFor: clean(source.purpose) || clean(source.selectedTypeLabel) || clean(source.documentType),
-      respondents: '',
-      summonsTo: '',
+      respondents: additional.respondentName || '',
+      summonsTo: additional.respondentName || '',
       hearingDay: '',
       hearingMonth: '',
       hearingYear: '',
@@ -192,29 +223,37 @@ export function buildRequestTemplateDefaultFields(
 
   if (templateKey === BUSINESS_PERMIT_TEMPLATE_KEY || templateKey.includes('business')) {
     return {
-      establishmentName: clean(source.purpose) || '',
+      establishmentName: additional.businessName || clean(source.purpose) || '',
+      businessName: additional.businessName || clean(source.purpose) || '',
       ownerName: residentName,
-      postalAddress: address,
+      postalAddress: additional.businessAddress || address,
+      businessAddress: additional.businessAddress || address,
       issuedDate: source.issuedDate,
     };
   }
 
   if (templateKey === CONSTRUCTION_PERMIT_TEMPLATE_KEY || templateKey.includes('construction')) {
+    const siteLoc = additional.addWhere || additional.projectLocation || address;
     return {
       ownerName: residentName,
       ownerAddress: address,
-      add_where: address,
-      location: address,
+      add_where: siteLoc,
+      addWhere: siteLoc,
+      location: siteLoc,
+      projectLocation: siteLoc,
       issuedDate: source.issuedDate,
       ...resolveConstructionPermitFields(source),
     };
   }
 
+  const siteLoc = additional.addWhere || additional.projectLocation || address;
   return {
     residentName,
     address,
-    add_where: address,
-    location: address,
+    add_where: siteLoc,
+    addWhere: siteLoc,
+    location: siteLoc,
+    projectLocation: siteLoc,
     issuedDate: source.issuedDate,
   };
 }

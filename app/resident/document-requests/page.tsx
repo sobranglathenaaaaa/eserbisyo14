@@ -86,6 +86,11 @@ export default function ResidentDocumentRequestsPage() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [dbTypes, setDbTypes] = useState<RawDocumentType[]>([]);
   const [purpose, setPurpose] = useState('');
+  const [businessName, setBusinessName] = useState('');
+  const [businessAddress, setBusinessAddress] = useState('');
+  const [addWhere, setAddWhere] = useState('');
+  const [respondentName, setRespondentName] = useState('');
+  const [complainantName, setComplainantName] = useState('');
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   
@@ -316,15 +321,63 @@ export default function ResidentDocumentRequestsPage() {
   const summaryRequest = myRequests.find((item) => item.id === summaryRequestId) ?? null;
   const selectedDoc = myDocs.find((item) => item.id === selectedDocId) ?? myDocs[0] ?? null;
 
+  const isBusinessDoc = useMemo(() => {
+    const combined = `${selectedCategory} ${selected?.type || ''}`.toLowerCase();
+    return combined.includes('business') || combined.includes('negosyo');
+  }, [selectedCategory, selected]);
 
-  
+  const isSiteLocationDoc = useMemo(() => {
+    const combined = `${selectedCategory} ${selected?.type || ''}`.toLowerCase();
+    return (
+      combined.includes('construction') ||
+      combined.includes('transient') ||
+      combined.includes('delivery') ||
+      combined.includes('hauling') ||
+      combined.includes('commercial') ||
+      combined.includes('pagpapatayo') ||
+      combined.includes('renovation') ||
+      combined.includes('demolition') ||
+      combined.includes('excavation') ||
+      combined.includes('fencing')
+    );
+  }, [selectedCategory, selected]);
+
+  const isLuponDoc = useMemo(() => {
+    const combined = `${selectedCategory} ${selected?.type || ''}`.toLowerCase();
+    return (
+      combined.includes('lupon') ||
+      combined.includes('patawag') ||
+      combined.includes('summons') ||
+      combined.includes('cfa') ||
+      combined.includes('hearing') ||
+      combined.includes('notice')
+    );
+  }, [selectedCategory, selected]);
 
   const submitConfirmedRequest = async () => {
     if (!selected) return;
 
-    const composedPurpose = isRequestingForSomeone
-      ? `${purpose.trim() ? `${purpose.trim()}\n\n` : ''}[Requested For Someone Else]\nFull Name: ${proxyDetails.fullName}\nDate of Birth: ${proxyDetails.birthDate}\nAddress: ${proxyDetails.address}\nContact Number: ${proxyDetails.contactNumber}\nRelationship: ${proxyDetails.relationship}`
-      : purpose;
+    const extraDetails: string[] = [];
+    if (isBusinessDoc) {
+      if (businessName.trim()) extraDetails.push(`Business Name: ${businessName.trim()}`);
+      if (businessAddress.trim()) extraDetails.push(`Business Address: ${businessAddress.trim()}`);
+    }
+    if (isSiteLocationDoc) {
+      if (addWhere.trim()) extraDetails.push(`Project Location: ${addWhere.trim()}`);
+    }
+    if (isLuponDoc) {
+      if (complainantName.trim()) extraDetails.push(`Complainant Name: ${complainantName.trim()}`);
+      if (respondentName.trim()) extraDetails.push(`Respondent Name: ${respondentName.trim()}`);
+    }
+
+    let composedPurpose = purpose.trim();
+    if (extraDetails.length > 0) {
+      composedPurpose = `${composedPurpose ? `${composedPurpose}\n\n` : ''}[Additional Details]\n${extraDetails.join('\n')}`;
+    }
+
+    if (isRequestingForSomeone) {
+      composedPurpose = `${composedPurpose ? `${composedPurpose}\n\n` : ''}[Requested For Someone Else]\nFull Name: ${proxyDetails.fullName}\nDate of Birth: ${proxyDetails.birthDate}\nAddress: ${proxyDetails.address}\nContact Number: ${proxyDetails.contactNumber}\nRelationship: ${proxyDetails.relationship}`;
+    }
 
     setConfirmSubmitOpen(false);
     setIsSubmitting(true);
@@ -348,6 +401,11 @@ export default function ResidentDocumentRequestsPage() {
           : `Request ${result.data.request.referenceNumber} has been submitted. Please wait for approval. Updates will appear in the portal and by email when the document is ready.`;
 
       setPurpose('');
+      setBusinessName('');
+      setBusinessAddress('');
+      setAddWhere('');
+      setRespondentName('');
+      setComplainantName('');
       setAttachmentFiles([]);
       setAttachmentError(null);
       setIsRequestingForSomeone(false);
@@ -415,6 +473,48 @@ export default function ResidentDocumentRequestsPage() {
         text: copyText(locale, 'Please enter the purpose of request.', 'Pakilagay ang layunin ng kahilingan.'),
       });
       return;
+    }
+
+    if (isBusinessDoc) {
+      if (!businessName.trim() || !businessAddress.trim()) {
+        setFeedback({
+          tone: 'error',
+          text: copyText(
+            locale,
+            'Please complete the Business Name and Business Address fields.',
+            'Pakiusap punan ang Pangalan ng Negosyo at Lokasyon ng Negosyo.'
+          ),
+        });
+        return;
+      }
+    }
+
+    if (isSiteLocationDoc) {
+      if (!addWhere.trim()) {
+        setFeedback({
+          tone: 'error',
+          text: copyText(
+            locale,
+            'Please specify the Project / Activity Site Location.',
+            'Pakiusap ilagay ang lokasyon kung saan gaganapin ang proyekto o aktibidad.'
+          ),
+        });
+        return;
+      }
+    }
+
+    if (isLuponDoc) {
+      if (!respondentName.trim()) {
+        setFeedback({
+          tone: 'error',
+          text: copyText(
+            locale,
+            'Please specify the Respondent Full Name (Pangalan ng Inirereklamo).',
+            'Pakiusap ilagay ang pangalan ng inirereklamo (Respondent Name).'
+          ),
+        });
+        return;
+      }
     }
 
     if (isRequestingForSomeone) {
@@ -596,6 +696,86 @@ export default function ResidentDocumentRequestsPage() {
               )}
             </span>
           </label>
+
+          {/* Conditional Additional Fields based on Document Category / Type */}
+          {(isBusinessDoc || isSiteLocationDoc || isLuponDoc) && (
+            <div className="grid gap-3.5 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-emerald-900 uppercase tracking-wide">
+                  {copyText(locale, 'Additional Required Information', 'Karagdagang Impormasyon para sa Dokumento')}
+                </span>
+                <span className="text-[11px] font-medium text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded">
+                  {isBusinessDoc
+                    ? copyText(locale, 'Business Details', 'Mga Detalye ng Negosyo')
+                    : isSiteLocationDoc
+                    ? copyText(locale, 'Location Details', 'Detalye ng Lokasyon')
+                    : copyText(locale, 'Lupon Case Details', 'Mga Detalye ng Kaso')}
+                </span>
+              </div>
+
+              {isBusinessDoc && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                  <label className="grid gap-1.5 text-xs font-semibold text-[color:#123726]">
+                    <span>{copyText(locale, 'Business / Establishment Name *', 'Pangalan ng Negosyo / Establishment Name *')}</span>
+                    <Input
+                      placeholder={copyText(locale, 'e.g. Progreso Sari-Sari Store', 'Hal. Progreso Sari-Sari Store')}
+                      value={businessName}
+                      onChange={(e) => setBusinessName(e.target.value)}
+                      required
+                      className="bg-white text-xs h-9"
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-xs font-semibold text-[color:#123726]">
+                    <span>{copyText(locale, 'Business Address / Location *', 'Lokasyon o Tirahan ng Negosyo (Business Address) *')}</span>
+                    <Input
+                      placeholder={copyText(locale, 'e.g. #123 M. Cruz St., Barangay Progreso', 'Hal. #123 M. Cruz St., Barangay Progreso')}
+                      value={businessAddress}
+                      onChange={(e) => setBusinessAddress(e.target.value)}
+                      required
+                      className="bg-white text-xs h-9"
+                    />
+                  </label>
+                </div>
+              )}
+
+              {isSiteLocationDoc && (
+                <label className="grid gap-1.5 text-xs font-semibold text-[color:#123726] pt-1">
+                  <span>{copyText(locale, 'Project / Activity Site Location (Kung saan gaganapin) *', 'Lokasyon kung saan gaganapin ang aktibidad o proyekto *')}</span>
+                  <Input
+                    placeholder={copyText(locale, 'e.g. Lot 4 Block 2, Progreso St., San Juan City', 'Hal. Lot 4 Block 2, Progreso St., San Juan City')}
+                    value={addWhere}
+                    onChange={(e) => setAddWhere(e.target.value)}
+                    required
+                    className="bg-white text-xs h-9"
+                  />
+                </label>
+              )}
+
+              {isLuponDoc && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                  <label className="grid gap-1.5 text-xs font-semibold text-[color:#123726]">
+                    <span>{copyText(locale, 'Respondent Full Name (Inirereklamo) *', 'Pangalan ng Inirereklamo (Respondent) *')}</span>
+                    <Input
+                      placeholder={copyText(locale, 'e.g. Pedro Santos', 'Hal. Pedro Santos')}
+                      value={respondentName}
+                      onChange={(e) => setRespondentName(e.target.value)}
+                      required
+                      className="bg-white text-xs h-9"
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-xs font-semibold text-[color:#123726]">
+                    <span>{copyText(locale, 'Complainant Full Name (Nagrereklamo)', 'Pangalan ng Nagrereklamo (Complainant)')}</span>
+                    <Input
+                      placeholder={user?.fullName || copyText(locale, 'Resident Full Name', 'Buong Pangalan ng Residente')}
+                      value={complainantName}
+                      onChange={(e) => setComplainantName(e.target.value)}
+                      className="bg-white text-xs h-9"
+                    />
+                  </label>
+                </div>
+              )}
+            </div>
+          )}
 
           
 

@@ -8,6 +8,7 @@ import { StatusBadge, statusToneFromState } from '@/components/portal-ui';
 import { getRequestStatusLabel } from '@/lib/formatters';
 import { getRequestedPersonDetails } from '@/lib/documents/request-template-fields';
 import { getBarangayOfficialSettings } from '@/lib/documents/barangay-settings';
+import { stripPriceFromPurpose } from '@/lib/documents/official-template-builder';
 import type { DocumentRequest, DocumentTemplate, User } from '@/lib/types/models';
 
 interface DocumentRequestPreviewModalProps {
@@ -200,7 +201,8 @@ export default function DocumentRequestPreviewModal({
     (request as Record<string, unknown> | null)?.location as string ||
     (request as Record<string, unknown> | null)?.projectLocation as string ||
     residentAddress;
-  const purpose = fieldDraft.purpose || fieldDraft.reasonText || request?.purpose || request?.typeLabel || 'Official legal requirements';
+  const rawPurpose = fieldDraft.purpose || fieldDraft.reasonText || request?.purpose || request?.typeLabel || 'Official legal requirements';
+  const purpose = stripPriceFromPurpose(rawPurpose) || 'Official legal requirements';
   const dateIssued =
     fieldDraft.issuedDate ||
     fieldDraft.dateIssued ||
