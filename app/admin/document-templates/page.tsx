@@ -1030,6 +1030,7 @@ function buildDefaultHtmlLayout(
     let luponSubtitle = isCfa
       ? '(KP FORM #20 - KATIBAYAN UPANG MAKADULOG SA HUKUMAN)'
       : isNotice
+      ? '(KP FORM #8 - ABISO NG PAGDINIG)'
       : '(KP FORM #9 - PATAWAG)';
 
     const effectiveTitle =
