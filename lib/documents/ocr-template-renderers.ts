@@ -215,135 +215,77 @@ export async function renderOcrTemplateFromDocx(
       return nameLower.includes(keyLower);
     });
 
-    if (customDbTemplate?.body) {
-      let cleanBody = customDbTemplate.body;
-      const metaMatch = cleanBody.match(/<!-- TEMPLATE_META:([\s\S]*?) -->$/);
-      if (metaMatch) {
-        cleanBody = cleanBody.replace(/<!-- TEMPLATE_META:([\s\S]*?) -->$/, '').trim();
-      }
+    const residentName = fields.residentName || doc.residentName || 'Resident';
+    const address = fields.address || fields.residenceAddress || fields.residentAddressLine || 'Barangay Progreso, City of San Juan';
+    const purpose = resolvePurposeFromReasons(fields);
+    const dateIssued = doc.dateIssued || new Date().toISOString().slice(0, 10);
 
-      const residentName = fields.residentName || doc.residentName || 'Resident';
-      const address = fields.address || fields.residenceAddress || 'Barangay Progreso, City of San Juan';
-      const purpose = resolvePurposeFromReasons(fields);
-      const dateIssued = doc.dateIssued || new Date().toISOString().slice(0, 10);
+    const { renderDocumentTemplateHtml } = await import('@/lib/documents/official-template-builder');
 
-      const punongBarangay = fields.punongBarangay || fields.punong_barangay || 'CESAR JR. H. STO. DOMINGO';
-      const barangaySecretary = fields.barangaySecretary || fields.barangay_secretary || 'Ma. Theresa R. Dela Cruz';
-      const barangayTreasurer = fields.barangayTreasurer || fields.barangay_treasurer || 'Saturnina C. Mirata';
-      const barangayName = fields.barangayName || fields.barangay_name || 'BARANGAY PROGRESO';
-      const city = fields.city || fields.cityName || 'City of San Juan';
-      const kagawadList = fields.kagawadList || fields.kagawad_list || '';
-      const referenceNumber = fields.referenceNumber || fields.reference_number || fields.barangayCaseNumber || '';
+    const templateToRender = customDbTemplate || {
+      id: templateKey,
+      name: checkedTemplate?.name || (templateKey.includes('indigency') ? 'Certificate of Indigency' : 'Barangay Certification'),
+      documentType: templateKey,
+      body: null,
+    };
 
-      const sealImgs = {
-        country: '<img src="/images/indigency-template/bagong-pilipinas.png" alt="Country Seal" style="width:62px;height:62px;object-fit:contain;display:inline-block;" />',
-        city: '<img src="/images/indigency-template/san-juan-seal.jpeg" alt="City Seal" style="width:62px;height:62px;object-fit:contain;display:inline-block;" />',
-        barangay: '<img src="/images/indigency-template/barangay-progreso-seal.jpeg" alt="Barangay Seal" style="width:62px;height:62px;object-fit:contain;display:inline-block;" />',
-        watermark: '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0.09;pointer-events:none;z-index:0;"><img src="/images/indigency-template/barangay-progreso-seal.jpeg" alt="Watermark" style="width:400px;height:400px;object-fit:contain;" /></div>',
-      };
+    const renderedBody = renderDocumentTemplateHtml(templateToRender, {
+      ...fields,
+      residentName,
+      residentAddress: address,
+      purpose,
+      dateIssued,
+    });
 
-      let renderedText = cleanBody;
-      renderedText = renderedText.replaceAll('{{resident_name}}', residentName);
-      renderedText = renderedText.replaceAll('{{residentName}}', residentName);
-      renderedText = renderedText.replaceAll('{{name}}', residentName);
-      renderedText = renderedText.replaceAll('{{resident_address}}', address);
-      renderedText = renderedText.replaceAll('{{residentAddress}}', address);
-      renderedText = renderedText.replaceAll('{{address}}', address);
-      renderedText = renderedText.replaceAll('{{purpose}}', purpose);
-      renderedText = renderedText.replaceAll('{{reason}}', purpose);
-      renderedText = renderedText.replaceAll('{{date_issued}}', dateIssued);
-      renderedText = renderedText.replaceAll('{{dateIssued}}', dateIssued);
-      renderedText = renderedText.replaceAll('{{issuedDate}}', dateIssued);
-      renderedText = renderedText.replaceAll('{{punong_barangay}}', punongBarangay);
-      renderedText = renderedText.replaceAll('{{punongBarangay}}', punongBarangay);
-      renderedText = renderedText.replaceAll('{{barangay_secretary}}', barangaySecretary);
-      renderedText = renderedText.replaceAll('{{barangaySecretary}}', barangaySecretary);
-      renderedText = renderedText.replaceAll('{{barangay_treasurer}}', barangayTreasurer);
-      renderedText = renderedText.replaceAll('{{barangayTreasurer}}', barangayTreasurer);
-      renderedText = renderedText.replaceAll('{{barangay_name}}', barangayName);
-      renderedText = renderedText.replaceAll('{{barangayName}}', barangayName);
-      renderedText = renderedText.replaceAll('{{city}}', city);
-      renderedText = renderedText.replaceAll('{{cityName}}', city);
-      renderedText = renderedText.replaceAll('{{kagawad_list}}', kagawadList);
-      renderedText = renderedText.replaceAll('{{kagawadList}}', kagawadList);
-      renderedText = renderedText.replaceAll('{{reference_number}}', referenceNumber);
-      renderedText = renderedText.replaceAll('{{referenceNumber}}', referenceNumber);
-      renderedText = renderedText.replaceAll('{{country_seal}}', sealImgs.country);
-      renderedText = renderedText.replaceAll('{{city_seal}}', sealImgs.city);
-      renderedText = renderedText.replaceAll('{{barangay_seal}}', sealImgs.barangay);
-      renderedText = renderedText.replaceAll('{{barangay_watermark}}', sealImgs.watermark);
-      renderedText = renderedText.replaceAll('{{barangay_address}}', fields.barangayAddress || fields.barangay_address || '#15 M. Cruz Street Barangay Progreso, San Juan City');
-      renderedText = renderedText.replaceAll('{{barangay_email}}', fields.barangayEmail || fields.barangay_email || 'barangayprogreso@yahoo.com');
-      renderedText = renderedText.replaceAll('{{barangay_phone}}', fields.barangayPhone || fields.barangay_phone || '(02)8727-5635 / (02)76258731');
-      renderedText = renderedText.replaceAll('{{official_seal}}', '<div style="display:inline-block;border:2px solid #1e3a8a;color:#1e3a8a;padding:4px 10px;border-radius:9999px;font-weight:bold;font-size:10px;">[ OFFICIAL BARANGAY SEAL ]</div>');
-
-      // Replace any other custom or dynamic fields from the fields map
-      for (const [key, val] of Object.entries(fields)) {
-        if (!val) continue;
-        renderedText = renderedText.replaceAll(`{{${key}}}`, String(val));
-        const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-        renderedText = renderedText.replaceAll(`{{${snakeKey}}}`, String(val));
-      }
-
-      const defaultRenderer = RENDERERS_BY_TEMPLATE_KEY[templateKey];
-      const baseResult = defaultRenderer ? await defaultRenderer(doc, fields) : null;
-
-      const isFullHtmlDocument = renderedText.includes('<div') || renderedText.includes('<table');
-
-      const printableHtml = `<!doctype html>
+    const printableHtml = `<!doctype html>
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>${customDbTemplate.name}</title>
+  <title>${templateToRender.name || 'Official Barangay Document'}</title>
   <style>
     @page { size: A4 portrait; margin: 0; }
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     body { margin: 0; font-family: "Times New Roman", Georgia, serif; color: #000; background: #fff; }
     .print-wrapper { width: 100%; max-width: 850px; margin: 0 auto; box-sizing: border-box; }
     @media print {
-      body { margin: 0; }
+      body { margin: 0; background: #fff; }
       .no-print { display: none !important; }
     }
   </style>
 </head>
 <body>
   <div class="print-wrapper">
-    ${isFullHtmlDocument ? renderedText : `
-    <div style="padding: 20mm;">
-      <div style="text-align: center; border-bottom: 2px solid #111; padding-bottom: 12px; margin-bottom: 24px;">
-        <p style="font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0;">REPUBLIC OF THE PHILIPPINES</p>
-        <p style="font-size: 12px; text-transform: uppercase; font-weight: bold; margin: 2px 0;">CITY OF SAN JUAN</p>
-        <h2 style="margin: 4px 0; font-size: 16px;">BARANGAY PROGRESO</h2>
-        <p style="font-size: 11px; font-weight: bold; margin: 0;">OFFICE OF THE PUNONG BARANGAY</p>
-      </div>
-      <div style="white-space: pre-wrap; line-height: 1.8; font-size: 14px;">${renderedText}</div>
-    </div>`}
+    ${renderedBody}
   </div>
 </body>
 </html>`;
 
-      return {
-        docxBuffer: baseResult?.docxBuffer ?? Buffer.from(''),
-        printableHtml,
-        templatePath: baseResult?.templatePath ?? 'db://custom-template',
-      };
-    }
-  } catch {
-    // Fall back seamlessly to default renderer
+    return {
+      docxBuffer: Buffer.from(''),
+      printableHtml,
+      templatePath: customDbTemplate ? 'db://custom-template' : 'system://official-template',
+    };
+  } catch (error) {
+    console.error('Error rendering OCR template, using official builder fallback:', error);
+    const { renderDocumentTemplateHtml } = await import('@/lib/documents/official-template-builder');
+    const residentName = fields.residentName || doc.residentName || 'Resident';
+    const address = fields.address || fields.residenceAddress || fields.residentAddressLine || 'Barangay Progreso, City of San Juan';
+    const purpose = resolvePurposeFromReasons(fields);
+    const dateIssued = doc.dateIssued || new Date().toISOString().slice(0, 10);
+
+    const renderedBody = renderDocumentTemplateHtml({ documentType: templateKey }, {
+      ...fields,
+      residentName,
+      residentAddress: address,
+      purpose,
+      dateIssued,
+    });
+
+    return {
+      docxBuffer: Buffer.from(''),
+      printableHtml: `<!doctype html><html><head><meta charset="utf-8" /><title>Barangay Document</title><style>@page{size:A4 portrait;margin:0;}body{margin:0;font-family:"Times New Roman",Georgia,serif;}</style></head><body><div style="max-width:850px;margin:0 auto;">${renderedBody}</div></body></html>`,
+      templatePath: 'system://official-fallback',
+    };
   }
-
-  const isIndigencyMarked =
-    fields.reasonIndigency === 'true' ||
-    fields.reasonIndigency === '1' ||
-    fields.reasonIndigency === 'yes' ||
-    fields.purpose?.toLowerCase().includes('indigency');
-
-  if (
-    (templateKey === 'barangay_certification' || templateKey === BARANGAY_CERTIFICATE_TEMPLATE_KEY) &&
-    isIndigencyMarked
-  ) {
-    return renderIndigencyCertificateFromDocx(doc, fields);
-  }
-
-  const renderer = RENDERERS_BY_TEMPLATE_KEY[templateKey] ?? renderBarangayCertificateFromDocx;
-  return renderer(doc, fields);
 }
+

@@ -17,22 +17,26 @@ import { getRolePageCopy, resolveRoleCopy, resolveSteps } from '@/lib/content/ro
 import { buildOcrIntakeFormHtml } from '@/lib/documents/ocr-intake-forms';
 import {
   buildDynamicOcrTemplateDefinition,
-  getAllOcrTemplates,
   getCategoryDefaultOcrTemplate,
   getDefaultOcrTemplate,
   getOcrTemplateByKey,
   validateOcrTemplateMatch,
-  BARANGAY_CERTIFICATE_TEMPLATE_KEY,
-  INDIGENCY_TEMPLATE_KEY,
   type OcrTemplateDefinition,
 } from '@/lib/ocr/templates';
 import {
+  DEFAULT_OFFICIAL_TEMPLATES,
   OFFICIAL_DOCUMENT_CATEGORIES,
+  OFFICIAL_WORD_TEMPLATES,
   getCategoryForDocType,
 } from '@/lib/documents/document-catalog-constants';
+import {
+  renderDocumentTemplateHtml,
+  resolvePurposeFromReasons,
+} from '@/lib/documents/official-template-builder';
 import { getSupabaseBrowserClient, getSupabaseSessionSafely } from '@/lib/supabase/client';
 import type { UIStatusTone } from '@/lib/types/ui';
-import type { StandaloneOcrIssuance } from '@/lib/types/models';
+import type { DocumentTemplate, StandaloneOcrIssuance } from '@/lib/types/models';
+import { Eye, Printer, Sparkles, CheckCircle2 } from 'lucide-react';
 
 function createPrintWindow() {
   return window.open('', '_blank', 'width=980,height=1200');
@@ -53,23 +57,13 @@ function writeAndPromptPrint(printWindow: Window, html: string) {
   }
 }
 
-function isOcrChoiceField(fieldKey: string) {
-  return fieldKey.startsWith('reason') || fieldKey.startsWith('permit');
-}
-
-function hasOcrChoiceMark(value: string | undefined) {
-  const normalized = (value ?? '').trim().toLowerCase();
-  return Boolean(normalized && !['0', 'false', 'no', 'none', 'n/a'].includes(normalized));
-}
-
 export default function StaffOcrIssuancePage() {
   const { state, locale } = useAppState();
   const pageCopy = getRolePageCopy('staff/ocr-issuance');
   const [issuance, setIssuance] = useState<StandaloneOcrIssuance | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
-  const [selectedTemplateKey, setSelectedTemplateKey] = useState('barangay_certification');
-  const [linkedResidentId, setLinkedResidentId] = useState('');
+  const [selectedTemplateKey, setSelectedTemplateKey] = useState('tpl_brgy_clearance');
   const [fieldDraft, setFieldDraft] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<{ tone: UIStatusTone; text: string } | null>(null);
   const [isUploadingOcr, setIsUploadingOcr] = useState(false);
@@ -77,168 +71,149 @@ export default function StaffOcrIssuancePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isIssuing, setIsIssuing] = useState(false);
 
-  const residents = useMemo(
-    () => state.users.filter((user) => user.role === 'resident' && !user.isDeleted),
-    [state.users],
-  );
+  // Exact same template list as Admin Document Templates (state.documentTemplates + DEFAULT_OFFICIAL_TEMPLATES)
+  const templatesList = useMemo(() => {
+    const customTemplates = state.documentTemplates || [];
+    const merged: DocumentTemplate[] = [];
+    const seenIds = new Set<string>();
+    const seenNames = new Set<string>();
 
-  // 7 Official Document Types matching the system catalog and Admin templates
-  const availableDocumentTypes = useMemo(() => {
-    const officialTypes = OFFICIAL_DOCUMENT_CATEGORIES.map((cat) => {
-      const matchedDb = (state.documentTemplates ?? []).find(
-        (t) => t.documentType === cat.id || getCategoryForDocType(t.documentType, t.name) === cat.id
-      );
+    const normalizeName = (name: string) =>
+      name.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
 
-      // The OCR schema must remain category-specific so it includes checkbox
-      // fields such as reasonIndigency. The Admin template is only the final
-      // printable layout and must not replace the OCR intake field map.
-      const definition: OcrTemplateDefinition = getCategoryDefaultOcrTemplate(cat.id);
+    // 1. Process custom / saved admin templates first
+    customTemplates.forEach((tpl) => {
+      const normId = (tpl.id || '').trim().toLowerCase();
+      const normName = normalizeName(tpl.name || '');
+      if (normId && !seenIds.has(normId) && !seenNames.has(normName)) {
+        seenIds.add(normId);
+        if (normName) seenNames.add(normName);
 
-      return {
-        // Persist the selected Admin template ID so issuance rendering can use
-        // the exact saved document body instead of only the OCR category.
-        key: matchedDb?.id ?? cat.id,
-        label: locale === 'fil' ? cat.labelFil : cat.labelEn,
-        category: cat.id,
-        definition,
-        hasCustomTemplate: Boolean(matchedDb),
-      };
+        const officialWordMatch = OFFICIAL_WORD_TEMPLATES.find(
+          (ow) => ow.id === tpl.id || normalizeName(ow.name) === normName
+        );
+
+        merged.push({
+          ...tpl,
+          dynamicFields:
+            tpl.dynamicFields && tpl.dynamicFields.length > 0
+              ? tpl.dynamicFields
+              : officialWordMatch
+              ? officialWordMatch.dynamicFields
+              : ['resident_name', 'resident_address', 'purpose', 'date_issued', 'punong_barangay'],
+          documentType: tpl.documentType || (officialWordMatch ? officialWordMatch.documentType : 'barangay_certification'),
+          sourceType: tpl.sourceType || (officialWordMatch ? 'official' : 'custom'),
+          originalFileName: tpl.originalFileName || (officialWordMatch ? officialWordMatch.fileName : undefined),
+        });
+      }
     });
 
-    const customTypes = (state.documentTemplates ?? [])
-      .filter(
-        (t) =>
-          !OFFICIAL_DOCUMENT_CATEGORIES.some(
-            (cat) => cat.id === t.documentType || getCategoryForDocType(t.documentType, t.name) === cat.id
-          )
-      )
-      .map((t) => ({
-        key: t.id,
-        label: t.name.replace(/\s+Template$/i, '').trim() || t.name,
-        category: 'custom',
-        definition: buildDynamicOcrTemplateDefinition(t),
-        hasCustomTemplate: true,
-      }));
+    // 2. Add default official templates that haven't been customized yet
+    DEFAULT_OFFICIAL_TEMPLATES.forEach((defTpl) => {
+      const normId = (defTpl.id || '').trim().toLowerCase();
+      const normName = normalizeName(defTpl.name || '');
 
-    return [...officialTypes, ...customTypes];
-  }, [state.documentTemplates, locale]);
+      if (!seenIds.has(normId) && !seenNames.has(normName)) {
+        seenIds.add(normId);
+        if (normName) seenNames.add(normName);
+
+        const officialWordMatch = OFFICIAL_WORD_TEMPLATES.find(
+          (ow) => ow.id === defTpl.id || normalizeName(ow.name) === normName
+        );
+
+        merged.push({
+          id: defTpl.id,
+          name: defTpl.name,
+          body: '',
+          dynamicFields: officialWordMatch
+            ? officialWordMatch.dynamicFields
+            : ['resident_name', 'resident_address', 'purpose', 'date_issued', 'punong_barangay'],
+          updatedAt: new Date().toISOString(),
+          updatedBy: 'System (Official)',
+          documentType: officialWordMatch ? officialWordMatch.documentType : defTpl.categoryId,
+          sourceType: officialWordMatch ? 'official' : 'custom',
+          originalFileName: officialWordMatch ? officialWordMatch.fileName : undefined,
+          isActive: true,
+        });
+      }
+    });
+
+    return merged;
+  }, [state.documentTemplates]);
 
   // Sync selectedTemplateKey to first available if initial value not found
   useEffect(() => {
-    if (availableDocumentTypes.length > 0 && !availableDocumentTypes.some((t) => t.key === selectedTemplateKey)) {
-      setSelectedTemplateKey(availableDocumentTypes[0].key);
+    if (templatesList.length > 0 && !templatesList.some((t) => t.id === selectedTemplateKey)) {
+      setSelectedTemplateKey(templatesList[0].id);
     }
-  }, [availableDocumentTypes, selectedTemplateKey]);
+  }, [templatesList, selectedTemplateKey]);
 
-  const activeTemplate: OcrTemplateDefinition = useMemo(() => {
+  // Currently active selected document template
+  const activeSelectedTemplate = useMemo(() => {
     const key = issuance?.templateKey ?? selectedTemplateKey;
-    const found = availableDocumentTypes.find((t) => t.key === key);
-    if (found) return found.definition;
-    const directPreset = getOcrTemplateByKey(key);
+    return templatesList.find((t) => t.id === key) ?? templatesList[0] ?? null;
+  }, [issuance?.templateKey, selectedTemplateKey, templatesList]);
+
+  // Active OCR Template Definition for extraction validation
+  const activeOcrDefinition: OcrTemplateDefinition = useMemo(() => {
+    if (!activeSelectedTemplate) return getDefaultOcrTemplate();
+    const directPreset = getOcrTemplateByKey(activeSelectedTemplate.id) ?? getOcrTemplateByKey(activeSelectedTemplate.documentType ?? '');
     if (directPreset) return directPreset;
-    const matchedDb = (state.documentTemplates ?? []).find(
-      (t) => t.id === key || t.documentType === key || getCategoryForDocType(t.documentType, t.name) === key
+    const cat = getCategoryForDocType(activeSelectedTemplate.documentType, activeSelectedTemplate.name);
+    return getCategoryDefaultOcrTemplate(cat);
+  }, [activeSelectedTemplate]);
+
+  // Live Template Preview HTML (100% Identical to Admin Document Templates)
+  const livePreviewHtml = useMemo(() => {
+    const purpose = fieldDraft.purpose || resolvePurposeFromReasons(fieldDraft);
+    const residentName = fieldDraft.residentName || 'Juan Dela Cruz';
+    const residentAddress =
+      fieldDraft.residentAddress ||
+      fieldDraft.address ||
+      fieldDraft.residentAddressLine ||
+      fieldDraft.residenceAddress ||
+      'Barangay Progreso, City of San Juan';
+    const dateIssued = fieldDraft.issuedDate || fieldDraft.dateIssued || new Date().toISOString().slice(0, 10);
+
+    return renderDocumentTemplateHtml(
+      activeSelectedTemplate,
+      {
+        ...fieldDraft,
+        residentName,
+        residentAddress,
+        purpose,
+        dateIssued,
+      }
     );
-    if (matchedDb) return buildDynamicOcrTemplateDefinition(matchedDb);
-    return availableDocumentTypes[0]?.definition ?? getDefaultOcrTemplate();
-  }, [issuance?.templateKey, selectedTemplateKey, availableDocumentTypes, state.documentTemplates]);
+  }, [fieldDraft, activeSelectedTemplate]);
 
-  const resolveDetectedAdminTemplateKey = (detectedTemplateKey: string | null) => {
-    if (!detectedTemplateKey) return null;
-    const detectedPreset = getOcrTemplateByKey(detectedTemplateKey);
-    const detectedDocumentType = detectedPreset?.documentLabel ?? detectedTemplateKey;
-    const matchingAdminTemplate = (state.documentTemplates ?? []).find((template) => {
-      const haystack = `${template.documentType ?? ''} ${template.name}`.toLowerCase();
-      const target = detectedDocumentType.toLowerCase();
-      return (
-        !/\b(intake|ocr)\b/i.test(template.name) &&
-        (template.documentType === detectedTemplateKey ||
-          haystack.includes(target) ||
-          (detectedTemplateKey === INDIGENCY_TEMPLATE_KEY && haystack.includes('indigency')))
-      );
-    });
-    return matchingAdminTemplate?.id ?? detectedTemplateKey;
-  };
-
-  const resolveCheckedCertificateTemplateKey = (parsedFields: Record<string, string>) => {
-    const checkedFieldAliases: Record<string, string[]> = {
-      reasonGeneralCert: ['barangay certification', 'barangay certificate', 'general certification'],
-      reasonIndigency: ['indigency'],
-      reasonResidency: ['residency', 'resident certificate'],
-      reasonGoodMoral: ['good moral'],
-      reasonEmployment: ['employment'],
-      reasonSchoolReference: ['school', 'scholarship'],
-      reasonSrCitizenId: ['senior', 'sr citizen', 'pwd'],
-      reasonSjHealthCard: ['health card', 'medical clearance'],
-      reasonPoliceNbi: ['police', 'nbi', 'court clearance'],
-      reasonPostalId: ['postal', 'passport', 'visa'],
-      reasonBurialAssistance: ['burial'],
-      reasonSssGsisPhilhealth: ['sss', 'gsis', 'philhealth'],
-      reasonFinancialAssistance: ['financial assistance'],
-      reasonMedicalAssistance: ['medical assistance'],
-      reasonTransferResidence: ['transfer', 'residence transfer'],
-      reasonNoOperation: ['no operation'],
-      reasonNonResident: ['non-resident', 'non resident'],
-      permitMayorsBusiness: ["mayor's business", 'business permit'],
-      permitBuilding: ['building permit'],
-      permitOccupancy: ['occupancy permit'],
-      permitExcavation: ['excavation permit'],
-      permitDemolition: ['demolition permit'],
-      permitRenovationRepair: ['renovation', 'repair permit'],
-      permitConstruction: ['construction permit'],
-      permitHauling: ['hauling permit'],
-      permitSignageBillboards: ['signage', 'billboard'],
-    };
-    const checked = Object.keys(checkedFieldAliases).find((field) => {
-      const value = (parsedFields[field] ?? '').trim().toLowerCase();
-      return value && !['0', 'false', 'no', 'none', 'n/a'].includes(value);
-    });
-    if (!checked) return null;
-
-    const aliases = checkedFieldAliases[checked];
-    const matchingAdminTemplate = (state.documentTemplates ?? []).find((template) => {
-      if (/\b(intake|ocr)\b/i.test(template.name)) return false;
-      const haystack = `${template.documentType ?? ''} ${template.name}`.toLowerCase();
-      return aliases.some((alias) => haystack.includes(alias));
-    });
-    return matchingAdminTemplate?.id ?? (checked === 'reasonIndigency' ? INDIGENCY_TEMPLATE_KEY : null);
-  };
-
-  const selectedValidationKey =
-    availableDocumentTypes.find((documentType) => documentType.key === selectedTemplateKey)?.category ??
-    selectedTemplateKey;
-
-  const missingFieldKeys = useMemo(
-    () => {
-      return activeTemplate.getMissingFields(fieldDraft);
-    },
-    [activeTemplate, fieldDraft],
-  );
-
-  const missingRequiredFields = useMemo(
-    () => {
-      return missingFieldKeys.map((key) => ({
-        key,
-        label: activeTemplate.labels[key] ?? key,
-      }));
-    },
-    [activeTemplate, missingFieldKeys],
-  );
+  const missingRequiredFields = useMemo(() => {
+    const missing: Array<{ key: string; label: string }> = [];
+    if (!(fieldDraft.residentName ?? '').trim()) {
+      missing.push({ key: 'residentName', label: 'Resident Full Name' });
+    }
+    if (!(fieldDraft.residentAddress ?? fieldDraft.address ?? fieldDraft.residentAddressLine ?? '').trim()) {
+      missing.push({ key: 'residentAddress', label: 'Residence / Postal Address' });
+    }
+    if (!(fieldDraft.issuedDate ?? fieldDraft.dateIssued ?? '').trim()) {
+      missing.push({ key: 'issuedDate', label: 'Date Issued' });
+    }
+    return missing;
+  }, [fieldDraft]);
 
   const ocrAccuracyPercent = useMemo(() => {
-    const intakeFields = activeTemplate.intakeFields;
-    if (!intakeFields.length) return 95;
-    const filledCount = intakeFields.filter((field) => Boolean((fieldDraft[field.key] ?? '').trim())).length;
-    const ratio = filledCount / intakeFields.length;
-    return Math.min(99, Math.max(85, Math.round(85 + ratio * 13)));
-  }, [activeTemplate.intakeFields, fieldDraft]);
+    const nameFilled = Boolean((fieldDraft.residentName ?? '').trim());
+    const addressFilled = Boolean((fieldDraft.residentAddress ?? fieldDraft.address ?? '').trim());
+    const dateFilled = Boolean((fieldDraft.issuedDate ?? fieldDraft.dateIssued ?? '').trim());
+    const filledCount = [nameFilled, addressFilled, dateFilled].filter(Boolean).length;
+    return filledCount === 3 ? 98 : filledCount === 2 ? 92 : 86;
+  }, [fieldDraft]);
 
   const handleStartNewIssuance = () => {
     setIssuance(null);
     setSelectedFile(null);
-    setLinkedResidentId('');
     setFieldDraft({});
-    setFeedback({ tone: 'info', text: 'Started a new issuance. Select a document type and upload a form to run OCR.' });
+    setFeedback({ tone: 'info', text: 'Started a new issuance. Select a document template and upload a form to run OCR.' });
     setHasScanCompleted(false);
     setFileInputKey((prev) => prev + 1);
   };
@@ -287,7 +262,7 @@ export default function StaffOcrIssuancePage() {
   };
 
   const handlePrintIntakeForm = () => {
-    const html = buildOcrIntakeFormHtml(activeTemplate.key, activeTemplate);
+    const html = buildOcrIntakeFormHtml(activeOcrDefinition.key, activeOcrDefinition);
     const printWindow = createPrintWindow();
     if (!printWindow) {
       setFeedback({ tone: 'danger', text: 'Popup blocked. Please allow popups for this site to print.' });
@@ -312,9 +287,7 @@ export default function StaffOcrIssuancePage() {
     try {
       let activeIssuance = issuance;
       if (!activeIssuance) {
-        console.log('Creating new standalone OCR issuance...');
         activeIssuance = await createStandaloneOcrIssuance({ templateKey: selectedTemplateKey });
-        console.log('Issuance created:', activeIssuance);
         setIssuance(activeIssuance);
         setFieldDraft(activeIssuance.parsedFields ?? {});
       } else if (activeIssuance.templateKey !== selectedTemplateKey) {
@@ -323,24 +296,36 @@ export default function StaffOcrIssuancePage() {
         setFieldDraft(activeIssuance.parsedFields ?? {});
       }
 
-      console.log('Running OCR scan for issuance:', activeIssuance.id);
       const updated = await runStandaloneOcrIssuanceScan(activeIssuance.id, { file: selectedFile });
       setIssuance(updated);
-      setFieldDraft(updated.parsedFields ?? {});
+
+      const extractedPurpose = resolvePurposeFromReasons(updated.parsedFields ?? {});
+      const normalizedFields = {
+        ...(updated.parsedFields ?? {}),
+        residentName: (updated.parsedFields?.residentName ?? '').trim(),
+        residentAddress:
+          (updated.parsedFields?.residentAddress ??
+            updated.parsedFields?.address ??
+            updated.parsedFields?.residentAddressLine ??
+            updated.parsedFields?.residenceAddress ??
+            '').trim(),
+        address:
+          (updated.parsedFields?.address ??
+            updated.parsedFields?.residentAddress ??
+            updated.parsedFields?.residentAddressLine ??
+            '').trim(),
+        purpose: (updated.parsedFields?.purpose ?? '').trim() || extractedPurpose,
+        issuedDate:
+          (updated.parsedFields?.issuedDate ??
+            updated.parsedFields?.dateIssued ??
+            new Date().toISOString().slice(0, 10)).trim(),
+      };
+
+      setFieldDraft(normalizedFields);
       setSelectedFile(null);
 
-      const validation = validateOcrTemplateMatch(selectedValidationKey, updated.extractedText ?? '', locale);
-      const detectedAdminTemplateKey =
-        resolveCheckedCertificateTemplateKey(updated.parsedFields ?? {}) ??
-        resolveDetectedAdminTemplateKey(validation.detectedTemplateKey ?? null);
-      if (detectedAdminTemplateKey && detectedAdminTemplateKey !== activeIssuance.templateKey) {
-        const switchedIssuance = await patchStandaloneOcrIssuance(activeIssuance.id, {
-          templateKey: detectedAdminTemplateKey,
-        });
-        setIssuance(switchedIssuance);
-        setSelectedTemplateKey(detectedAdminTemplateKey);
-        setFieldDraft(switchedIssuance.parsedFields ?? updated.parsedFields ?? {});
-      }
+      const category = getCategoryForDocType(activeSelectedTemplate?.documentType, activeSelectedTemplate?.name);
+      const validation = validateOcrTemplateMatch(category, updated.extractedText ?? '', locale);
 
       if (!validation.isMatch && validation.errorMessage) {
         setFeedback({ tone: 'danger', text: validation.errorMessage });
@@ -353,13 +338,7 @@ export default function StaffOcrIssuancePage() {
       }
     } catch (error) {
       console.error('OCR Error:', error);
-      let errorMessage = error instanceof Error ? error.message : 'Unable to run OCR scan.';
-      if (issuance?.extractedText) {
-        const check = validateOcrTemplateMatch(selectedValidationKey, issuance.extractedText, locale);
-        if (!check.isMatch && check.errorMessage) {
-          errorMessage = check.errorMessage;
-        }
-      }
+      const errorMessage = error instanceof Error ? error.message : 'Unable to run OCR scan.';
       setFeedback({ tone: 'danger', text: errorMessage });
       setHasScanCompleted(false);
     } finally {
@@ -380,10 +359,8 @@ export default function StaffOcrIssuancePage() {
     try {
       const updated = await patchStandaloneOcrIssuance(issuance.id, {
         parsedFields: fieldDraft,
-        residentId: linkedResidentId || null,
       });
       setIssuance(updated);
-      setLinkedResidentId(updated.residentId ?? '');
       setFeedback({ tone: 'success', text: 'Extracted fields saved.' });
     } catch (error) {
       setFeedback({ tone: 'danger', text: error instanceof Error ? error.message : 'Unable to save extracted fields.' });
@@ -411,7 +388,7 @@ export default function StaffOcrIssuancePage() {
         await printGeneratedDocument(issuance.generatedDocumentId, printWindow);
         setFeedback({
           tone: 'success',
-          text: `${activeTemplate.documentLabel} already issued. Reprinted successfully.`,
+          text: `${activeSelectedTemplate?.name || 'Document'} already issued. Reprinted successfully.`,
         });
       } catch (error) {
         setFeedback({ tone: 'danger', text: error instanceof Error ? error.message : 'Unable to reprint document.' });
@@ -438,14 +415,10 @@ export default function StaffOcrIssuancePage() {
       // Always persist latest staff edits before final issuance.
       const patched = await patchStandaloneOcrIssuance(issuance.id, {
         parsedFields: fieldDraft,
-        residentId: linkedResidentId || null,
       });
       setIssuance(patched);
-      setLinkedResidentId(patched.residentId ?? '');
 
-      const result = await finalizeStandaloneOcrIssuance(issuance.id, {
-        residentId: linkedResidentId || null,
-      });
+      const result = await finalizeStandaloneOcrIssuance(issuance.id);
       setIssuance(result.issuance);
 
       const printed = writeAndPromptPrint(printWindow, result.printableHtml);
@@ -455,9 +428,7 @@ export default function StaffOcrIssuancePage() {
 
       setFeedback({
         tone: 'success',
-        text: linkedResidentId
-          ? `${activeTemplate.documentLabel} issued and printed. A copy is also sent to the linked resident portal.`
-          : `${activeTemplate.documentLabel} issued and printed (print-only issuance).`,
+        text: `${activeSelectedTemplate?.name || 'Document'} issued and printed successfully.`,
       });
     } catch (error) {
       setFeedback({ tone: 'danger', text: error instanceof Error ? error.message : 'Unable to issue document.' });
@@ -482,188 +453,279 @@ export default function StaffOcrIssuancePage() {
         />
       ) : null}
 
-      <SectionCard
-        title="Issuance via OCR"
-      >
-        <div className="grid gap-3">
-          <label className="grid gap-1 text-sm text-(--portal-ink-800)">
-            <span>Document Type</span>
-            <Select
-              value={selectedTemplateKey}
-              onChange={(event) => void handleTemplateChange(event.target.value)}
-              disabled={issuance?.status === 'issued' || isUploadingOcr || isSaving || isIssuing}
-            >
-              {availableDocumentTypes.map((docType) => (
-                <option key={docType.key} value={docType.key}>
-                  {docType.label}
-                </option>
-              ))}
-            </Select>
-          </label>
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="resident" onClick={handlePrintIntakeForm}>
-              Print OCR Form
-            </Button>
-          </div>
+      <div className="grid gap-6">
+        {/* Top Control Card */}
+        <SectionCard title="Issuance via OCR">
+          <div className="grid gap-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-1 text-sm text-(--portal-ink-800)">
+                <span className="font-medium">Document Template</span>
+                <Select
+                  value={selectedTemplateKey}
+                  onChange={(event) => void handleTemplateChange(event.target.value)}
+                  disabled={issuance?.status === 'issued' || isUploadingOcr || isSaving || isIssuing}
+                >
+                  {templatesList.map((tpl) => (
+                    <option key={tpl.id} value={tpl.id}>
+                      {tpl.name} {tpl.sourceType === 'custom' || tpl.sourceType === 'uploaded' ? '(Admin Custom)' : ''}
+                    </option>
+                  ))}
+                </Select>
+              </label>
 
-          <label className="grid gap-1 text-sm text-(--portal-ink-800)">
-            <span>Upload Returned Form</span>
-            <Input key={fileInputKey} type="file" accept="image/png,image/jpeg,image/jfif,image/webp,.jfif" onChange={handleFileChange} />
-          </label>
-
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="resident" onClick={() => void handleRunOcr()} disabled={!selectedFile || isUploadingOcr}>
-              {isUploadingOcr
-                ? 'Running OCR...'
-                : issuance
-                  ? 'Run OCR Extraction'
-                  : 'Run OCR Extraction'}
-            </Button>
-            <Button
-              type="button"
-              variant="residentOutline"
-              onClick={() => void handleSaveDraft()}
-              disabled={!issuance || isSaving || issuance.status === 'issued'}
-            >
-              {isSaving ? 'Saving fields...' : 'Save Draft Fields'}
-            </Button>
-          </div>
-          <p className="text-xs text-(--portal-ink-600)">
-            Upload completed OCR form then click Run OCR. If no draft exists yet, one is created automatically.
-          </p>
-
-          {isUploadingOcr ? (
-            <div className="grid gap-3 rounded-(--portal-radius-md) border-2 border-[#2f9a65]/40 bg-[linear-gradient(135deg,#f2faf5_0%,#e1f4e8_100%)] p-4 text-xs shadow-sm">
-              <div className="flex items-center gap-3.5">
-                <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1b7a50]/15 text-[#1b7a50]">
-                  <svg className="h-6 w-6 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  <span className="absolute inset-0 animate-ping rounded-full bg-[#1b7a50]/20" aria-hidden="true" />
-                </div>
-                <div className="grid gap-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-[#114b30]">
-                      OCR Scanning & Extraction in Progress
-                    </span>
-                    <span className="inline-flex items-center rounded-full bg-[#1b7a50] px-2 py-0.5 text-[10px] font-semibold text-white animate-pulse">
-                      Processing...
-                    </span>
-                  </div>
-                  <p className="text-xs text-[#1e6141]">
-                    Please wait while the OCR reads text and fills in form fields.
-                  </p>
-                </div>
-              </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-[#c3e6d2]">
-                <div className="h-full w-full rounded-full bg-[linear-gradient(90deg,#1b7a50,#42b27b,#1b7a50)] animate-pulse" />
+              <div className="flex flex-col justify-end">
+                <Button
+                  type="button"
+                  variant="residentOutline"
+                  onClick={handlePrintIntakeForm}
+                  className="w-full sm:w-auto"
+                >
+                  <Printer className="mr-1.5 h-4 w-4" />
+                  Print Blank OCR Form
+                </Button>
               </div>
             </div>
-          ) : null}
 
-          {!isUploadingOcr && (hasScanCompleted || Boolean(issuance?.extractedText)) && feedback?.tone !== 'danger' ? (
-            <div className="grid gap-2 rounded-(--portal-radius-md) border border-[#bce3cd] bg-[linear-gradient(180deg,#f4fbf7_0%,#eaf6ef_100%)] p-3.5 text-xs">
-              <div className="flex items-center justify-between gap-3 text-xs font-semibold text-[#1b7a50]">
-                <span className="flex items-center gap-1.5">
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 1001-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  OCR Accuracy Threshold
-                </span>
-                <span className="rounded-full bg-[#1b7a50]/10 px-2.5 py-0.5 text-xs font-bold text-[#1b7a50]">
-                  {ocrAccuracyPercent}% Accuracy
-                </span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-[#cde8d8]" aria-hidden="true">
-                <div
-                  className="h-full rounded-full bg-[linear-gradient(90deg,#1b7a50_0%,#2f9a65_100%)] transition-all duration-300 ease-out"
-                  style={{ width: `${ocrAccuracyPercent}%` }}
+            <div className="grid gap-3 rounded-(--portal-radius-md) border border-(--portal-border-soft) bg-(--portal-bg-card) p-4">
+              <label className="grid gap-1.5 text-sm text-(--portal-ink-800)">
+                <span className="font-semibold">Upload Returned Intake Form (Image / Scan)</span>
+                <Input
+                  key={fileInputKey}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jfif,image/webp,.jfif"
+                  onChange={handleFileChange}
                 />
+              </label>
+
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="resident"
+                  onClick={() => void handleRunOcr()}
+                  disabled={!selectedFile || isUploadingOcr}
+                >
+                  <Sparkles className="mr-1.5 h-4 w-4" />
+                  {isUploadingOcr ? 'Running OCR Extraction...' : 'Run OCR Extraction'}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="residentOutline"
+                  onClick={() => void handleSaveDraft()}
+                  disabled={!issuance || isSaving || issuance.status === 'issued'}
+                >
+                  {isSaving ? 'Saving...' : 'Save Draft Fields'}
+                </Button>
+
+                {issuance ? (
+                  <Button
+                    type="button"
+                    variant="residentOutline"
+                    onClick={handleStartNewIssuance}
+                    disabled={isUploadingOcr || isSaving || isIssuing}
+                  >
+                    Start New Issuance
+                  </Button>
+                ) : null}
               </div>
-              <p className="mt-0.5 text-xs font-medium text-(--portal-ink-700)">
-                OCR extraction completed. Review and edit fields before issuing.
+              <p className="text-xs text-(--portal-ink-600)">
+                Upload the scanned form, then click Run OCR Extraction to auto-populate the official Document Template.
               </p>
             </div>
-          ) : null}
 
-          {issuance ? (
-            <div className="grid gap-2 rounded-(--portal-radius-md) border border-(--portal-border-soft) bg-white p-3">
-              <p className="text-xs uppercase tracking-[0.08em] text-(--portal-ink-500)">
-                Issuance ID: {issuance.id}
-              </p>
-              <p className="text-xs text-(--portal-ink-600)">Status: {issuance.status}</p>
-              {activeTemplate.intakeFields.map((field) => {
-                const isChoiceField = isOcrChoiceField(field.key);
-                return (
-                  <label key={field.key} className="grid gap-1 text-xs text-(--portal-ink-700)">
-                    <span>{field.label}{field.required ? ' *' : ''}</span>
+            {isUploadingOcr ? (
+              <div className="grid gap-3 rounded-(--portal-radius-md) border-2 border-[#2f9a65]/40 bg-[linear-gradient(135deg,#f2faf5_0%,#e1f4e8_100%)] p-4 text-xs shadow-sm">
+                <div className="flex items-center gap-3.5">
+                  <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1b7a50]/15 text-[#1b7a50]">
+                    <svg className="h-6 w-6 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <span className="absolute inset-0 animate-ping rounded-full bg-[#1b7a50]/20" aria-hidden="true" />
+                  </div>
+                  <div className="grid gap-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-[#114b30]">
+                        OCR Scanning & Field Mapping in Progress
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-[#1b7a50] px-2 py-0.5 text-[10px] font-semibold text-white animate-pulse">
+                        Processing...
+                      </span>
+                    </div>
+                    <p className="text-xs text-[#1e6141]">
+                      Reading text and mapping extracted details directly to the {activeSelectedTemplate?.name || 'Document'} template.
+                    </p>
+                  </div>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-[#c3e6d2]">
+                  <div className="h-full w-full rounded-full bg-[linear-gradient(90deg,#1b7a50,#42b27b,#1b7a50)] animate-pulse" />
+                </div>
+              </div>
+            ) : null}
+
+            {!isUploadingOcr && (hasScanCompleted || Boolean(issuance?.extractedText)) && feedback?.tone !== 'danger' ? (
+              <div className="grid gap-2 rounded-(--portal-radius-md) border border-[#bce3cd] bg-[linear-gradient(180deg,#f4fbf7_0%,#eaf6ef_100%)] p-3.5 text-xs">
+                <div className="flex items-center justify-between gap-3 text-xs font-semibold text-[#1b7a50]">
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4 text-[#1b7a50]" />
+                    OCR Extraction Completed
+                  </span>
+                  <span className="rounded-full bg-[#1b7a50]/10 px-2.5 py-0.5 text-xs font-bold text-[#1b7a50]">
+                    {ocrAccuracyPercent}% Quality Match
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs font-medium text-(--portal-ink-700)">
+                  Extracted details mapped to document template placeholders. Review the form or live preview before issuing.
+                </p>
+              </div>
+            ) : null}
+
+            {feedback ? (
+              <FormFeedback
+                tone={
+                  feedback.tone === 'danger'
+                    ? 'error'
+                    : feedback.tone === 'warning'
+                      ? 'info'
+                      : 'success'
+                }
+                text={feedback.text}
+              />
+            ) : null}
+          </div>
+        </SectionCard>
+
+        {/* 2-Column Split: Extracted Form Fields & Live Document Template Preview */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          {/* Left Column: Form Details (5 Columns) */}
+          <div className="lg:col-span-5">
+            <SectionCard title="Extracted Document Data">
+              <div className="grid gap-4">
+                <div className="flex items-center justify-between text-xs text-(--portal-ink-600)">
+                  <span>
+                    Status:{' '}
+                    <strong className="text-(--portal-ink-800) uppercase font-semibold">
+                      {issuance?.status || 'Draft'}
+                    </strong>
+                  </span>
+                  {issuance ? (
+                    <span className="font-mono text-[11px] text-(--portal-ink-500)">
+                      ID: {issuance.id.slice(0, 8)}...
+                    </span>
+                  ) : null}
+                </div>
+
+                {/* Primary Document Fields */}
+                <div className="grid gap-3 border-t border-(--portal-border-soft) pt-3">
+                  <label className="grid gap-1 text-xs font-semibold text-(--portal-ink-800)">
+                    <span>Resident Full Name *</span>
                     <Input
-                      value={isChoiceField ? (hasOcrChoiceMark(fieldDraft[field.key]) ? 'Yes' : 'No') : fieldDraft[field.key] ?? ''}
-                      onChange={(event) =>
+                      placeholder="e.g. Juan Dela Cruz"
+                      value={fieldDraft.residentName ?? ''}
+                      onChange={(e) =>
                         setFieldDraft((prev) => ({
                           ...prev,
-                          [field.key]: event.target.value,
+                          residentName: e.target.value,
                         }))
                       }
                     />
                   </label>
-                );
-              })}
-              {missingRequiredFields.length ? (
-                <p className="text-xs text-[#a33b32]">
-                  Missing required fields: {missingRequiredFields.map((field) => field.label).join(', ')}
-                </p>
-              ) : null}
-              {!selectedFile && issuance.status === 'draft' ? (
-                <p className="text-xs text-(--portal-ink-600)">
-                  Upload a returned OCR form and click Run OCR Extraction.
-                </p>
-              ) : null}
-              <div className="flex flex-wrap gap-2 pt-2">
-                <Button
-                  type="button"
-                  variant="residentOutline"
-                  onClick={() => void handleIssueAndPrint()}
-                  disabled={
-                    !issuance ||
-                    isIssuing ||
-                    (issuance.status !== 'issued' && missingRequiredFields.length > 0) ||
-                    (issuance.status === 'issued' && !issuance.generatedDocumentId)
-                  }
-                >
-                  {isIssuing
-                    ? 'Preparing print...'
-                    : issuance.status === 'issued'
-                      ? `Reprint ${activeTemplate.documentLabel}`
-                      : `Issue and Print ${activeTemplate.documentLabel}`}
-                </Button>
-                <Button
-                  type="button"
-                  variant="resident"
-                  onClick={handleStartNewIssuance}
-                  disabled={isUploadingOcr || isSaving || isIssuing}
-                >
-                  Issue Another Document
-                </Button>
-              </div>
-            </div>
-          ) : null}
 
-          {feedback ? (
-            <FormFeedback
-              tone={
-                feedback.tone === 'danger'
-                  ? 'error'
-                  : feedback.tone === 'warning'
-                    ? 'info'
-                    : 'success'
-              }
-              text={feedback.text}
-            />
-          ) : null}
+                  <label className="grid gap-1 text-xs font-semibold text-(--portal-ink-800)">
+                    <span>Residence / Postal Address *</span>
+                    <Input
+                      placeholder="e.g. #123 M. Cruz St., Barangay Progreso, San Juan City"
+                      value={fieldDraft.residentAddress ?? fieldDraft.address ?? fieldDraft.residentAddressLine ?? ''}
+                      onChange={(e) =>
+                        setFieldDraft((prev) => ({
+                          ...prev,
+                          residentAddress: e.target.value,
+                          address: e.target.value,
+                          residentAddressLine: e.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <label className="grid gap-1 text-xs font-semibold text-(--portal-ink-800)">
+                    <span>Date Issued *</span>
+                    <Input
+                      type="date"
+                      value={fieldDraft.issuedDate ?? fieldDraft.dateIssued ?? ''}
+                      onChange={(e) =>
+                        setFieldDraft((prev) => ({
+                          ...prev,
+                          issuedDate: e.target.value,
+                          dateIssued: e.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
+
+                {missingRequiredFields.length ? (
+                  <p className="text-xs font-medium text-[#a33b32]">
+                    Missing required fields: {missingRequiredFields.map((field) => field.label).join(', ')}
+                  </p>
+                ) : null}
+
+                {/* Issuance Action Bar */}
+                <div className="flex flex-col gap-2 border-t border-(--portal-border-soft) pt-4">
+                  <Button
+                    type="button"
+                    variant="resident"
+                    onClick={() => void handleIssueAndPrint()}
+                    disabled={
+                      isIssuing ||
+                      (issuance?.status !== 'issued' && missingRequiredFields.length > 0) ||
+                      (issuance?.status === 'issued' && !issuance?.generatedDocumentId)
+                    }
+                    className="w-full py-2.5 text-sm font-semibold shadow-sm"
+                  >
+                    <Printer className="mr-1.5 h-4 w-4" />
+                    {isIssuing
+                      ? 'Preparing print...'
+                      : issuance?.status === 'issued'
+                        ? `Reprint ${activeSelectedTemplate?.name || 'Document'}`
+                        : `Issue and Print ${activeSelectedTemplate?.name || 'Document'}`}
+                  </Button>
+                </div>
+              </div>
+            </SectionCard>
+          </div>
+
+          {/* Right Column: Live Document Template Preview (7 Columns) */}
+          <div className="lg:col-span-7">
+            <SectionCard title="Document Template Live Preview">
+              <div className="grid gap-3">
+                <div className="flex items-center justify-between text-xs text-(--portal-ink-600)">
+                  <span>
+                    Template:{' '}
+                    <strong className="text-(--portal-ink-800)">
+                      {activeSelectedTemplate?.name || 'Barangay Document'}
+                    </strong>
+                  </span>
+                  <span className="text-[11px] text-(--portal-ink-500)">
+                    Updates in real-time as you type
+                  </span>
+                </div>
+
+                {/* Document Certificate Paper Container (Exact 1:1 format from Admin Document Templates) */}
+                <div className="relative overflow-hidden rounded-lg border border-slate-300 bg-white p-4 shadow-md">
+                  <div
+                    className="prose prose-slate max-w-none text-black"
+                    style={{
+                      fontFamily: '"Times New Roman", Georgia, serif',
+                      lineHeight: '1.6',
+                    }}
+                    dangerouslySetInnerHTML={{ __html: livePreviewHtml }}
+                  />
+                </div>
+              </div>
+            </SectionCard>
+          </div>
         </div>
-      </SectionCard>
+      </div>
     </PortalShell>
   );
 }

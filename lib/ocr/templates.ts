@@ -1,7 +1,9 @@
 import {
+  DEFAULT_OFFICIAL_TEMPLATES,
+  OFFICIAL_DOCUMENT_CATEGORIES,
+  OFFICIAL_WORD_TEMPLATES,
   getCategoryForDocType,
   getCategoryLabel,
-  OFFICIAL_DOCUMENT_CATEGORIES,
 } from '@/lib/documents/document-catalog-constants';
 
 export const INDIGENCY_TEMPLATE_KEY = 'certificate_indigency';
@@ -169,7 +171,10 @@ function hasReasonMark(value: string | undefined) {
 function getMissingIndigencyFields(parsedFields: Record<string, string>) {
   return toRequiredFields(INDIGENCY_FIELDS_BASE).filter((field) => {
     if (field === 'address') {
-      return !((parsedFields.address ?? parsedFields.residenceAddress ?? '').trim());
+      return !((parsedFields.address ?? parsedFields.residentAddress ?? parsedFields.residentAddressLine ?? parsedFields.residenceAddress ?? '').trim());
+    }
+    if (field === 'requestedBy') {
+      return !((parsedFields.requestedBy ?? parsedFields.residentName ?? '').trim());
     }
     if (field === 'issuedDate') {
       const direct = (parsedFields.issuedDate ?? parsedFields.dateIssued ?? '').trim();
@@ -187,11 +192,8 @@ function getMissingIndigencyFields(parsedFields: Record<string, string>) {
 function getMissingBarangayCertificateFields(parsedFields: Record<string, string>) {
   const missing: string[] = [];
   if (!(parsedFields.residentName ?? '').trim()) missing.push('residentName');
-  if (!(parsedFields.residentAddressLine ?? '').trim()) missing.push('residentAddressLine');
-  const hasMarkedReason = BARANGAY_REASON_KEYS.some((key) => hasReasonMark(parsedFields[key]));
-  if (!hasMarkedReason && !(parsedFields.otherReasonText ?? '').trim()) {
-    missing.push('reasonSelection');
-  }
+  const hasAddress = Boolean((parsedFields.residentAddressLine ?? parsedFields.residentAddress ?? parsedFields.address ?? parsedFields.residenceAddress ?? '').trim());
+  if (!hasAddress) missing.push('residentAddressLine');
   const issuedDate = (parsedFields.issuedDate ?? parsedFields.dateIssued ?? '').trim();
   if (!issuedDate) missing.push('issuedDate');
   return missing;
@@ -529,6 +531,29 @@ export function buildAdminTemplateOcrDefinition(docTemplate: {
 export function getOcrTemplateByKey(templateKey: string | null | undefined) {
   if (!templateKey) return null;
   if (TEMPLATES_BY_KEY[templateKey]) return TEMPLATES_BY_KEY[templateKey];
+
+  const defaultTpl = DEFAULT_OFFICIAL_TEMPLATES.find((t) => t.id === templateKey);
+  if (defaultTpl) {
+    const categoryDef = getCategoryDefaultOcrTemplate(defaultTpl.categoryId);
+    return {
+      ...categoryDef,
+      key: defaultTpl.id,
+      name: defaultTpl.name,
+      documentLabel: defaultTpl.name,
+    };
+  }
+
+  const wordTpl = OFFICIAL_WORD_TEMPLATES.find((t) => t.id === templateKey);
+  if (wordTpl) {
+    const categoryDef = getCategoryDefaultOcrTemplate(wordTpl.categoryId);
+    return {
+      ...categoryDef,
+      key: wordTpl.id,
+      name: wordTpl.name,
+      documentLabel: wordTpl.name,
+    };
+  }
+
   const officialCategories = [
     'barangay_certification',
     'transient_employees',

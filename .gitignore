@@ -3,9 +3,22 @@ node_modules
 out
 dist
 .env
-.env.local
-.env.example
-.env.development.local
-.env.production.local
+.env.*
+!.env.example
+*.log
+.tmp/
+tmp/
+scratch/
+test-results/
 coverage
 mcp.json
+
+# Supabase CLI local state
+supabase/.temp/
+supabase/.branches/
+
+# AI IDE local agents/customizations (if you don't want them in GitHub)
+.agents/
+.codex/
+.claude/
+.copilot-tracking/

@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import PortalShell from '@/components/portal-shell';
 import { SectionCard, EmptyState } from '@/components/portal-ui';
 import { Button } from '@/components/ui/button';
-import { ReportEditor } from '@/src/components/ReportEditor/ReportEditor';
+import { ReportEditor } from '@/components/ReportEditor/ReportEditor';
 import { useAppState } from '@/lib/frontend-data/use-app-state';
 import { FileText, FolderPlus, Trash2 } from 'lucide-react';
 // Short ID generator (6 alphanumeric characters)

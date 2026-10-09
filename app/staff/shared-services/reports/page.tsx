@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ReportEditor } from '@/src/components/ReportEditor/ReportEditor';
+import { ReportEditor } from '@/components/ReportEditor/ReportEditor';
 import { v4 as uuidv4 } from 'uuid';
 
 export default function StaffReportsPage() {
