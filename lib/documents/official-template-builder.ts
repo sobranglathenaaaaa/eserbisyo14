@@ -3,6 +3,7 @@ import {
   OFFICIAL_WORD_TEMPLATES,
   getCategoryForDocType,
 } from '@/lib/documents/document-catalog-constants';
+import { getBarangayOfficialSettings } from '@/lib/documents/barangay-settings';
 import type { DocumentTemplate } from '@/lib/types/models';
 
 export const OFFICIAL_KAGAWADS = [
@@ -16,11 +17,20 @@ export const OFFICIAL_KAGAWADS = [
   { id: '8', name: 'HON. JOSHUA C. VERGARA', committee: 'SK Chairperson / Youth and Sports Development' },
 ];
 
+export function stripPriceFromPurpose(purpose: string): string {
+  if (!purpose) return '';
+  return purpose
+    .replace(/\s*\([₱P][\d,.]+(?:\s*-\s*[₱P]?[\d,.]+)?(?:\/[a-zA-Z]+)?\)/gi, '')
+    .replace(/\s*\(\s*(?:Free|Libre|No\s*fee)[^\)]*\)/gi, '')
+    .replace(/\s*-\s*[₱P][\d,.]+/gi, '')
+    .trim();
+}
+
 export function resolvePurposeFromReasons(fields: Record<string, string>): string {
-  if (fields.purpose?.trim()) return fields.purpose.trim();
-  if (fields.reason?.trim()) return fields.reason.trim();
-  if (fields.reasonText?.trim()) return fields.reasonText.trim();
-  if (fields.otherReasonText?.trim()) return fields.otherReasonText.trim();
+  if (fields.purpose?.trim()) return stripPriceFromPurpose(fields.purpose.trim());
+  if (fields.reason?.trim()) return stripPriceFromPurpose(fields.reason.trim());
+  if (fields.reasonText?.trim()) return stripPriceFromPurpose(fields.reasonText.trim());
+  if (fields.otherReasonText?.trim()) return stripPriceFromPurpose(fields.otherReasonText.trim());
 
   const checkedReasons: string[] = [];
   const REASON_MAP: Record<string, string> = {
@@ -51,7 +61,7 @@ export function resolvePurposeFromReasons(fields: Record<string, string>): strin
   }
 
   if (checkedReasons.length > 0) {
-    return checkedReasons.join(', ');
+    return stripPriceFromPurpose(checkedReasons.join(', '));
   }
 
   return 'For whatever legal purpose it may serve';
@@ -157,7 +167,7 @@ export function buildDefaultHtmlLayout(
   Based on records and verification, the above-named individual is a law-abiding citizen with good moral standing in this community.
 </p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  This certification is issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">SCHOOL REQUIREMENT / ENROLLMENT / SCHOLARSHIP APPLICATION</u> (<u style="font-weight:bold;">{{purpose}}</u>).
+  This certification is issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">{{purpose}}</u>.
 </p>
 <p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
   Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
@@ -172,7 +182,7 @@ export function buildDefaultHtmlLayout(
   This is to certify that <u style="font-weight:bold;">{{resident_name}}</u> whose residence at <u style="font-weight:bold;">{{resident_address}}</u> is within the jurisdiction of {{barangay_name}}, {{city}} and belongs to the indigent families of this barangay. The barangay also certifies that their daily income is barely enough to meet their day-to-day needs.
 </p>
 <p style="font-size:15px;line-height:2.1;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  This certification is being issued upon the request of Mr./Mrs./Ms. <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">{{purpose}}</u> (Financial, Medical, Educational, or Burial Assistance).
+  This certification is being issued upon the request of Mr./Mrs./Ms. <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">{{purpose}}</u>.
 </p>
 <p style="font-size:15px;margin-top:26px;margin-bottom:32px;color:#000;">
   Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
@@ -190,7 +200,7 @@ export function buildDefaultHtmlLayout(
   This office further certifies that the subject individual is eligible for registration and issuance of privileges under Republic Act No. 7277 / Republic Act No. 9994.
 </p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  Issued upon request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">PWD / SENIOR CITIZEN APPLICATION</u> (<u style="font-weight:bold;">{{purpose}}</u>).
+  Issued upon request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">{{purpose}}</u>.
 </p>
 <p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
   Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
@@ -208,7 +218,7 @@ export function buildDefaultHtmlLayout(
   He/She has undergone residency verification and has no derogatory record on file with this office.
 </p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  This certification is issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">HEALTH CARD APPLICATION / MEDICAL PROCESSING</u> (<u style="font-weight:bold;">{{purpose}}</u>).
+  This certification is issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">{{purpose}}</u>.
 </p>
 <p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
   Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
@@ -244,7 +254,7 @@ export function buildDefaultHtmlLayout(
   RECORD CHECK IN THIS OFFICE SHOWS THAT THE ABOVE-NAMED INDIVIDUAL HAS NO DEROGATORY AND/OR PENDING CRIMINAL RECORD FILED AGAINST HIM/HER AS OF THIS DATE.
 </p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  This certification is being issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">LOCAL EMPLOYMENT / PRE-EMPLOYMENT REQUIREMENTS</u> (<u style="font-weight:bold;">{{purpose}}</u>).
+  This certification is being issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">{{purpose}}</u>.
 </p>
 <p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
   Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
@@ -262,7 +272,7 @@ export function buildDefaultHtmlLayout(
   RECORD CHECK SHOWS THAT HE/SHE HAS NO DEROGATORY RECORD ON FILE AS OF THIS DATE AND IS A LAW-ABIDING CITIZEN.
 </p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  Issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">SECURING POLICE, NBI, OR COURT CLEARANCE</u> (<u style="font-weight:bold;">{{purpose}}</u>).
+  Issued upon the request of <u style="font-weight:bold;">{{resident_name}}</u> for <u style="font-weight:bold;">{{purpose}}</u>.
 </p>
 <p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
   Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
@@ -280,7 +290,7 @@ export function buildDefaultHtmlLayout(
   The undersigned officials attest that the bearer is a person of good moral character and has no derogatory record on file.
 </p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  Issued upon request for <u style="font-weight:bold;">PASSPORT / POSTAL ID / VISA APPLICATION</u> (<u style="font-weight:bold;">{{purpose}}</u>).
+  Issued upon request for <u style="font-weight:bold;">{{purpose}}</u>.
 </p>
 <p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
   Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
@@ -298,7 +308,7 @@ export function buildDefaultHtmlLayout(
   He/She is verified to have no derogatory record in this barangay and is of good moral standing.
 </p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  Issued upon request for <u style="font-weight:bold;">OVERSEAS EMPLOYMENT (OFW) / VISA EXTENSION</u> (<u style="font-weight:bold;">{{purpose}}</u>).
+  Issued upon request for <u style="font-weight:bold;">{{purpose}}</u>.
 </p>
 <p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
   Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
@@ -313,7 +323,7 @@ export function buildDefaultHtmlLayout(
   This is to certify that according to the records and ocular inspection conducted by this office, the business entity registered under the name of <u style="font-weight:bold;">{{resident_name}}</u> with business address located at <u style="font-weight:bold;">{{resident_address}}</u>, {{barangay_name}}, {{city}}, is <u style="font-weight:bold;">NOT IN OPERATION / HAS CEASED OPERATIONS</u>.
 </p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  This certification is being issued upon request for <u style="font-weight:bold;">{{purpose}}</u> (Business Closure / Tax Assessment / Government Agency compliance).
+  This certification is being issued upon request for <u style="font-weight:bold;">{{purpose}}</u>.
 </p>
 <p style="font-size:14.5px;margin-top:26px;margin-bottom:32px;color:#000;">
   Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
@@ -342,26 +352,38 @@ export function buildDefaultHtmlLayout(
     case normalizedDocTypeKey.includes('business'):
       docTitleUpper = 'BARANGAY BUSINESS CLEARANCE';
       bodyWordingHtml = `
-<div style="font-size:14.5px;line-height:2.1;text-align:justify;color:#000;">
-  <p style="text-align:center;font-size:13px;font-weight:bold;letter-spacing:0.6px;margin:0 0 20px 0;">
+<div style="font-size:14.5px;line-height:2.1;color:#000;">
+  <p style="text-align:center;font-size:13px;font-weight:bold;letter-spacing:0.6px;margin:0 0 16px 0;">
     ${businessClassification}
   </p>
-  <p style="margin-bottom:16px;text-indent:42px;">
-    <strong>Name of Establishment:</strong> <u style="font-weight:bold;font-size:15.5px;">{{purpose}}</u>
-  </p>
-  <p style="margin-bottom:16px;text-indent:42px;">
-    is issued to <u style="font-weight:bold;font-size:15.5px;">{{resident_name}}</u> (Name of Owner)
-  </p>
-  <p style="margin-bottom:20px;text-indent:42px;">
-    With postal address at <u style="font-weight:bold;">{{resident_address}}</u>, {{city}}.
-  </p>
-  <p style="text-indent:42px;margin-bottom:24px;line-height:2.1;">
+  <div style="text-align:center;margin:12px 0 24px 0;line-height:1.9;">
+    <p style="font-size:16px;font-weight:bold;margin:0 0 2px 0;">
+      <u style="display:inline-block;min-width:320px;text-align:center;">{{purpose}}</u>
+    </p>
+    <div style="font-size:12px;font-style:italic;margin-bottom:14px;color:#333;">Name of Establishment</div>
+
+    <div style="font-size:14px;font-style:italic;margin-bottom:14px;">is issued to</div>
+
+    <p style="font-size:16px;font-weight:bold;margin:0 0 2px 0;">
+      <u style="display:inline-block;min-width:320px;text-align:center;">{{resident_name}}</u>
+    </p>
+    <div style="font-size:12px;font-style:italic;margin-bottom:14px;color:#333;">Name of Owner</div>
+
+    <div style="font-size:14px;font-style:italic;margin-bottom:8px;">With postal address at</div>
+
+    <p style="font-size:15px;font-weight:bold;margin:0 0 2px 0;">
+      <u style="display:inline-block;min-width:340px;text-align:center;">{{resident_address}}, {{city}}</u>
+    </p>
+    <div style="font-size:12px;font-style:italic;color:#333;">Postal Address</div>
+  </div>
+
+  <p style="text-indent:42px;margin-bottom:24px;line-height:2.1;text-align:justify;">
     This clearance specifically covers ${businessPurpose}.
   </p>
-  <p style="text-indent:42px;margin-bottom:24px;line-height:2.1;">
+  <p style="text-indent:42px;margin-bottom:24px;line-height:2.1;text-align:justify;">
     This clearance is issued upon the request of the aforementioned name, provided that no law, city ordinance, or resolution shall be violated during the operation.
   </p>
-  <p style="margin-top:24px;margin-bottom:32px;">
+  <p style="margin-top:24px;margin-bottom:32px;text-align:justify;">
     Issued this <u style="font-weight:bold;">{{date_issued}}</u> at {{barangay_name}}, {{city}}.
   </p>
 </div>
@@ -395,7 +417,8 @@ export function buildDefaultHtmlLayout(
 </div>
 <p style="font-size:14px;font-weight:bold;margin-bottom:6px;">IN FAVOR OF:</p>
 <p style="font-size:14px;margin-bottom:4px;margin-left:20px;">Name of Owner: <u style="font-weight:bold;">{{resident_name}}</u></p>
-<p style="font-size:14px;margin-bottom:16px;margin-left:20px;">Address of Owner: <u style="font-weight:bold;">{{resident_address}}</u></p>
+<p style="font-size:14px;margin-bottom:4px;margin-left:20px;">Address of Owner: <u style="font-weight:bold;">{{resident_address}}</u></p>
+<p style="font-size:14px;margin-bottom:16px;margin-left:20px;">Location of Project / Activity: <u style="font-weight:bold;">{{add_where}}</u></p>
 <p style="font-size:14px;line-height:2.0;text-indent:42px;margin-bottom:20px;text-align:justify;color:#000;">
   This Certification is being issued upon the request of the above-named applicant for the aforementioned purpose (<u style="font-weight:bold;">{{purpose}}</u>).
 </p>
@@ -414,7 +437,7 @@ export function buildDefaultHtmlLayout(
       docTitleUpper = 'DELIVERY & HAULING CLEARANCE';
       bodyWordingHtml = `
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
-  Barangay clearance is hereby granted to <u style="font-weight:bold;">{{resident_name}}</u> for delivery / hauling operations at <u style="font-weight:bold;">{{resident_address}}</u>, {{barangay_name}}, {{city}}.
+  Barangay clearance is hereby granted to <u style="font-weight:bold;">{{resident_name}}</u> (residing at {{resident_address}}) for delivery / hauling operations at <u style="font-weight:bold;">{{add_where}}</u>, {{barangay_name}}, {{city}}.
 </p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
   This clearance covers hauling/transportation of materials/equipment as specified: <u style="font-weight:bold;">{{purpose}}</u>.
@@ -435,7 +458,7 @@ export function buildDefaultHtmlLayout(
       docTitleUpper = 'SPECIAL & COMMERCIAL PERMIT';
       bodyWordingHtml = `
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
-  Special barangay clearance/permit is hereby granted to <u style="font-weight:bold;">{{resident_name}}</u> for activity/operations at <u style="font-weight:bold;">{{resident_address}}</u>, {{barangay_name}}, {{city}}.
+  Special barangay clearance/permit is hereby granted to <u style="font-weight:bold;">{{resident_name}}</u> (residing at {{resident_address}}) for activity/operations at <u style="font-weight:bold;">{{add_where}}</u>, {{barangay_name}}, {{city}}.
 </p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
   This permit is valid for the specific purpose of: <u style="font-weight:bold;">{{purpose}}</u>.
@@ -582,6 +605,19 @@ export function buildDefaultHtmlLayout(
     </p>`;
     }
 
+    const bodyHasCaptionBox =
+      luponBody.toLowerCase().includes('case no') ||
+      luponBody.toLowerCase().includes('complainant') ||
+      luponBody.includes('-against-') ||
+      luponBody.includes('- against -');
+
+    const bodyHasTitle =
+      luponBody.toLowerCase().includes('=summons=') ||
+      luponBody.toLowerCase().includes('= summons =') ||
+      luponBody.toLowerCase().includes('patawag') ||
+      luponBody.toLowerCase().includes('certificate to file action') ||
+      luponBody.toLowerCase().includes('kp form');
+
     return `
 <div style="font-family:'Times New Roman',Georgia,serif;color:#000;width:100%;max-width:840px;min-height:272mm;height:100%;margin:0 auto;background:#fff;display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;padding:4mm 8mm;position:relative;">
   <!-- DYNAMIC WATERMARK SEAL -->
@@ -594,6 +630,7 @@ export function buildDefaultHtmlLayout(
       OFFICE OF THE LUPONG TAGAPAMAYAPA
     </div>
 
+    ${!bodyHasCaptionBox ? `
     <!-- CAPTION TABLE / BOX -->
     <div style="border:1.5px solid #000;padding:12px 18px;margin-bottom:18px;font-size:14px;line-height:1.8;background:transparent;">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
@@ -606,8 +643,9 @@ export function buildDefaultHtmlLayout(
       </div>
       <div style="text-align:center;font-weight:bold;margin:6px 0;letter-spacing:2px;">- against -</div>
       <div><strong>Respondent/s:</strong> <span style="display:inline-block;border-bottom:1px solid #000;min-width:260px;text-align:center;padding:0 8px;">{{resident_name}}</span></div>
-    </div>
+    </div>` : ''}
 
+    ${!bodyHasTitle ? `
     <!-- DOCUMENT HEADING -->
     <div style="text-align:center;margin:18px 0 16px 0;">
       <h2 style="font-size:24px;font-weight:800;letter-spacing:3px;margin:0;color:#000;text-transform:uppercase;">
@@ -616,7 +654,7 @@ export function buildDefaultHtmlLayout(
       <p style="font-size:12px;font-weight:bold;color:#475569;margin:4px 0 0 0;text-transform:uppercase;letter-spacing:1px;">
         ${luponSubtitle}
       </p>
-    </div>
+    </div>` : ''}
 
     ${luponBody}
   </div>
@@ -859,16 +897,32 @@ export function renderDocumentTemplateHtml(
     (data.residentAddressLine as string) ||
     (data.residenceAddress as string) ||
     'Barangay Progreso, City of San Juan';
-  const purpose = (data.purpose as string) || 'For whatever legal purpose it may serve';
-  const dateIssued = (data.dateIssued as string) || (data.issuedDate as string) || new Date().toISOString().slice(0, 10);
+  const rawPurpose = (data.purpose as string) || (data.reason as string) || 'For whatever legal purpose it may serve';
+  const purpose = stripPriceFromPurpose(rawPurpose) || 'For whatever legal purpose it may serve';
+  const rawDateIssued = (data.dateIssued as string) || (data.issuedDate as string) || new Date().toISOString().slice(0, 10);
+  const parsedDate = new Date(rawDateIssued);
+  const validDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+  const dayNum = validDate.getDate();
+  const daySuffix = ['th', 'st', 'nd', 'rd'][(dayNum % 10 > 3 || Math.floor((dayNum % 100) / 10) === 1) ? 0 : dayNum % 10];
+  const formattedDay = `${dayNum}${daySuffix}`;
+  const formattedMonth = validDate.toLocaleString('en-US', { month: 'long' });
+  const formattedYear = String(validDate.getFullYear());
+  const formattedDateIssued = `${formattedDay} day of ${formattedMonth}, ${formattedYear}`;
+  const dateIssued = rawDateIssued;
+
   const referenceNumber = (data.referenceNumber as string) || (data.caseNumber as string) || '';
   const complainantName = (data.complainantName as string) || (data.complainants as string) || '';
 
-  const punongBarangay = (data.punongBarangay as string) || (data.punong_barangay as string) || 'CESAR JR. H. STO. DOMINGO';
-  const barangaySecretary = (data.barangaySecretary as string) || (data.barangay_secretary as string) || 'Ma. Theresa R. Dela Cruz';
-  const barangayTreasurer = (data.barangayTreasurer as string) || (data.barangay_treasurer as string) || 'Saturnina C. Mirata';
-  const barangayName = (data.barangayName as string) || (data.barangay_name as string) || 'BARANGAY PROGRESO';
-  const city = (data.city as string) || (data.cityName as string) || 'City Of San Juan';
+  const settings = getBarangayOfficialSettings();
+
+  const punongBarangay = (data.punongBarangay as string) || (data.punong_barangay as string) || settings.punongBarangay;
+  const barangaySecretary = (data.barangaySecretary as string) || (data.barangay_secretary as string) || settings.barangaySecretary;
+  const barangayTreasurer = (data.barangayTreasurer as string) || (data.barangay_treasurer as string) || settings.barangayTreasurer;
+  const barangayName = (data.barangayName as string) || (data.barangay_name as string) || settings.barangayName;
+  const city = (data.city as string) || (data.cityName as string) || settings.cityName;
+  const barangayAddress = (data.barangayAddress as string) || (data.barangay_address as string) || settings.barangayAddress;
+  const barangayEmail = (data.barangayEmail as string) || (data.barangay_email as string) || settings.barangayEmail;
+  const barangayPhone = (data.barangayPhone as string) || (data.barangay_phone as string) || settings.barangayPhone;
 
   const sealImgs = {
     country: '<img src="/images/indigency-template/bagong-pilipinas.png" alt="Country Seal" style="height:55px;width:68px;object-fit:contain;display:inline-block;" />',
@@ -885,14 +939,29 @@ export function renderDocumentTemplateHtml(
 </div>`
   ).join('');
 
+  const docKey = `${template?.documentType || template?.id || ''} ${template?.name || ''}`.trim() || 'barangay_certification';
+  const isLuponKey =
+    docKey.toLowerCase().includes('lupon') ||
+    docKey.toLowerCase().includes('summons') ||
+    docKey.toLowerCase().includes('patawag') ||
+    docKey.toLowerCase().includes('cfa');
+
   let rawHtml = template?.body?.trim();
-  if (!rawHtml) {
-    const docKey = `${template?.documentType || template?.id || ''} ${template?.name || ''}`.trim() || 'barangay_certification';
-    rawHtml = buildDefaultHtmlLayout(docKey);
+  if (!rawHtml || (!isLuponKey && !rawHtml.includes('doc-frame') && !rawHtml.includes('kagawad'))) {
+    rawHtml = buildDefaultHtmlLayout(docKey, 'centered', isLuponKey ? 'single_column' : 'two_column_sidebar');
   }
 
   // Strip metadata comments if present
   rawHtml = rawHtml.replace(/<!-- TEMPLATE_META:([\s\S]*?) -->$/, '').trim();
+
+  const addWhere =
+    (data.add_where as string) ||
+    (data.addWhere as string) ||
+    (data.location as string) ||
+    (data.projectLocation as string) ||
+    (data.site_address as string) ||
+    (data.siteAddress as string) ||
+    residentAddress;
 
   let rendered = rawHtml;
   rendered = rendered.replaceAll('{{resident_name}}', residentName);
@@ -901,16 +970,26 @@ export function renderDocumentTemplateHtml(
   rendered = rendered.replaceAll('{{resident_address}}', residentAddress);
   rendered = rendered.replaceAll('{{residentAddress}}', residentAddress);
   rendered = rendered.replaceAll('{{address}}', residentAddress);
+  rendered = rendered.replaceAll('{{add_where}}', addWhere);
+  rendered = rendered.replaceAll('{{addWhere}}', addWhere);
+  rendered = rendered.replaceAll('{{location}}', addWhere);
+  rendered = rendered.replaceAll('{{site_address}}', addWhere);
+  rendered = rendered.replaceAll('{{siteAddress}}', addWhere);
+  rendered = rendered.replaceAll('{{project_location}}', addWhere);
+  rendered = rendered.replaceAll('{{projectLocation}}', addWhere);
   rendered = rendered.replaceAll('{{purpose}}', purpose);
   rendered = rendered.replaceAll('{{reason}}', purpose);
-  rendered = rendered.replaceAll('{{date_issued}}', dateIssued);
+  rendered = rendered.replaceAll('{{date_issued}}', formattedDateIssued);
+  rendered = rendered.replaceAll('{{day}}', formattedDay);
+  rendered = rendered.replaceAll('{{month}}', formattedMonth);
+  rendered = rendered.replaceAll('{{year}}', formattedYear);
   rendered = rendered.replaceAll('{{dateIssued}}', dateIssued);
   rendered = rendered.replaceAll('{{issuedDate}}', dateIssued);
   rendered = rendered.replaceAll('{{reference_number}}', referenceNumber);
   rendered = rendered.replaceAll('{{referenceNumber}}', referenceNumber);
   rendered = rendered.replaceAll('{{case_number}}', referenceNumber);
-  rendered = rendered.replaceAll('{{date_filed}}', dateIssued);
-  rendered = rendered.replaceAll('{{hearing_date_time}}', `${dateIssued} at 9:00 AM`);
+  rendered = rendered.replaceAll('{{date_filed}}', formattedDateIssued);
+  rendered = rendered.replaceAll('{{hearing_date_time}}', `${formattedDateIssued} at 9:00 AM`);
   rendered = rendered.replaceAll('{{complainant_name}}', complainantName || 'Complainant Name');
   rendered = rendered.replaceAll('{{complainants}}', complainantName || 'Complainant Name');
   rendered = rendered.replaceAll('{{punong_barangay}}', punongBarangay);
@@ -929,9 +1008,9 @@ export function renderDocumentTemplateHtml(
   rendered = rendered.replaceAll('{{barangay_seal}}', sealImgs.barangay);
   rendered = rendered.replaceAll('{{barangay_watermark}}', sealImgs.watermark);
   rendered = rendered.replaceAll('{{official_seal}}', '<div style="display:inline-block;border:2px solid #1e3a8a;color:#1e3a8a;padding:4px 10px;border-radius:9999px;font-weight:bold;font-size:10px;">[ OFFICIAL BARANGAY SEAL ]</div>');
-  rendered = rendered.replaceAll('{{barangay_address}}', '#15 M. Cruz Street Barangay Progreso, San Juan City');
-  rendered = rendered.replaceAll('{{barangay_email}}', 'barangayprogreso@yahoo.com');
-  rendered = rendered.replaceAll('{{barangay_phone}}', '(02)8727-5635 / (02)76258731');
+  rendered = rendered.replaceAll('{{barangay_address}}', barangayAddress);
+  rendered = rendered.replaceAll('{{barangay_email}}', barangayEmail);
+  rendered = rendered.replaceAll('{{barangay_phone}}', barangayPhone);
 
   // Replace other dynamic fields from data map
   for (const [key, val] of Object.entries(data)) {

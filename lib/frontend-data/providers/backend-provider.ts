@@ -856,7 +856,8 @@ async function createState(): Promise<AppState> {
       return {
         id: item.id,
         name: item.name,
-        body: cleanBody,
+        body: meta.plainBody !== undefined ? meta.plainBody : (cleanBody.includes('<div') || cleanBody.includes('<!DOCTYPE') ? '' : cleanBody),
+        htmlBody: meta.htmlBody ?? (cleanBody.includes('<') ? cleanBody : undefined),
         dynamicFields: item.dynamic_fields ?? [],
         updatedAt: item.updated_at,
         updatedBy: item.updated_by ?? '',
@@ -2122,6 +2123,8 @@ export const backendProvider: DataProvider = {
     const supabase = getSupabaseBrowserClient();
 
     const metaObj = {
+      plainBody: payload.body,
+      htmlBody: payload.htmlBody,
       documentType: payload.documentType ?? 'custom',
       sourceType: payload.sourceType ?? 'custom',
       originalFileName: payload.originalFileName,
@@ -2135,23 +2138,63 @@ export const backendProvider: DataProvider = {
     const templateBody = (payload.htmlBody || payload.body || '').trim();
     const encodedBody = `${templateBody}\n\n<!-- TEMPLATE_META:${JSON.stringify(metaObj)} -->`;
 
-    if (payload.id) {
-      await supabase
+    const isUuid = Boolean(
+      payload.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.id)
+    );
+
+    if (isUuid && payload.id) {
+      const { data: existing } = await supabase
         .from('document_templates')
-        .update({
+        .select('id')
+        .eq('id', payload.id)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase
+          .from('document_templates')
+          .update({
+            name: payload.name,
+            body: encodedBody,
+            dynamic_fields: payload.dynamicFields,
+            updated_by: editor.id,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', payload.id);
+      } else {
+        await supabase.from('document_templates').insert({
+          id: payload.id,
           name: payload.name,
           body: encodedBody,
           dynamic_fields: payload.dynamicFields,
           updated_by: editor.id,
-        })
-        .eq('id', payload.id);
+        });
+      }
     } else {
-      await supabase.from('document_templates').insert({
-        name: payload.name,
-        body: encodedBody,
-        dynamic_fields: payload.dynamicFields,
-        updated_by: editor.id,
-      });
+      // Non-UUID (e.g. 'tpl-001') or brand new template: check if name matches existing DB record
+      const { data: existingByName } = await supabase
+        .from('document_templates')
+        .select('id')
+        .eq('name', payload.name)
+        .maybeSingle();
+
+      if (existingByName) {
+        await supabase
+          .from('document_templates')
+          .update({
+            body: encodedBody,
+            dynamic_fields: payload.dynamicFields,
+            updated_by: editor.id,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existingByName.id);
+      } else {
+        await supabase.from('document_templates').insert({
+          name: payload.name,
+          body: encodedBody,
+          dynamic_fields: payload.dynamicFields,
+          updated_by: editor.id,
+        });
+      }
     }
     emitStateChanged();
   },

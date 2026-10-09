@@ -200,11 +200,29 @@ function getMissingBarangayCertificateFields(parsedFields: Record<string, string
 }
 
 function getMissingLuponSummonsFields(parsedFields: Record<string, string>) {
-  return toRequiredFields(LUPON_SUMMONS_FIELDS_BASE).filter((field) => !(parsedFields[field] ?? '').trim());
+  const missing: string[] = [];
+  const caseNo = (parsedFields.barangayCaseNumber ?? parsedFields.caseNumber ?? parsedFields.caseNo ?? parsedFields.barangay_case_number ?? '').trim();
+  if (!caseNo) missing.push('barangayCaseNumber');
+  const complainant = (parsedFields.complainants ?? parsedFields.complainantName ?? parsedFields.complainant ?? parsedFields.complainant_name ?? '').trim();
+  if (!complainant) missing.push('complainants');
+  const respondent = (parsedFields.respondents ?? parsedFields.residentName ?? parsedFields.respondentName ?? parsedFields.respondent ?? '').trim();
+  if (!respondent) missing.push('respondents');
+  const complaintFor = (parsedFields.complaintFor ?? parsedFields.purpose ?? parsedFields.reason ?? parsedFields.complaint_for ?? '').trim();
+  if (!complaintFor) missing.push('complaintFor');
+  return missing;
 }
 
 function getMissingBusinessPermitFields(parsedFields: Record<string, string>) {
-  return toRequiredFields(BUSINESS_PERMIT_FIELDS_BASE).filter((field) => !(parsedFields[field] ?? '').trim());
+  const missing: string[] = [];
+  const est = (parsedFields.establishmentName ?? parsedFields.businessName ?? parsedFields.establishment_name ?? parsedFields.business_name ?? parsedFields.tradeName ?? '').trim();
+  if (!est) missing.push('establishmentName');
+  const owner = (parsedFields.ownerName ?? parsedFields.residentName ?? parsedFields.owner_name ?? parsedFields.resident_name ?? parsedFields.fullName ?? '').trim();
+  if (!owner) missing.push('ownerName');
+  const address = (parsedFields.postalAddress ?? parsedFields.residentAddress ?? parsedFields.residentAddressLine ?? parsedFields.address ?? parsedFields.ownerAddress ?? '').trim();
+  if (!address) missing.push('postalAddress');
+  const date = (parsedFields.issuedDate ?? parsedFields.dateIssued ?? parsedFields.date_issued ?? '').trim();
+  if (!date) missing.push('issuedDate');
+  return missing;
 }
 
 function getMissingConstructionPermitFields(parsedFields: Record<string, string>) {

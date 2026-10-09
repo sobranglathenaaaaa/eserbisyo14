@@ -190,19 +190,21 @@ export function buildRequestTemplateDefaultFields(
     };
   }
 
-  if (templateKey === BUSINESS_PERMIT_TEMPLATE_KEY) {
+  if (templateKey === BUSINESS_PERMIT_TEMPLATE_KEY || templateKey.includes('business')) {
     return {
-      establishmentName: '',
+      establishmentName: clean(source.purpose) || '',
       ownerName: residentName,
       postalAddress: address,
       issuedDate: source.issuedDate,
     };
   }
 
-  if (templateKey === CONSTRUCTION_PERMIT_TEMPLATE_KEY) {
+  if (templateKey === CONSTRUCTION_PERMIT_TEMPLATE_KEY || templateKey.includes('construction')) {
     return {
       ownerName: residentName,
       ownerAddress: address,
+      add_where: address,
+      location: address,
       issuedDate: source.issuedDate,
       ...resolveConstructionPermitFields(source),
     };
@@ -211,6 +213,8 @@ export function buildRequestTemplateDefaultFields(
   return {
     residentName,
     address,
+    add_where: address,
+    location: address,
     issuedDate: source.issuedDate,
   };
 }

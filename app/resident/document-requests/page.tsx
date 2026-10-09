@@ -23,6 +23,8 @@ import {
   DEFAULT_OFFICIAL_TEMPLATES,
   getCategoryForDocType,
   getCategoryLabel,
+  loadDocumentTypesCatalog,
+  getPurposesForDocumentType,
 } from '@/lib/documents/document-catalog-constants';
 
 const DRAFT_KEY = 'eserbisyo.draft.document-request';
@@ -126,13 +128,38 @@ export default function ResidentDocumentRequestsPage() {
     })();
   }, []);
 
-  // Dynamically build document types and templates connected to Admin Document Templates (state.documentTemplates)
+  // Dynamically build document types and templates connected to Admin Document Templates & Catalog
   const documentTypes = useMemo<DocumentTypeOption[]>(() => {
+    const catalog = loadDocumentTypesCatalog().filter((c) => c.isActive !== false);
     const customTemplates = (state.documentTemplates || []).filter((t) => t.isActive !== false);
     const options: DocumentTypeOption[] = [];
     const seenOptionKeys = new Set<string>();
 
-    // 1. Process custom / active templates from Admin (state.documentTemplates)
+    // 1. Process custom catalog items from Admin Document Types & Purposes Catalog
+    catalog.forEach((catItem) => {
+      const categoryLabel = catItem.categoryLabel || getCategoryLabel(catItem.categoryId);
+      const optionKey = `${categoryLabel.toLowerCase()}|${catItem.name.toLowerCase()}`;
+      if (!seenOptionKeys.has(optionKey)) {
+        seenOptionKeys.add(optionKey);
+        const matchingDbType =
+          dbTypes.find(
+            (db) => db.category.toLowerCase() === categoryLabel.toLowerCase() && db.type.toLowerCase() === catItem.name.toLowerCase()
+          ) ||
+          dbTypes.find((db) => db.category.toLowerCase() === categoryLabel.toLowerCase()) ||
+          dbTypes[0];
+
+        options.push({
+          optionId: catItem.id,
+          backendId: matchingDbType?.id || catItem.id,
+          category: categoryLabel,
+          type: catItem.name,
+          price: matchingDbType?.price ?? catItem.price,
+          pricing_note: matchingDbType?.pricing_note ?? catItem.pricingNote,
+        });
+      }
+    });
+
+    // 2. Process custom / active templates from Admin (state.documentTemplates)
     customTemplates.forEach((tpl) => {
       const categoryId =
         tpl.documentType && OFFICIAL_DOCUMENT_CATEGORIES.some((c) => c.id === tpl.documentType)
@@ -162,7 +189,7 @@ export default function ResidentDocumentRequestsPage() {
       }
     });
 
-    // 2. Include default official templates for all official categories if not already added
+    // 3. Include default official templates for all official categories if not already added
     DEFAULT_OFFICIAL_TEMPLATES.forEach((defTpl) => {
       const categoryLabel = getCategoryLabel(defTpl.categoryId);
       const optionKey = `${categoryLabel.toLowerCase()}|${defTpl.name.toLowerCase()}`;
@@ -282,6 +309,10 @@ export default function ResidentDocumentRequestsPage() {
   useBodyScrollLock(proxyModalOpen || confirmSubmitOpen || Boolean(summaryRequestId));
 
   const selected = documentTypes.find((item) => item.optionId === selectedOptionId);
+  const availablePurposes = useMemo(() => {
+    if (!selected) return [];
+    return getPurposesForDocumentType(selected.type, selected.category);
+  }, [selected]);
   const summaryRequest = myRequests.find((item) => item.id === summaryRequestId) ?? null;
   const selectedDoc = myDocs.find((item) => item.id === selectedDocId) ?? myDocs[0] ?? null;
 
@@ -520,19 +551,48 @@ export default function ResidentDocumentRequestsPage() {
           </div>
 
           <label className="grid gap-3 text-sm">
-            <span className="font-medium text-[color:#123726]">{copyText(locale, 'Notes *', 'Mga Tala *')}</span>
+            <span className="font-medium text-[color:#123726]">{copyText(locale, 'Purpose / Notes *', 'Layunin / Mga Tala *')}</span>
             <Textarea
               value={purpose}
               onChange={(event) => setPurpose(event.target.value)}
-              className="min-h-[120px]"
+              placeholder={copyText(
+                locale,
+                'Select a suggested purpose below or type your specific request reason...',
+                'Pumili sa mga mungkahing layunin sa ibaba o i-type ang iyong partikular na dahilan...',
+              )}
+              className="min-h-[110px]"
               required
               aria-describedby="document-purpose-help"
             />
+            {availablePurposes.length > 0 && (
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] font-semibold text-[color:#123726] shrink-0">
+                  {copyText(locale, 'Suggested Purposes:', 'Mga Mungkahing Layunin:')}
+                </span>
+                {availablePurposes.map((p) => {
+                  const isSelected = purpose === p;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPurpose(p)}
+                      className={`rounded-full px-2.5 py-1 text-xs transition-colors border cursor-pointer ${
+                        isSelected
+                          ? 'bg-emerald-700 text-white border-emerald-800 font-semibold shadow-xs'
+                          : 'bg-emerald-50 text-emerald-900 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             <span id="document-purpose-help" className="text-xs leading-5 text-[color:#557968]">
               {copyText(
                 locale,
-                'Example: employment requirement, school enrollment, medical assistance, or other legal purpose.',
-                'Halimbawa: requirement sa trabaho, enrollment sa school, medical assistance, o iba pang legal na layunin.',
+                'Click any suggested option above or freely edit/type your specific purpose.',
+                'I-click ang alinman sa mga opsyon sa itaas o malayang i-type ang iyong partikular na layunin.',
               )}
             </span>
           </label>

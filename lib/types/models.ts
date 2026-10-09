@@ -157,6 +157,13 @@ export interface DocumentTemplate {
     officeTitle?: string;
     fontFamily?: string;
     alignment?: 'left' | 'center' | 'right';
+    docTitle?: string;
+    salutation?: string;
+    closingClause?: string;
+    signatoryName?: string;
+    signatoryTitle?: string;
+    footerNotice?: string;
+    sealNotice?: string;
   };
   officialsConfig?: {
     includePunongBarangay?: boolean;

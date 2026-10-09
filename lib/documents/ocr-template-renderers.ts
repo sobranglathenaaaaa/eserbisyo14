@@ -7,6 +7,7 @@ import type { CertificateFieldMap } from '@/lib/documents/indigency-certificate'
 import { renderIndigencyCertificateFromDocx } from '@/lib/documents/indigency-docx';
 import { renderLuponSummonsFromDocx } from '@/lib/documents/lupon-summons-docx';
 import { getCategoryForDocType } from '@/lib/documents/document-catalog-constants';
+import { stripPriceFromPurpose } from '@/lib/documents/official-template-builder';
 import {
   BARANGAY_CERTIFICATE_TEMPLATE_KEY,
   BUSINESS_PERMIT_TEMPLATE_KEY,
@@ -60,10 +61,10 @@ export function resolvePrintableTemplateKey(
 }
 
 export function resolvePurposeFromReasons(fields: Record<string, string>): string {
-  if (fields.purpose?.trim()) return fields.purpose.trim();
-  if (fields.reason?.trim()) return fields.reason.trim();
-  if (fields.reasonText?.trim()) return fields.reasonText.trim();
-  if (fields.otherReasonText?.trim()) return fields.otherReasonText.trim();
+  if (fields.purpose?.trim()) return stripPriceFromPurpose(fields.purpose.trim());
+  if (fields.reason?.trim()) return stripPriceFromPurpose(fields.reason.trim());
+  if (fields.reasonText?.trim()) return stripPriceFromPurpose(fields.reasonText.trim());
+  if (fields.otherReasonText?.trim()) return stripPriceFromPurpose(fields.otherReasonText.trim());
 
   const checkedReasons: string[] = [];
   const REASON_MAP: Record<string, string> = {
@@ -94,7 +95,7 @@ export function resolvePurposeFromReasons(fields: Record<string, string>): strin
   }
 
   if (checkedReasons.length > 0) {
-    return checkedReasons.join(', ');
+    return stripPriceFromPurpose(checkedReasons.join(', '));
   }
 
   return 'For whatever legal purpose it may serve';
@@ -243,10 +244,44 @@ export async function renderOcrTemplateFromDocx(
   <meta charset="utf-8" />
   <title>${templateToRender.name || 'Official Barangay Document'}</title>
   <style>
-    @page { size: A4 portrait; margin: 0; }
-    * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    body { margin: 0; font-family: "Times New Roman", Georgia, serif; color: #000; background: #fff; }
-    .print-wrapper { width: 100%; max-width: 850px; margin: 0 auto; box-sizing: border-box; }
+    @page {
+      size: A4 portrait;
+      margin: 4mm 6mm;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      font-family: "Times New Roman", Times, serif;
+      color: #000;
+      width: 100%;
+      height: 100%;
+    }
+    .print-document-wrapper {
+      width: 100%;
+      max-width: 198mm;
+      min-height: 275mm;
+      height: 275mm;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: #fff;
+      box-sizing: border-box;
+      padding: 2mm 0;
+    }
+    .print-document-wrapper > div {
+      min-height: 275mm !important;
+      height: 100% !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+    }
     @media print {
       body { margin: 0; background: #fff; }
       .no-print { display: none !important; }
@@ -254,7 +289,7 @@ export async function renderOcrTemplateFromDocx(
   </style>
 </head>
 <body>
-  <div class="print-wrapper">
+  <div class="print-document-wrapper">
     ${renderedBody}
   </div>
 </body>
@@ -283,7 +318,7 @@ export async function renderOcrTemplateFromDocx(
 
     return {
       docxBuffer: Buffer.from(''),
-      printableHtml: `<!doctype html><html><head><meta charset="utf-8" /><title>Barangay Document</title><style>@page{size:A4 portrait;margin:0;}body{margin:0;font-family:"Times New Roman",Georgia,serif;}</style></head><body><div style="max-width:850px;margin:0 auto;">${renderedBody}</div></body></html>`,
+      printableHtml: `<!doctype html><html><head><meta charset="utf-8" /><title>Barangay Document</title><style>@page{size:A4 portrait;margin:4mm 6mm;}body{margin:0;font-family:"Times New Roman",Georgia,serif;}.print-document-wrapper{max-width:198mm;margin:0 auto;}</style></head><body><div class="print-document-wrapper">${renderedBody}</div></body></html>`,
       templatePath: 'system://official-fallback',
     };
   }

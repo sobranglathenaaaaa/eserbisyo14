@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { StatusBadge, statusToneFromState } from '@/components/portal-ui';
 import { getRequestStatusLabel } from '@/lib/formatters';
 import { getRequestedPersonDetails } from '@/lib/documents/request-template-fields';
+import { getBarangayOfficialSettings } from '@/lib/documents/barangay-settings';
 import type { DocumentRequest, DocumentTemplate, User } from '@/lib/types/models';
 
 interface DocumentRequestPreviewModalProps {
@@ -188,6 +189,17 @@ export default function DocumentRequestPreviewModal({
     resident?.address ||
     resident?.addressLine ||
     'Barangay Progreso, San Juan City';
+  const addWhere =
+    fieldDraft.add_where ||
+    fieldDraft.addWhere ||
+    fieldDraft.location ||
+    fieldDraft.projectLocation ||
+    fieldDraft.site_address ||
+    fieldDraft.siteAddress ||
+    (request as Record<string, unknown> | null)?.add_where as string ||
+    (request as Record<string, unknown> | null)?.location as string ||
+    (request as Record<string, unknown> | null)?.projectLocation as string ||
+    residentAddress;
   const purpose = fieldDraft.purpose || fieldDraft.reasonText || request?.purpose || request?.typeLabel || 'Official legal requirements';
   const dateIssued =
     fieldDraft.issuedDate ||
@@ -202,20 +214,18 @@ export default function DocumentRequestPreviewModal({
   const previewHtml = useMemo(() => {
     if (!request) return '';
 
-    const barangayLogoHtml = `<img src="/images/indigency-template/barangay-progreso-seal.jpeg" style="height:60px;width:60px;object-fit:contain;" alt="Barangay Seal" />`;
-    const cityLogoHtml = `<img src="/images/indigency-template/san-juan-seal.jpeg" style="height:60px;width:60px;object-fit:contain;" alt="City Seal" />`;
-    const countryLogoHtml = `<img src="/images/indigency-template/bagong-pilipinas.png" style="height:55px;width:68px;object-fit:contain;" alt="Bagong Pilipinas Seal" />`;
+    const settings = getBarangayOfficialSettings();
 
-    const kagawadListHtml = `
-<div style="margin-bottom:7px;"><p style="font-size:14px;font-weight:bold;margin:0;color:#000;line-height:1.25;">Carmencita H. Sto. Domingo</p><p style="font-size:12px;font-style:italic;margin:2px 0 0 0;color:#333;line-height:1.2;">Peace and Order/BADAC</p></div>
-<div style="margin-bottom:7px;"><p style="font-size:14px;font-weight:bold;margin:0;color:#000;line-height:1.25;">Mary Antoinette P. Salayon</p><p style="font-size:12px;font-style:italic;margin:2px 0 0 0;color:#333;line-height:1.2;">Disaster Management</p></div>
-<div style="margin-bottom:7px;"><p style="font-size:14px;font-weight:bold;margin:0;color:#000;line-height:1.25;">Rodelio O. Santos</p><p style="font-size:12px;font-style:italic;margin:2px 0 0 0;color:#333;line-height:1.2;">Livelihood & Public Enterprise</p></div>
-<div style="margin-bottom:7px;"><p style="font-size:14px;font-weight:bold;margin:0;color:#000;line-height:1.25;">Darryl S. Eustaquio</p><p style="font-size:12px;font-style:italic;margin:2px 0 0 0;color:#333;line-height:1.2;">Infrastructure & Public Works</p></div>
-<div style="margin-bottom:7px;"><p style="font-size:14px;font-weight:bold;margin:0;color:#000;line-height:1.25;">Amafel T. Ingalla</p><p style="font-size:12px;font-style:italic;margin:2px 0 0 0;color:#333;line-height:1.2;">Health, Nutrition & Women</p></div>
-<div style="margin-bottom:7px;"><p style="font-size:14px;font-weight:bold;margin:0;color:#000;line-height:1.25;">Renar M. Mendoza</p><p style="font-size:12px;font-style:italic;margin:2px 0 0 0;color:#333;line-height:1.2;">Ways & Means, Appropriations</p></div>
-<div style="margin-bottom:7px;"><p style="font-size:14px;font-weight:bold;margin:0;color:#000;line-height:1.25;">Raymund Marcel B. Fontamillas</p><p style="font-size:12px;font-style:italic;margin:2px 0 0 0;color:#333;line-height:1.2;">Clean & Green Solid Waste</p></div>
-<div style="margin-bottom:7px;"><p style="font-size:14px;font-weight:bold;margin:0;color:#000;line-height:1.25;">Anton Jose T. Cabrillas</p><p style="font-size:12px;font-style:italic;margin:2px 0 0 0;color:#333;line-height:1.2;">SK-Chairperson Sports Dev.</p></div>
-`;
+    const barangayLogoHtml = `<img src="${settings.barangayLogoUrl}" style="height:60px;width:60px;object-fit:contain;" alt="Barangay Seal" />`;
+    const cityLogoHtml = `<img src="${settings.cityLogoUrl}" style="height:60px;width:60px;object-fit:contain;" alt="City Seal" />`;
+    const countryLogoHtml = `<img src="${settings.countryLogoUrl}" style="height:55px;width:68px;object-fit:contain;" alt="Bagong Pilipinas Seal" />`;
+
+    const kagawadListHtml = settings.kagawadList
+      .map(
+        (k) =>
+          `<div style="margin-bottom:7px;"><p style="font-size:14px;font-weight:bold;margin:0;color:#000;line-height:1.25;">${k.name}</p>${k.committee ? `<p style="font-size:12px;font-style:italic;margin:2px 0 0 0;color:#333;line-height:1.2;">${k.committee}</p>` : ''}</div>`
+      )
+      .join('');
 
     const headerHtml = `
 <div style="text-align:center;margin-bottom:8px;">
@@ -225,13 +235,13 @@ export default function DocumentRequestPreviewModal({
     ${countryLogoHtml}
   </div>
   <p style="font-family:Georgia,serif;font-size:13px;font-weight:bold;font-style:italic;text-transform:uppercase;color:#4f6e34;margin:0;letter-spacing:0.5px;">REPUBLIC OF THE PHILIPPINES</p>
-  <p style="font-family:Georgia,serif;font-size:12px;font-style:italic;color:#4f6e34;margin:1px 0;">City Of San Juan</p>
-  <p style="font-family:Georgia,serif;font-size:14px;font-weight:bold;font-style:italic;text-transform:uppercase;color:#4f6e34;margin:0;">BARANGAY PROGRESO</p>
+  <p style="font-family:Georgia,serif;font-size:12px;font-style:italic;color:#4f6e34;margin:1px 0;">${settings.cityName}</p>
+  <p style="font-family:Georgia,serif;font-size:14px;font-weight:bold;font-style:italic;text-transform:uppercase;color:#4f6e34;margin:0;">${settings.barangayName}</p>
   <p style="font-family:Georgia,serif;font-size:11px;font-weight:bold;font-style:italic;text-transform:uppercase;color:#4f6e34;margin:2px 0 0 0;">OFFICE OF THE PUNONG BARANGAY</p>
 </div>
 `;
 
-    const dynamicWatermarkHtml = `<img src="/images/indigency-template/barangay-progreso-seal.jpeg" class="doc-watermark" style="position:absolute;left:50%;top:50%;width:560px;max-width:88%;transform:translate(-50%, -50%);opacity:0.12;filter:contrast(115%);pointer-events:none;z-index:1;user-select:none;-webkit-user-select:none;" alt="Barangay Seal Watermark" />`;
+    const dynamicWatermarkHtml = `<img src="${settings.watermarkLogoUrl || settings.barangayLogoUrl}" class="doc-watermark" style="position:absolute;left:50%;top:50%;width:560px;max-width:88%;transform:translate(-50%, -50%);opacity:0.12;filter:contrast(115%);pointer-events:none;z-index:1;user-select:none;-webkit-user-select:none;" alt="Barangay Seal Watermark" />`;
 
     const currentDocKey = docTypeKey as string;
     const isLuponType =
@@ -310,22 +320,41 @@ export default function DocumentRequestPreviewModal({
           let rendered = customHtml;
           rendered = rendered.replaceAll('{{resident_name}}', residentName);
           rendered = rendered.replaceAll('{{resident_address}}', residentAddress);
+          rendered = rendered.replaceAll('{{add_where}}', addWhere);
+          rendered = rendered.replaceAll('{{addWhere}}', addWhere);
+          rendered = rendered.replaceAll('{{location}}', addWhere);
+          rendered = rendered.replaceAll('{{site_address}}', addWhere);
+          rendered = rendered.replaceAll('{{project_location}}', addWhere);
+          const d = fieldDraft.issuedDate || fieldDraft.dateIssued ? new Date(fieldDraft.issuedDate || fieldDraft.dateIssued) : new Date();
+          const validD = isNaN(d.getTime()) ? new Date() : d;
+          const dayN = validD.getDate();
+          const daySuff = ['th', 'st', 'nd', 'rd'][(dayN % 10 > 3 || Math.floor((dayN % 100) / 10) === 1) ? 0 : dayN % 10];
+          const fDay = `${dayN}${daySuff}`;
+          const fMonth = validD.toLocaleString('en-US', { month: 'long' });
+          const fYear = String(validD.getFullYear());
+          const fDateIssued = `${fDay} day of ${fMonth}, ${fYear}`;
+
           rendered = rendered.replaceAll('{{purpose}}', purpose);
-          rendered = rendered.replaceAll('{{date_issued}}', dateIssued);
+          rendered = rendered.replaceAll('{{date_issued}}', fDateIssued);
+          rendered = rendered.replaceAll('{{day}}', fDay);
+          rendered = rendered.replaceAll('{{month}}', fMonth);
+          rendered = rendered.replaceAll('{{year}}', fYear);
+          rendered = rendered.replaceAll('{{dateIssued}}', fDateIssued);
+          rendered = rendered.replaceAll('{{issuedDate}}', fDateIssued);
           rendered = rendered.replaceAll('{{reference_number}}', request.referenceNumber || '');
-          rendered = rendered.replaceAll('{{punong_barangay}}', 'CESAR JR. H. STO. DOMINGO');
-          rendered = rendered.replaceAll('{{barangay_secretary}}', 'Ma. Theresa R. Dela Cruz');
-          rendered = rendered.replaceAll('{{barangay_treasurer}}', 'Saturnina C. Mirata');
+          rendered = rendered.replaceAll('{{punong_barangay}}', settings.punongBarangay);
+          rendered = rendered.replaceAll('{{barangay_secretary}}', settings.barangaySecretary);
+          rendered = rendered.replaceAll('{{barangay_treasurer}}', settings.barangayTreasurer);
           rendered = rendered.replaceAll('{{kagawad_list}}', kagawadListHtml);
-          rendered = rendered.replaceAll('{{barangay_name}}', 'BARANGAY PROGRESO');
-          rendered = rendered.replaceAll('{{city}}', 'City Of San Juan');
+          rendered = rendered.replaceAll('{{barangay_name}}', settings.barangayName);
+          rendered = rendered.replaceAll('{{city}}', settings.cityName);
           rendered = rendered.replaceAll('{{country_seal}}', countryLogoHtml);
           rendered = rendered.replaceAll('{{city_seal}}', cityLogoHtml);
           rendered = rendered.replaceAll('{{barangay_seal}}', barangayLogoHtml);
           rendered = rendered.replaceAll('{{barangay_watermark}}', dynamicWatermarkHtml);
-          rendered = rendered.replaceAll('{{barangay_address}}', '#15 M. Cruz Street Barangay Progreso, San Juan City');
-          rendered = rendered.replaceAll('{{barangay_email}}', 'barangayprogreso@yahoo.com');
-          rendered = rendered.replaceAll('{{barangay_phone}}', '(02)8727-5635 / (02)76258731');
+          rendered = rendered.replaceAll('{{barangay_address}}', settings.barangayAddress);
+          rendered = rendered.replaceAll('{{barangay_email}}', settings.barangayEmail);
+          rendered = rendered.replaceAll('{{barangay_phone}}', settings.barangayPhone);
           rendered = rendered.replaceAll('{{official_seal}}', '<div style="display:inline-block;border:2px solid #1e3a8a;color:#1e3a8a;padding:4px 10px;border-radius:9999px;font-weight:bold;font-size:10px;">[ OFFICIAL BARANGAY SEAL ]</div>');
           return rendered;
         }
@@ -340,7 +369,7 @@ export default function DocumentRequestPreviewModal({
         docTitleUpper = 'TRANSIENT WORKER CERTIFICATION';
         bodyWordingHtml = `
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  This is to certify that <u style="font-weight:bold;">${residentName}</u> is an authorized transient worker / employee engaged at <u style="font-weight:bold;">${residentAddress}</u> within the jurisdiction of BARANGAY PROGRESO, City Of San Juan.
+  This is to certify that <u style="font-weight:bold;">${residentName}</u> is an authorized transient worker / employee engaged at <u style="font-weight:bold;">${addWhere}</u> within the jurisdiction of ${settings.barangayName}, ${settings.cityName}.
 </p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
   RECORD CHECK IN THIS OFFICE SHOWS THAT THE ABOVE-NAMED INDIVIDUAL HAS NO DEROGATORY RECORD IN THIS BARANGAY AS OF THIS DATE.
@@ -358,7 +387,7 @@ export default function DocumentRequestPreviewModal({
         docTitleUpper = 'DELIVERY & HAULING CLEARANCE';
         bodyWordingHtml = `
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  Barangay clearance is hereby granted to <u style="font-weight:bold;">${residentName}</u> for delivery / hauling operations at <u style="font-weight:bold;">${residentAddress}</u>, BARANGAY PROGRESO, City Of San Juan.
+  Barangay clearance is hereby granted to <u style="font-weight:bold;">${residentName}</u> (residing at ${residentAddress}) for delivery / hauling operations at <u style="font-weight:bold;">${addWhere}</u>, ${settings.barangayName}, ${settings.cityName}.
 </p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
   This clearance covers hauling/transportation of materials/equipment as specified: <u style="font-weight:bold;">${purpose}</u>.
@@ -376,7 +405,7 @@ export default function DocumentRequestPreviewModal({
         docTitleUpper = 'SPECIAL & COMMERCIAL PERMIT';
         bodyWordingHtml = `
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  Special barangay clearance/permit is hereby granted to <u style="font-weight:bold;">${residentName}</u> for activity/operations at <u style="font-weight:bold;">${residentAddress}</u>, BARANGAY PROGRESO, City Of San Juan.
+  Special barangay clearance/permit is hereby granted to <u style="font-weight:bold;">${residentName}</u> (residing at ${residentAddress}) for activity/operations at <u style="font-weight:bold;">${addWhere}</u>, ${settings.barangayName}, ${settings.cityName}.
 </p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
   This permit is valid for the specific purpose of: <u style="font-weight:bold;">${purpose}</u>.
@@ -394,7 +423,7 @@ export default function DocumentRequestPreviewModal({
         docTitleUpper = 'CERTIFICATE OF RESIDENCY';
         bodyWordingHtml = `
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  This is to certify that <u style="font-weight:bold;">${residentName}</u> whose residence at <u style="font-weight:bold;">${residentAddress}</u> is a verified permanent resident of BARANGAY PROGRESO, City Of San Juan.
+  This is to certify that <u style="font-weight:bold;">${residentName}</u> whose residence at <u style="font-weight:bold;">${residentAddress}</u> is a verified permanent resident of ${settings.barangayName}, ${settings.cityName}.
 </p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
   The barangay also certifies that he/she is a law-abiding citizen of good standing in this community.
@@ -412,7 +441,7 @@ export default function DocumentRequestPreviewModal({
         docTitleUpper = 'CERTIFICATE OF GOOD MORAL CHARACTER';
         bodyWordingHtml = `
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  This is to certify that <u style="font-weight:bold;">${residentName}</u> residing at <u style="font-weight:bold;">${residentAddress}</u> is personally known to the undersigned officials as a person of good moral character.
+  This is to certify that <u style="font-weight:bold;">${residentName}</u> residing at <u style="font-weight:bold;">${residentAddress}</u> is personally known to the undersigned officials of ${settings.barangayName}, ${settings.cityName} as a person of good moral character.
 </p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
   He/She has no record of involvement in any unlawful activities in this barangay.
@@ -431,7 +460,7 @@ export default function DocumentRequestPreviewModal({
         docTitleUpper = 'BARANGAY BUSINESS CLEARANCE';
         bodyWordingHtml = `
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  Barangay clearance is hereby granted to <u style="font-weight:bold;">${residentName}</u> to operate business located at <u style="font-weight:bold;">${residentAddress}</u>, BARANGAY PROGRESO, City Of San Juan.
+  Barangay clearance is hereby granted to <u style="font-weight:bold;">${residentName}</u> to operate business located at <u style="font-weight:bold;">${residentAddress}</u>, ${settings.barangayName}, ${settings.cityName}.
 </p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:28px;text-align:justify;color:#000;">
   Subject to compliance with all existing barangay ordinances and municipal health laws.
@@ -447,7 +476,7 @@ export default function DocumentRequestPreviewModal({
         docTitleUpper = 'BARANGAY CONSTRUCTION CLEARANCE';
         bodyWordingHtml = `
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  Barangay construction clearance is hereby granted to <u style="font-weight:bold;">${residentName}</u> with project address at <u style="font-weight:bold;">${residentAddress}</u>, BARANGAY PROGRESO, City Of San Juan.
+  Barangay construction clearance is hereby granted to <u style="font-weight:bold;">${residentName}</u> (residing at ${residentAddress}) with project/construction site at <u style="font-weight:bold;">${addWhere}</u>, ${settings.barangayName}, ${settings.cityName}.
 </p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
   This clearance covers the proposed construction, renovation, or building activities specified for: <u style="font-weight:bold;">${purpose}</u>.
@@ -600,7 +629,7 @@ export default function DocumentRequestPreviewModal({
   <div style="position:relative;z-index:2;display:flex;justify-content:flex-end;margin-top:auto;padding-bottom:16px;">
     <div style="text-align:center;min-width:260px;">
       <p style="font-size:15px;font-weight:bold;text-decoration:underline;margin:0;color:#000;text-transform:uppercase;">
-        CESAR JR. H. STO. DOMINGO
+        ${settings.punongBarangay}
       </p>
       <p style="font-size:12.5px;font-weight:bold;margin:3px 0 0 0;color:#000;">
         Punong Barangay / Lupon Chairman
@@ -610,9 +639,9 @@ export default function DocumentRequestPreviewModal({
 
   <!-- FOOTER ADDRESS & CONTACT -->
   <div style="position:relative;z-index:2;text-align:center;margin-top:auto;padding-top:12px;border-top:1px solid #cbd5e1;font-size:11.5px;font-style:italic;color:#4f6e34;font-weight:bold;line-height:1.4;font-family:Georgia,serif;">
-    <p style="margin:0;">#15 M. Cruz Street Barangay Progreso, San Juan City</p>
+    <p style="margin:0;">${settings.barangayAddress}</p>
     <p style="margin:2px 0 0 0;">
-      Email Address: <span style="text-decoration:underline;">barangayprogreso@yahoo.com</span> | Telephone Nos. (02)8727-5635 / (02)76258731
+      Email Address: <span style="text-decoration:underline;">${settings.barangayEmail}</span> | Telephone Nos. ${settings.barangayPhone}
     </p>
   </div>
 </div>
@@ -623,10 +652,10 @@ export default function DocumentRequestPreviewModal({
         docTitleUpper = 'CERTIFICATE OF INDIGENCY';
         bodyWordingHtml = `
 <p style="font-size:15.5px;line-height:2.1;text-indent:42px;margin-bottom:24px;text-align:justify;color:#000;">
-  This is to certify that <u style="font-weight:bold;">${residentName}</u> whose residence at <u style="font-weight:bold;">${residentAddress}</u> is within the jurisdiction of BARANGAY PROGRESO, City Of San Juan and belongs to the indigent families of this barangay. The barangay also certifies that their daily income is barely enough to meet their day-to-day needs.
+  This is to certify that <u style="font-weight:bold;">${residentName}</u> whose residence at <u style="font-weight:bold;">${residentAddress}</u> is within the jurisdiction of ${settings.barangayName}, ${settings.cityName} and belongs to the indigent families of this barangay. The barangay also certifies that their daily income is barely enough to meet their day-to-day needs.
 </p>
 <p style="font-size:15.5px;line-height:2.1;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  This certification is being issued upon the request of Mr./Mrs./Ms. <u style="font-weight:bold;">${residentName}</u> for whatever legal purpose it may serve him/her.
+  This certification is being issued upon the request of Mr./Mrs./Ms. <u style="font-weight:bold;">${residentName}</u> for <u style="font-weight:bold;">${purpose}</u>.
 </p>
 <p style="font-size:15.5px;margin-top:26px;margin-bottom:32px;color:#000;text-align:center;">
   Issued this <u style="font-weight:bold;">${dateIssued}</u>.
@@ -634,13 +663,50 @@ export default function DocumentRequestPreviewModal({
 `;
         break;
 
+      case 'construction_clearance':
+      case 'construction_clearances':
+      case 'construction':
+      case 'building_permit':
+      case 'excavation_permit':
+      case 'demolition_permit':
+      case 'fencing_permit':
+      case 'occupancy_permit':
+        docTitleUpper = 'BARANGAY CLEARANCE';
+        bodyWordingHtml = `
+<p style="font-size:14.5px;line-height:2.0;margin-bottom:14px;text-align:justify;color:#000;">
+  This is to certify that the Sangguniang Barangay of Progreso, ${settings.cityName} interposes no objection to the issuance of:
+</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-bottom:18px;font-size:13px;padding:8px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;">
+  <div><span style="font-weight:bold;display:inline-block;width:24px;border-bottom:1px solid #000;text-align:center;">&nbsp;</span> Mayor's Business Permit</div>
+  <div><span style="font-weight:bold;display:inline-block;width:24px;border-bottom:1px solid #000;text-align:center;">&nbsp;</span> Building Permit</div>
+  <div><span style="font-weight:bold;display:inline-block;width:24px;border-bottom:1px solid #000;text-align:center;">&nbsp;</span> Occupancy Permit</div>
+  <div><span style="font-weight:bold;display:inline-block;width:24px;border-bottom:1px solid #000;text-align:center;">&nbsp;</span> Excavation Permit</div>
+  <div><span style="font-weight:bold;display:inline-block;width:24px;border-bottom:1px solid #000;text-align:center;">&nbsp;</span> Demolition Permit</div>
+  <div><span style="font-weight:bold;display:inline-block;width:24px;border-bottom:1px solid #000;text-align:center;">&nbsp;</span> Renovation / Repair Permit</div>
+  <div><span style="font-weight:bold;display:inline-block;width:24px;border-bottom:1px solid #000;text-align:center;">✓</span> Construction Permit</div>
+  <div><span style="font-weight:bold;display:inline-block;width:24px;border-bottom:1px solid #000;text-align:center;">&nbsp;</span> Hauling Permit</div>
+  <div><span style="font-weight:bold;display:inline-block;width:24px;border-bottom:1px solid #000;text-align:center;">&nbsp;</span> Signage / Billboards Permit</div>
+  <div><span style="font-weight:bold;display:inline-block;width:24px;border-bottom:1px solid #000;text-align:center;">&nbsp;</span> Others (Asphalt Overlay)</div>
+</div>
+<p style="font-size:14px;font-weight:bold;margin-bottom:6px;">IN FAVOR OF:</p>
+<p style="font-size:14px;margin-bottom:4px;margin-left:20px;">Name of Owner: <u style="font-weight:bold;">${residentName}</u></p>
+<p style="font-size:14px;margin-bottom:16px;margin-left:20px;">Address of Owner: <u style="font-weight:bold;">${residentAddress}</u></p>
+<p style="font-size:14px;line-height:2.0;text-indent:42px;margin-bottom:20px;text-align:justify;color:#000;">
+  This Certification is being issued upon the request of the above-named applicant for the aforementioned purpose (<u style="font-weight:bold;">${purpose}</u>).
+</p>
+<p style="font-size:14px;margin-top:20px;margin-bottom:28px;color:#000;">
+  Given this <u style="font-weight:bold;">${dateIssued}</u> at ${settings.barangayName}, ${settings.cityName}, Metro Manila.
+</p>
+`;
+        break;
+
       case 'barangay_certificate':
       case 'barangay_certification':
       default:
-        docTitleUpper = 'BARANGAY CLEARANCE';
+        docTitleUpper = (request.selectedTypeLabel || request.typeLabel || 'BARANGAY CERTIFICATION').toUpperCase();
         bodyWordingHtml = `
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
-  This is to certify that <u style="font-weight:bold;">${residentName}</u> whose residence at <u style="font-weight:bold;">${residentAddress}</u> is within the jurisdiction of BARANGAY PROGRESO, City Of San Juan.
+  This is to certify that <u style="font-weight:bold;">${residentName}</u> whose residence at <u style="font-weight:bold;">${residentAddress}</u> is within the jurisdiction of ${settings.barangayName}, ${settings.cityName}.
 </p>
 <p style="font-size:14.5px;line-height:2.2;text-indent:42px;margin-bottom:26px;text-align:justify;color:#000;">
   RECORD CHECK IN THIS OFFICE SHOWS THAT THE ABOVE-NAMED INDIVIDUAL HAS NO DEROGATORY AND/OR PENDING CRIMINAL RECORD FILED AGAINST HIM/HER AS OF THIS DATE.
@@ -673,13 +739,10 @@ export default function DocumentRequestPreviewModal({
         <!-- PUNONG BARANGAY -->
         <div style="margin-bottom:10px;">
           <p style="font-size:15.5px;font-weight:bold;text-decoration:underline;margin:0;color:#000;text-transform:uppercase;">
-            CESAR JR. H. STO. DOMINGO
+            ${settings.punongBarangay}
           </p>
           <p style="font-size:14px;font-weight:bold;margin:2px 0 0 0;color:#000;">
             Punong Barangay
-          </p>
-          <p style="font-size:12.5px;font-style:italic;margin:2px 0 0 0;color:#333;">
-            Senior Citizen & PWD's Committee
           </p>
         </div>
 
@@ -696,11 +759,11 @@ export default function DocumentRequestPreviewModal({
         <!-- EXECUTIVE OFFICERS -->
         <div style="margin-top:20px;">
           <div style="margin-bottom:6px;">
-            <p style="font-size:14.5px;font-weight:bold;margin:0;color:#000;">Saturnina C. Mirata</p>
+            <p style="font-size:14.5px;font-weight:bold;margin:0;color:#000;">${settings.barangayTreasurer}</p>
             <p style="font-size:12.5px;font-style:italic;margin:1px 0 0 0;color:#333;">Barangay Treasurer</p>
           </div>
           <div>
-            <p style="font-size:14.5px;font-weight:bold;margin:0;color:#000;">Ma. Theresa R. Dela Cruz</p>
+            <p style="font-size:14.5px;font-weight:bold;margin:0;color:#000;">${settings.barangaySecretary}</p>
             <p style="font-size:12.5px;font-style:italic;margin:1px 0 0 0;color:#333;">Barangay Secretary</p>
           </div>
         </div>
@@ -731,7 +794,7 @@ export default function DocumentRequestPreviewModal({
 
           <div style="text-align:center;min-width:220px;">
             <p style="font-size:14.5px;font-weight:bold;margin:0;color:#000;">
-              CESAR JR. H. STO. DOMINGO
+              ${settings.punongBarangay}
             </p>
             <p style="font-size:12px;font-weight:bold;margin:3px 0 0 0;color:#000;">
               Punong Barangay
@@ -751,11 +814,11 @@ export default function DocumentRequestPreviewModal({
 
   <!-- DYNAMIC FOOTER ADDRESS & CONTACT INFORMATION -->
   <div style="position:relative;z-index:2;text-align:center;margin-top:auto;padding-top:8px;font-size:11.5px;font-style:italic;color:#4f6e34;font-weight:bold;line-height:1.4;font-family:Georgia,serif;">
-    <p style="margin:0;">#15 M. Cruz Street Barangay Progreso, San Juan City</p>
+    <p style="margin:0;">${settings.barangayAddress}</p>
     <p style="margin:2px 0 0 0;">
-      Email Address: <span style="text-decoration:underline;">barangayprogreso@yahoo.com</span>
+      Email Address: <span style="text-decoration:underline;">${settings.barangayEmail}</span>
     </p>
-    <p style="margin:2px 0 0 0;">Telephone Nos. (02)8727-5635 / (02)76258731</p>
+    <p style="margin:2px 0 0 0;">Telephone Nos. ${settings.barangayPhone}</p>
   </div>
 </div>
 `.trim();

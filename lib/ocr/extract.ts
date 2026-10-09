@@ -2,10 +2,19 @@ import 'server-only';
 
 import { GoogleGenAI } from '@google/genai';
 
-const OCR_MODEL = 'gemini-2.5-flash';
+const OCR_MODELS = Array.from(
+  new Set(
+    [
+      process.env.GEMINI_OCR_MODEL,
+      process.env.GEMINI_MODEL,
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+      'gemini-2.5-flash',
+      'gemini-3.8-flash',
+    ].filter(Boolean) as string[]
+  )
+);
 const OCR_RETRY_DELAYS_MS = [750, 1500];
-
-let geminiClient: GoogleGenAI | null = null;
 
 export class OcrModelUnavailableError extends Error {
   constructor(message: string) {
@@ -15,13 +24,11 @@ export class OcrModelUnavailableError extends Error {
 }
 
 function getGeminiClient() {
-  if (geminiClient) return geminiClient;
   const apiKey = process.env.GOOGLE_GENAI_API_KEY;
   if (!apiKey) {
     throw new Error('GOOGLE_GENAI_API_KEY is not configured.');
   }
-  geminiClient = new GoogleGenAI({ apiKey });
-  return geminiClient;
+  return new GoogleGenAI({ apiKey });
 }
 
 function normalizeExtractedText(input: string): string {
@@ -320,21 +327,43 @@ Rules:
 - Do not include markdown or explanation.`
       : 'Extract all readable text from this document image. Return only the extracted text with line breaks preserved.';
 
-    const response = await generateContentWithRetry(ai, {
-      model: OCR_MODEL,
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: extractionPrompt },
-            { inlineData: { mimeType: file.type, data } },
-          ],
-        },
-      ],
-    });
+    let rawOutput = '';
+    let selectedModel = OCR_MODELS[0] || 'gemini-2.0-flash';
+    let lastGenError: unknown = null;
 
-    const rawOutput = response.text ?? '';
+    for (const candidateModel of OCR_MODELS) {
+      try {
+        const response = await generateContentWithRetry(ai, {
+          model: candidateModel,
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                { text: extractionPrompt },
+                { inlineData: { mimeType: file.type, data } },
+              ],
+            },
+          ],
+        });
+        rawOutput = response.text ?? '';
+        if (rawOutput.trim()) {
+          selectedModel = candidateModel;
+          lastGenError = null;
+          break;
+        }
+      } catch (err) {
+        lastGenError = err;
+        const msg = normalizeErrorMessage(err).toLowerCase();
+        if (msg.includes('404') || msg.includes('not_found') || msg.includes('not found') || msg.includes('no longer available')) {
+          console.warn(`[Gemini OCR] Model "${candidateModel}" unavailable or not found. Trying next candidate model...`);
+          continue;
+        }
+        break;
+      }
+    }
+
     if (!rawOutput.trim()) {
+      if (lastGenError) throw lastGenError;
       throw new Error('No OCR text was returned from the model.');
     }
 
@@ -343,7 +372,7 @@ Rules:
       if (!extractedText) {
         throw new Error('No OCR text was returned from the model.');
       }
-      return { extractedText, parsedFields: {}, model: OCR_MODEL };
+      return { extractedText, parsedFields: {}, model: selectedModel };
     }
 
     const json = parseJsonObject(rawOutput);
@@ -365,7 +394,7 @@ Rules:
     return {
       extractedText,
       parsedFields,
-      model: OCR_MODEL,
+      model: selectedModel,
     };
   } catch (error) {
     console.warn('[Gemini OCR unavailable/failed. Falling back to Tesseract.js]:', error);

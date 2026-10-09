@@ -16,18 +16,18 @@ import { useAppState } from '@/lib/frontend-data/use-app-state';
 import { getRolePageCopy, resolveRoleCopy, resolveSteps } from '@/lib/content/role-pages';
 import { buildOcrIntakeFormHtml } from '@/lib/documents/ocr-intake-forms';
 import {
-  buildDynamicOcrTemplateDefinition,
   getCategoryDefaultOcrTemplate,
   getDefaultOcrTemplate,
   getOcrTemplateByKey,
-  validateOcrTemplateMatch,
   type OcrTemplateDefinition,
 } from '@/lib/ocr/templates';
 import {
-  DEFAULT_OFFICIAL_TEMPLATES,
   OFFICIAL_DOCUMENT_CATEGORIES,
   OFFICIAL_WORD_TEMPLATES,
+  loadDocumentTypesCatalog,
   getCategoryForDocType,
+  getPurposesForDocumentType,
+  type DocumentTypeCatalogItem,
 } from '@/lib/documents/document-catalog-constants';
 import {
   renderDocumentTemplateHtml,
@@ -36,7 +36,11 @@ import {
 import { getSupabaseBrowserClient, getSupabaseSessionSafely } from '@/lib/supabase/client';
 import type { UIStatusTone } from '@/lib/types/ui';
 import type { DocumentTemplate, StandaloneOcrIssuance } from '@/lib/types/models';
-import { Eye, Printer, Sparkles, CheckCircle2 } from 'lucide-react';
+import {
+  CheckCircle2,
+  Printer,
+  FileText,
+} from 'lucide-react';
 
 function createPrintWindow() {
   return window.open('', '_blank', 'width=980,height=1200');
@@ -57,89 +61,330 @@ function writeAndPromptPrint(printWindow: Window, html: string) {
   }
 }
 
+function cleanOcrText(input: string): string {
+  return input
+    .replace(/^[\s:;,\-.()_[\]{}]+/, '')
+    .replace(/^\s*(?:x|check|checked)\s*[:\-]?\s*/i, '')
+    .trim();
+}
+
+function extractDraftFromOcr(
+  parsed: Record<string, unknown> = {},
+  extractedText: string = '',
+  previous: Record<string, string> = {}
+): Record<string, string> {
+  const p = (key: string): string => {
+    const val = parsed[key];
+    return typeof val === 'string' ? val.trim() : val != null ? String(val).trim() : '';
+  };
+
+  // Helper to extract regex pattern matches from extractedText as a fallback
+  const matchText = (patterns: RegExp[]): string => {
+    if (!extractedText) return '';
+    for (const pat of patterns) {
+      const match = extractedText.match(pat);
+      if (match && match[1]?.trim()) {
+        const cleaned = cleanOcrText(match[1]);
+        if (cleaned) return cleaned;
+      }
+    }
+    return '';
+  };
+
+  const textResidentName = matchText([
+    /(?:Resident(?:\s+Full)?\s*Name|Name\s+of\s+Owner|Owner(?:\s*Name)?|Respondent(?:\s*Name)?|Certify\s+that|Issued\s+upon\s+the\s+request\s+of|Applicant(?:\s*Name)?|Pangalan(?:\s+ng\s+May-ari)?)\s*[:\-]?\s*([^\n\r]+)/i,
+  ]);
+
+  const textAddress = matchText([
+    /(?:Residence\s+(?:Address|at)|Postal\s+Address|Address(?:\s+of\s+Owner)?|Owner\s+Address|Tirahan|Address)\s*[:\-]?\s*([^\n\r]+)/i,
+  ]);
+
+  const textBusinessName = matchText([
+    /(?:Name\s+of\s+Establishment|Business(?:\s+Name)?|Establishment(?:\s*Name)?|Pangalan\s+ng\s+Negosyo|Trade\s+Name)\s*[:\-]?\s*([^\n\r]+)/i,
+  ]);
+
+  const textPurpose = matchText([
+    /(?:Purpose|Reason|Layunin|For(?:\s+the\s+purpose\s+of)?|Assistance\s+Type|Complaint\s+For)\s*[:\-]?\s*([^\n\r]+)/i,
+  ]);
+
+  const textComplainant = matchText([
+    /(?:Complainant(?:\/s|\s*Name)?|Nagsusumbong|May-sumbong)\s*[:\-]?\s*([^\n\r]+)/i,
+  ]);
+
+  const textCaseNo = matchText([
+    /(?:Barangay\s+Case\s+(?:No|Number)|Case\s+(?:No|Number)|Kaso\s+Blg)\s*[:\-]?\s*([^\n\r]+)/i,
+  ]);
+
+  const textDateFiled = matchText([
+    /(?:Date\s+Filed|Petsa\s+ng\s+Pagsusumbong|Petsa\s+Naihain)\s*[:\-]?\s*([^\n\r]+)/i,
+  ]);
+
+  const textSiteLocation = matchText([
+    /(?:Site\s+Location|Project\s+Location|Kung\s+saan\s+gaganapin|Workplace\s+Address|Hauling\s+Address)\s*[:\-]?\s*([^\n\r]+)/i,
+  ]);
+
+  const textPermitType = matchText([
+    /(?:Permit\s+Type|Uri\s+ng\s+Permit|Permit)\s*[:\-]?\s*([^\n\r]+)/i,
+  ]);
+
+  const textIssuedDate = matchText([
+    /(?:Date\s+(?:to\s+issue|Issued)|Given\s+this|Issued\s+this|Petsa)\s*[:\-]?\s*([^\n\r]+)/i,
+  ]);
+
+  const residentName =
+    p('residentName') ||
+    p('resident_name') ||
+    p('ownerName') ||
+    p('owner_name') ||
+    p('applicantName') ||
+    p('applicant_name') ||
+    p('respondents') ||
+    p('respondent') ||
+    p('respondentName') ||
+    p('fullName') ||
+    p('full_name') ||
+    p('name') ||
+    p('requestedBy') ||
+    textResidentName ||
+    previous.residentName ||
+    '';
+
+  const residentAddress =
+    p('residentAddress') ||
+    p('resident_address') ||
+    p('residentAddressLine') ||
+    p('resident_address_line') ||
+    p('address') ||
+    p('postalAddress') ||
+    p('postal_address') ||
+    p('ownerAddress') ||
+    p('owner_address') ||
+    p('residenceAddress') ||
+    p('residence_address') ||
+    p('workplace_address') ||
+    textAddress ||
+    previous.residentAddress ||
+    previous.address ||
+    '';
+
+  const businessName =
+    p('businessName') ||
+    p('business_name') ||
+    p('establishmentName') ||
+    p('establishment_name') ||
+    p('tradeName') ||
+    p('trade_name') ||
+    p('companyName') ||
+    p('company_name') ||
+    textBusinessName ||
+    previous.businessName ||
+    '';
+
+  const complainantName =
+    p('complainantName') ||
+    p('complainant_name') ||
+    p('complainants') ||
+    p('complainant') ||
+    textComplainant ||
+    previous.complainantName ||
+    '';
+
+  const caseNumber =
+    p('caseNumber') ||
+    p('case_number') ||
+    p('barangayCaseNumber') ||
+    p('barangay_case_number') ||
+    p('caseNo') ||
+    p('case_no') ||
+    textCaseNo ||
+    previous.caseNumber ||
+    '';
+
+  const dateFiled =
+    p('dateFiled') ||
+    p('date_filed') ||
+    p('filedDate') ||
+    p('filed_date') ||
+    textDateFiled ||
+    previous.dateFiled ||
+    '';
+
+  const addWhere =
+    p('addWhere') ||
+    p('add_where') ||
+    p('location') ||
+    p('projectLocation') ||
+    p('project_location') ||
+    p('siteAddress') ||
+    p('site_address') ||
+    p('hauling_address') ||
+    p('workplace_address') ||
+    textSiteLocation ||
+    previous.addWhere ||
+    '';
+
+  const permitType =
+    p('permitType') ||
+    p('permit_type') ||
+    p('otherPermitText') ||
+    p('permitOther') ||
+    textPermitType ||
+    previous.permitType ||
+    '';
+
+  const stringParsed = Object.entries(parsed).reduce<Record<string, string>>((acc, [k, v]) => {
+    acc[k] = typeof v === 'string' ? v : String(v ?? '');
+    return acc;
+  }, {});
+
+  const purpose =
+    p('purpose') ||
+    p('reason') ||
+    p('reasonText') ||
+    p('otherReasonText') ||
+    p('complaintFor') ||
+    p('complaint_for') ||
+    resolvePurposeFromReasons(stringParsed) ||
+    textPurpose ||
+    previous.purpose ||
+    '';
+
+  const issuedDate =
+    p('issuedDate') ||
+    p('dateIssued') ||
+    p('date_issued') ||
+    p('issued_date') ||
+    textIssuedDate ||
+    previous.issuedDate ||
+    previous.dateIssued ||
+    new Date().toISOString().slice(0, 10);
+
+  return {
+    ...previous,
+    ...stringParsed,
+    residentName,
+    residentAddress,
+    address: residentAddress,
+    residentAddressLine: residentAddress,
+    postalAddress: residentAddress,
+    businessName,
+    establishmentName: businessName,
+    purpose,
+    issuedDate,
+    dateIssued: issuedDate,
+    complainantName,
+    caseNumber,
+    dateFiled,
+    addWhere,
+    permitType,
+  };
+}
+
 export default function StaffOcrIssuancePage() {
   const { state, locale } = useAppState();
+  const isFil = locale === 'fil';
   const pageCopy = getRolePageCopy('staff/ocr-issuance');
+
   const [issuance, setIssuance] = useState<StandaloneOcrIssuance | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [selectedTemplateKey, setSelectedTemplateKey] = useState('tpl_brgy_clearance');
-  const [fieldDraft, setFieldDraft] = useState<Record<string, string>>({});
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const [fieldDraft, setFieldDraft] = useState<Record<string, string>>({
+    issuedDate: todayIso,
+    dateIssued: todayIso,
+  });
   const [feedback, setFeedback] = useState<{ tone: UIStatusTone; text: string } | null>(null);
   const [isUploadingOcr, setIsUploadingOcr] = useState(false);
   const [hasScanCompleted, setHasScanCompleted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isIssuing, setIsIssuing] = useState(false);
 
-  // Exact same template list as Admin Document Templates (state.documentTemplates + DEFAULT_OFFICIAL_TEMPLATES)
+  // Admin Document Types Catalog (Synced with Admin Configuration)
+  const [docTypesCatalog, setDocTypesCatalog] = useState<DocumentTypeCatalogItem[]>([]);
+
+  useEffect(() => {
+    setDocTypesCatalog(loadDocumentTypesCatalog());
+
+    const handleCatalogUpdate = (e: Event) => {
+      const customEv = e as CustomEvent<DocumentTypeCatalogItem[]>;
+      if (customEv.detail && Array.isArray(customEv.detail)) {
+        setDocTypesCatalog(customEv.detail);
+      } else {
+        setDocTypesCatalog(loadDocumentTypesCatalog());
+      }
+    };
+
+    window.addEventListener('eserbisyo:document-types-catalog-updated', handleCatalogUpdate);
+    window.addEventListener('eserbisyo:document-types-updated', handleCatalogUpdate);
+    return () => {
+      window.removeEventListener('eserbisyo:document-types-catalog-updated', handleCatalogUpdate);
+      window.removeEventListener('eserbisyo:document-types-updated', handleCatalogUpdate);
+    };
+  }, []);
+
+  // Concisely map the 7 Primary Document Types to their official/custom templates
   const templatesList = useMemo(() => {
     const customTemplates = state.documentTemplates || [];
-    const merged: DocumentTemplate[] = [];
-    const seenIds = new Set<string>();
-    const seenNames = new Set<string>();
+    const catalog = docTypesCatalog.length > 0 ? docTypesCatalog : OFFICIAL_DOCUMENT_CATEGORIES.map((c) => ({
+      id: c.id,
+      name: c.labelEn,
+      categoryId: c.id,
+      categoryLabel: c.labelEn,
+      isActive: true,
+    }));
 
-    const normalizeName = (name: string) =>
-      name.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
-
-    // 1. Process custom / saved admin templates first
-    customTemplates.forEach((tpl) => {
-      const normId = (tpl.id || '').trim().toLowerCase();
-      const normName = normalizeName(tpl.name || '');
-      if (normId && !seenIds.has(normId) && !seenNames.has(normName)) {
-        seenIds.add(normId);
-        if (normName) seenNames.add(normName);
-
-        const officialWordMatch = OFFICIAL_WORD_TEMPLATES.find(
-          (ow) => ow.id === tpl.id || normalizeName(ow.name) === normName
-        );
-
-        merged.push({
-          ...tpl,
-          dynamicFields:
-            tpl.dynamicFields && tpl.dynamicFields.length > 0
-              ? tpl.dynamicFields
-              : officialWordMatch
-              ? officialWordMatch.dynamicFields
-              : ['resident_name', 'resident_address', 'purpose', 'date_issued', 'punong_barangay'],
-          documentType: tpl.documentType || (officialWordMatch ? officialWordMatch.documentType : 'barangay_certification'),
-          sourceType: tpl.sourceType || (officialWordMatch ? 'official' : 'custom'),
-          originalFileName: tpl.originalFileName || (officialWordMatch ? officialWordMatch.fileName : undefined),
+    return catalog
+      .filter((docType) => docType.isActive !== false)
+      .map((docType) => {
+        // 1. Check if Admin saved a custom template specifically for this document type
+        const customMatch = customTemplates.find((tpl) => {
+          const cat = getCategoryForDocType(tpl.documentType, tpl.name);
+          return (
+            cat === docType.id ||
+            cat === docType.categoryId ||
+            tpl.id === docType.id ||
+            tpl.documentType === docType.id
+          );
         });
-      }
-    });
 
-    // 2. Add default official templates that haven't been customized yet
-    DEFAULT_OFFICIAL_TEMPLATES.forEach((defTpl) => {
-      const normId = (defTpl.id || '').trim().toLowerCase();
-      const normName = normalizeName(defTpl.name || '');
+        if (customMatch) {
+          const officialWordMatch = OFFICIAL_WORD_TEMPLATES.find(
+            (ow) => ow.id === customMatch.id || ow.categoryId === docType.categoryId || ow.documentType === docType.id
+          );
+          return {
+            ...customMatch,
+            name: docType.name,
+            dynamicFields:
+              customMatch.dynamicFields && customMatch.dynamicFields.length > 0
+                ? customMatch.dynamicFields
+                : officialWordMatch?.dynamicFields || ['resident_name', 'resident_address', 'purpose', 'date_issued', 'punong_barangay'],
+            documentType: docType.id,
+            sourceType: customMatch.sourceType || 'custom',
+          };
+        }
 
-      if (!seenIds.has(normId) && !seenNames.has(normName)) {
-        seenIds.add(normId);
-        if (normName) seenNames.add(normName);
-
+        // 2. Otherwise use the primary official Word template definition
         const officialWordMatch = OFFICIAL_WORD_TEMPLATES.find(
-          (ow) => ow.id === defTpl.id || normalizeName(ow.name) === normName
+          (ow) => ow.categoryId === docType.categoryId || ow.documentType === docType.id
         );
 
-        merged.push({
-          id: defTpl.id,
-          name: defTpl.name,
+        return {
+          id: officialWordMatch ? officialWordMatch.id : docType.id,
+          name: docType.name,
           body: '',
           dynamicFields: officialWordMatch
             ? officialWordMatch.dynamicFields
             : ['resident_name', 'resident_address', 'purpose', 'date_issued', 'punong_barangay'],
           updatedAt: new Date().toISOString(),
           updatedBy: 'System (Official)',
-          documentType: officialWordMatch ? officialWordMatch.documentType : defTpl.categoryId,
-          sourceType: officialWordMatch ? 'official' : 'custom',
-          originalFileName: officialWordMatch ? officialWordMatch.fileName : undefined,
+          documentType: docType.id,
+          sourceType: 'official',
+          originalFileName: officialWordMatch?.fileName,
           isActive: true,
-        });
-      }
-    });
-
-    return merged;
-  }, [state.documentTemplates]);
+        };
+      });
+  }, [docTypesCatalog, state.documentTemplates]);
 
   // Sync selectedTemplateKey to first available if initial value not found
   useEffect(() => {
@@ -154,6 +399,42 @@ export default function StaffOcrIssuancePage() {
     return templatesList.find((t) => t.id === key) ?? templatesList[0] ?? null;
   }, [issuance?.templateKey, selectedTemplateKey, templatesList]);
 
+  // Active Document Type details from Admin Catalog
+  const activeDocTypeItem = useMemo(() => {
+    if (!activeSelectedTemplate) return null;
+    const catId = getCategoryForDocType(activeSelectedTemplate.documentType, activeSelectedTemplate.name);
+    return (
+      docTypesCatalog.find((c) => c.id === catId || c.categoryId === catId || c.name.toLowerCase() === activeSelectedTemplate.name.toLowerCase()) ||
+      docTypesCatalog.find((c) => c.id === activeSelectedTemplate.documentType) ||
+      null
+    );
+  }, [activeSelectedTemplate, docTypesCatalog]);
+
+  // Purposes configured in Admin for this Document Type
+  const availablePurposes = useMemo(() => {
+    if (activeDocTypeItem?.purposes && activeDocTypeItem.purposes.length > 0) {
+      return activeDocTypeItem.purposes;
+    }
+    const catId = activeDocTypeItem?.id || getCategoryForDocType(activeSelectedTemplate?.documentType, activeSelectedTemplate?.name);
+    return getPurposesForDocumentType(activeSelectedTemplate?.name, catId);
+  }, [activeDocTypeItem, activeSelectedTemplate]);
+
+  const otherPurposeOptionValue = useMemo(() => {
+    return availablePurposes.find((p) => p.toLowerCase().includes('other') || p.toLowerCase().includes('specify')) || 'Other Purpose';
+  }, [availablePurposes]);
+
+  const isOtherPurposeSelected = useMemo(() => {
+    const current = (fieldDraft.purpose || '').toLowerCase();
+    const otherOption = availablePurposes.find((p) => p.toLowerCase().includes('other') || p.toLowerCase().includes('specify'));
+    return (
+      (Boolean(otherOption) && fieldDraft.purpose === otherOption) ||
+      current.includes('other') ||
+      current.includes('specify') ||
+      Boolean(fieldDraft.otherPurposeDetails) ||
+      (!availablePurposes.includes(fieldDraft.purpose ?? '') && Boolean(fieldDraft.purpose))
+    );
+  }, [fieldDraft.purpose, fieldDraft.otherPurposeDetails, availablePurposes]);
+
   // Active OCR Template Definition for extraction validation
   const activeOcrDefinition: OcrTemplateDefinition = useMemo(() => {
     if (!activeSelectedTemplate) return getDefaultOcrTemplate();
@@ -163,9 +444,44 @@ export default function StaffOcrIssuancePage() {
     return getCategoryDefaultOcrTemplate(cat);
   }, [activeSelectedTemplate]);
 
+  // Determine which specialized field inputs to show based on Document Type / Template
+  const docCategoryKey = useMemo(() => {
+    return getCategoryForDocType(activeSelectedTemplate?.documentType, activeSelectedTemplate?.name);
+  }, [activeSelectedTemplate]);
+
+  const isLuponDoc = useMemo(() => {
+    return (
+      docCategoryKey === 'lupon_tagapamayapa' ||
+      (activeSelectedTemplate?.name || '').toLowerCase().includes('lupon') ||
+      (activeSelectedTemplate?.name || '').toLowerCase().includes('patawag') ||
+      (activeSelectedTemplate?.name || '').toLowerCase().includes('summons') ||
+      (activeSelectedTemplate?.name || '').toLowerCase().includes('cfa')
+    );
+  }, [docCategoryKey, activeSelectedTemplate]);
+
+  const isBusinessDoc = useMemo(() => {
+    return (
+      docCategoryKey === 'business_clearance' ||
+      (activeSelectedTemplate?.name || '').toLowerCase().includes('business')
+    );
+  }, [docCategoryKey, activeSelectedTemplate]);
+
+  const isSiteLocationDoc = useMemo(() => {
+    return (
+      docCategoryKey === 'construction_clearances' ||
+      docCategoryKey === 'transient_employees' ||
+      docCategoryKey === 'delivery_hauling_clearances' ||
+      docCategoryKey === 'special_commercial_permits' ||
+      (activeSelectedTemplate?.name || '').toLowerCase().includes('construction') ||
+      (activeSelectedTemplate?.name || '').toLowerCase().includes('transient') ||
+      (activeSelectedTemplate?.name || '').toLowerCase().includes('permit') ||
+      (activeSelectedTemplate?.name || '').toLowerCase().includes('hauling')
+    );
+  }, [docCategoryKey, activeSelectedTemplate]);
+
   // Live Template Preview HTML (100% Identical to Admin Document Templates)
   const livePreviewHtml = useMemo(() => {
-    const purpose = fieldDraft.purpose || resolvePurposeFromReasons(fieldDraft);
+    const purpose = fieldDraft.otherPurposeDetails || fieldDraft.purpose || resolvePurposeFromReasons(fieldDraft);
     const residentName = fieldDraft.residentName || 'Juan Dela Cruz';
     const residentAddress =
       fieldDraft.residentAddress ||
@@ -190,29 +506,52 @@ export default function StaffOcrIssuancePage() {
   const missingRequiredFields = useMemo(() => {
     const missing: Array<{ key: string; label: string }> = [];
     if (!(fieldDraft.residentName ?? '').trim()) {
-      missing.push({ key: 'residentName', label: 'Resident Full Name' });
+      missing.push({ key: 'residentName', label: isLuponDoc ? 'Respondent / Resident Name' : 'Resident Full Name' });
     }
-    if (!(fieldDraft.residentAddress ?? fieldDraft.address ?? fieldDraft.residentAddressLine ?? '').trim()) {
+    if (!isLuponDoc && !(fieldDraft.residentAddress ?? fieldDraft.address ?? fieldDraft.residentAddressLine ?? '').trim()) {
       missing.push({ key: 'residentAddress', label: 'Residence / Postal Address' });
     }
-    if (!(fieldDraft.issuedDate ?? fieldDraft.dateIssued ?? '').trim()) {
-      missing.push({ key: 'issuedDate', label: 'Date Issued' });
+    if (isLuponDoc) {
+      if (!(fieldDraft.complainantName ?? '').trim()) {
+        missing.push({ key: 'complainantName', label: 'Complainant Full Name' });
+      }
+    }
+    if (isBusinessDoc) {
+      if (!(fieldDraft.businessName ?? '').trim()) {
+        missing.push({ key: 'businessName', label: 'Business / Establishment Name' });
+      }
     }
     return missing;
-  }, [fieldDraft]);
+  }, [fieldDraft, isLuponDoc, isBusinessDoc]);
 
   const ocrAccuracyPercent = useMemo(() => {
-    const nameFilled = Boolean((fieldDraft.residentName ?? '').trim());
-    const addressFilled = Boolean((fieldDraft.residentAddress ?? fieldDraft.address ?? '').trim());
-    const dateFilled = Boolean((fieldDraft.issuedDate ?? fieldDraft.dateIssued ?? '').trim());
-    const filledCount = [nameFilled, addressFilled, dateFilled].filter(Boolean).length;
-    return filledCount === 3 ? 98 : filledCount === 2 ? 92 : 86;
-  }, [fieldDraft]);
+    if (!hasScanCompleted && !issuance?.extractedText) return 0;
+    const nameFilled = Boolean((fieldDraft.residentName ?? fieldDraft.ownerName ?? '').trim());
+    const addressFilled = Boolean((fieldDraft.residentAddress ?? fieldDraft.address ?? fieldDraft.postalAddress ?? '').trim());
+    const purposeFilled = Boolean((fieldDraft.otherPurposeDetails || fieldDraft.purpose || '').trim());
+    
+    const checks: boolean[] = [nameFilled, addressFilled, purposeFilled];
+    if (isBusinessDoc) {
+      checks.push(Boolean((fieldDraft.businessName ?? fieldDraft.establishmentName ?? '').trim()));
+    }
+    if (isLuponDoc) {
+      checks.push(Boolean((fieldDraft.complainantName ?? fieldDraft.complainants ?? '').trim()));
+    }
+    if (isSiteLocationDoc) {
+      checks.push(Boolean((fieldDraft.addWhere ?? '').trim()));
+    }
+    const filledCount = checks.filter(Boolean).length;
+    const totalCount = checks.length;
+    return Math.round((filledCount / totalCount) * 100);
+  }, [fieldDraft, isBusinessDoc, isLuponDoc, isSiteLocationDoc, hasScanCompleted, issuance?.extractedText]);
 
   const handleStartNewIssuance = () => {
     setIssuance(null);
     setSelectedFile(null);
-    setFieldDraft({});
+    setFieldDraft({
+      issuedDate: new Date().toISOString().slice(0, 10),
+      dateIssued: new Date().toISOString().slice(0, 10),
+    });
     setFeedback({ tone: 'info', text: 'Started a new issuance. Select a document template and upload a form to run OCR.' });
     setHasScanCompleted(false);
     setFileInputKey((prev) => prev + 1);
@@ -248,13 +587,27 @@ export default function StaffOcrIssuancePage() {
     setSelectedTemplateKey(newKey);
     setFeedback(null);
     setHasScanCompleted(false);
+
+    // If new template has specific default purposes, preset initial purpose if empty
+    const matched = templatesList.find((t) => t.id === newKey);
+    if (matched) {
+      const cat = getCategoryForDocType(matched.documentType, matched.name);
+      const purposes = getPurposesForDocumentType(matched.name, cat);
+      if (purposes.length > 0 && !fieldDraft.purpose) {
+        setFieldDraft((prev) => ({
+          ...prev,
+          purpose: purposes[0],
+        }));
+      }
+    }
+
     if (issuance && issuance.status === 'draft' && issuance.templateKey !== newKey) {
       try {
         const updated = await patchStandaloneOcrIssuance(issuance.id, {
           templateKey: newKey,
         });
         setIssuance(updated);
-        setFieldDraft(updated.parsedFields ?? {});
+        setFieldDraft((prev) => extractDraftFromOcr(updated.parsedFields ?? {}, updated.extractedText ?? '', prev));
       } catch (error) {
         console.error('Unable to patch templateKey on draft issuance:', error);
       }
@@ -262,7 +615,11 @@ export default function StaffOcrIssuancePage() {
   };
 
   const handlePrintIntakeForm = () => {
-    const html = buildOcrIntakeFormHtml(activeOcrDefinition.key, activeOcrDefinition);
+    const html = buildOcrIntakeFormHtml(activeOcrDefinition.key, {
+      ...activeOcrDefinition,
+      name: activeSelectedTemplate?.name || activeOcrDefinition.name,
+      purposes: availablePurposes,
+    });
     const printWindow = createPrintWindow();
     if (!printWindow) {
       setFeedback({ tone: 'danger', text: 'Popup blocked. Please allow popups for this site to print.' });
@@ -289,58 +646,31 @@ export default function StaffOcrIssuancePage() {
       if (!activeIssuance) {
         activeIssuance = await createStandaloneOcrIssuance({ templateKey: selectedTemplateKey });
         setIssuance(activeIssuance);
-        setFieldDraft(activeIssuance.parsedFields ?? {});
+        setFieldDraft(extractDraftFromOcr(activeIssuance.parsedFields ?? {}, activeIssuance.extractedText ?? '', fieldDraft));
       } else if (activeIssuance.templateKey !== selectedTemplateKey) {
         activeIssuance = await patchStandaloneOcrIssuance(activeIssuance.id, { templateKey: selectedTemplateKey });
         setIssuance(activeIssuance);
-        setFieldDraft(activeIssuance.parsedFields ?? {});
+        setFieldDraft(extractDraftFromOcr(activeIssuance.parsedFields ?? {}, activeIssuance.extractedText ?? '', fieldDraft));
       }
 
       const updated = await runStandaloneOcrIssuanceScan(activeIssuance.id, { file: selectedFile });
       setIssuance(updated);
+      setHasScanCompleted(true);
 
-      const extractedPurpose = resolvePurposeFromReasons(updated.parsedFields ?? {});
-      const normalizedFields = {
-        ...(updated.parsedFields ?? {}),
-        residentName: (updated.parsedFields?.residentName ?? '').trim(),
-        residentAddress:
-          (updated.parsedFields?.residentAddress ??
-            updated.parsedFields?.address ??
-            updated.parsedFields?.residentAddressLine ??
-            updated.parsedFields?.residenceAddress ??
-            '').trim(),
-        address:
-          (updated.parsedFields?.address ??
-            updated.parsedFields?.residentAddress ??
-            updated.parsedFields?.residentAddressLine ??
-            '').trim(),
-        purpose: (updated.parsedFields?.purpose ?? '').trim() || extractedPurpose,
-        issuedDate:
-          (updated.parsedFields?.issuedDate ??
-            updated.parsedFields?.dateIssued ??
-            new Date().toISOString().slice(0, 10)).trim(),
-      };
+      const mapped = extractDraftFromOcr(
+        updated.parsedFields ?? {},
+        updated.extractedText ?? '',
+        fieldDraft
+      );
+      setFieldDraft(mapped);
 
-      setFieldDraft(normalizedFields);
-      setSelectedFile(null);
-
-      const category = getCategoryForDocType(activeSelectedTemplate?.documentType, activeSelectedTemplate?.name);
-      const validation = validateOcrTemplateMatch(category, updated.extractedText ?? '', locale);
-
-      if (!validation.isMatch && validation.errorMessage) {
-        setFeedback({ tone: 'danger', text: validation.errorMessage });
-        setHasScanCompleted(false);
-      } else if (updated.errorMessage) {
-        setFeedback({ tone: 'danger', text: updated.errorMessage });
-        setHasScanCompleted(false);
-      } else {
-        setHasScanCompleted(true);
-      }
+      // Note: We don't set a duplicate success banner here because the Quality Match banner will render clearly.
+      setFeedback(null);
     } catch (error) {
-      console.error('OCR Error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unable to run OCR scan.';
-      setFeedback({ tone: 'danger', text: errorMessage });
-      setHasScanCompleted(false);
+      setFeedback({
+        tone: 'danger',
+        text: error instanceof Error ? error.message : 'Failed to scan intake form via OCR.',
+      });
     } finally {
       setIsUploadingOcr(false);
     }
@@ -386,10 +716,7 @@ export default function StaffOcrIssuancePage() {
           throw new Error('Popup blocked. Please allow popups for this site to print.');
         }
         await printGeneratedDocument(issuance.generatedDocumentId, printWindow);
-        setFeedback({
-          tone: 'success',
-          text: `${activeSelectedTemplate?.name || 'Document'} already issued. Reprinted successfully.`,
-        });
+        setFeedback(null);
       } catch (error) {
         setFeedback({ tone: 'danger', text: error instanceof Error ? error.message : 'Unable to reprint document.' });
       } finally {
@@ -457,9 +784,15 @@ export default function StaffOcrIssuancePage() {
         {/* Top Control Card */}
         <SectionCard title="Issuance via OCR">
           <div className="grid gap-4">
+            {/* Clean Template Selector for the 7 Primary Document Types */}
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="grid gap-1 text-sm text-(--portal-ink-800)">
-                <span className="font-medium">Document Template</span>
+                <span className="font-medium flex items-center justify-between">
+                  <span>Document Template</span>
+                  <span className="text-xs font-normal text-slate-500">
+                    {templatesList.length} Official Document Types
+                  </span>
+                </span>
                 <Select
                   value={selectedTemplateKey}
                   onChange={(event) => void handleTemplateChange(event.target.value)}
@@ -481,11 +814,12 @@ export default function StaffOcrIssuancePage() {
                   className="w-full sm:w-auto"
                 >
                   <Printer className="mr-1.5 h-4 w-4" />
-                  Print Blank OCR Form
+                  Print Blank OCR Form ({activeSelectedTemplate?.name || 'Intake'})
                 </Button>
               </div>
             </div>
 
+            {/* Upload Box */}
             <div className="grid gap-3 rounded-(--portal-radius-md) border border-(--portal-border-soft) bg-(--portal-bg-card) p-4">
               <label className="grid gap-1.5 text-sm text-(--portal-ink-800)">
                 <span className="font-semibold">Upload Returned Intake Form (Image / Scan)</span>
@@ -504,7 +838,7 @@ export default function StaffOcrIssuancePage() {
                   onClick={() => void handleRunOcr()}
                   disabled={!selectedFile || isUploadingOcr}
                 >
-                  <Sparkles className="mr-1.5 h-4 w-4" />
+                  <FileText className="mr-1.5 h-4 w-4" />
                   {isUploadingOcr ? 'Running OCR Extraction...' : 'Run OCR Extraction'}
                 </Button>
 
@@ -529,31 +863,32 @@ export default function StaffOcrIssuancePage() {
                 ) : null}
               </div>
               <p className="text-xs text-(--portal-ink-600)">
-                Upload the scanned form, then click Run OCR Extraction to auto-populate the official Document Template.
+                Upload the scanned form, then click Run OCR Extraction to auto-populate the official Document Template connected to Admin.
               </p>
             </div>
 
+            {/* Live Loading Animation while scanning */}
             {isUploadingOcr ? (
-              <div className="grid gap-3 rounded-(--portal-radius-md) border-2 border-[#2f9a65]/40 bg-[linear-gradient(135deg,#f2faf5_0%,#e1f4e8_100%)] p-4 text-xs shadow-sm">
+              <div className="grid gap-3 rounded-(--portal-radius-md) border border-[#1b7a50]/40 bg-[#f4fbf7] p-4 text-xs shadow-xs">
                 <div className="flex items-center gap-3.5">
-                  <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1b7a50]/15 text-[#1b7a50]">
-                    <svg className="h-6 w-6 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#1b7a50]/15 text-[#1b7a50]">
+                    <svg className="h-7 w-7 animate-spin text-[#1b7a50]" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
                     <span className="absolute inset-0 animate-ping rounded-full bg-[#1b7a50]/20" aria-hidden="true" />
                   </div>
-                  <div className="grid gap-0.5">
+                  <div className="grid gap-1">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-bold text-[#114b30]">
                         OCR Scanning & Field Mapping in Progress
                       </span>
-                      <span className="inline-flex items-center rounded-full bg-[#1b7a50] px-2 py-0.5 text-[10px] font-semibold text-white animate-pulse">
-                        Processing...
+                      <span className="inline-flex items-center rounded-full bg-[#1b7a50] px-2.5 py-0.5 text-[10px] font-semibold text-white animate-pulse">
+                        Analyzing Document...
                       </span>
                     </div>
                     <p className="text-xs text-[#1e6141]">
-                      Reading text and mapping extracted details directly to the {activeSelectedTemplate?.name || 'Document'} template.
+                      Binabasa ang text at sinusuri ang match threshold para sa {activeSelectedTemplate?.name || 'Document'}.
                     </p>
                   </div>
                 </div>
@@ -563,20 +898,52 @@ export default function StaffOcrIssuancePage() {
               </div>
             ) : null}
 
-            {!isUploadingOcr && (hasScanCompleted || Boolean(issuance?.extractedText)) && feedback?.tone !== 'danger' ? (
-              <div className="grid gap-2 rounded-(--portal-radius-md) border border-[#bce3cd] bg-[linear-gradient(180deg,#f4fbf7_0%,#eaf6ef_100%)] p-3.5 text-xs">
-                <div className="flex items-center justify-between gap-3 text-xs font-semibold text-[#1b7a50]">
-                  <span className="flex items-center gap-1.5">
-                    <CheckCircle2 className="h-4 w-4 text-[#1b7a50]" />
-                    OCR Extraction Completed
-                  </span>
-                  <span className="rounded-full bg-[#1b7a50]/10 px-2.5 py-0.5 text-xs font-bold text-[#1b7a50]">
-                    {ocrAccuracyPercent}% Quality Match
-                  </span>
+            {/* OCR Quality Match & Accuracy Threshold Card (When Scan Completed or Extracted Text Loaded) */}
+            {!isUploadingOcr && (hasScanCompleted || Boolean(issuance?.extractedText)) ? (
+              <div className="grid gap-3 rounded-(--portal-radius-md) border border-[#bce3cd] bg-[linear-gradient(180deg,#f4fbf7_0%,#eaf6ef_100%)] p-4 text-xs shadow-xs">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1b7a50]/15 text-[#1b7a50]">
+                      <svg className="h-6 w-6 text-[#1b7a50] animate-[spin_8s_linear_infinite]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <circle cx="12" cy="12" r="9" strokeWidth="2.5" strokeDasharray="6 4" />
+                      </svg>
+                      <CheckCircle2 className="absolute h-5 w-5 text-[#1b7a50]" />
+                    </div>
+                    <div className="grid gap-0.5">
+                      <span className="text-sm font-bold text-[#114b30]">
+                        OCR Extraction Complete
+                      </span>
+                      <span className="text-xs text-[#1e6141]">
+                        Template: <strong className="font-semibold">{activeSelectedTemplate?.name}</strong>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="flex flex-col items-end">
+                      <span className="text-[10px] uppercase font-semibold text-[#1e6141] tracking-wider">
+                        Accuracy Threshold
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-[#1b7a50] px-3.5 py-1 text-xs font-bold text-white shadow-xs">
+                        {ocrAccuracyPercent}% Quality Match
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <p className="mt-0.5 text-xs font-medium text-(--portal-ink-700)">
-                  Extracted details mapped to document template placeholders. Review the form or live preview before issuing.
-                </p>
+
+                {/* Accuracy progress meter bar */}
+                <div className="grid gap-1">
+                  <div className="flex justify-between text-[11px] text-[#1e6141]">
+                    <span>Field Detection & Mapping Completeness</span>
+                    <span className="font-semibold">{ocrAccuracyPercent}% Threshold Met</span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-[#c3e6d2]">
+                    <div
+                      className="h-full rounded-full bg-[#1b7a50] transition-all duration-500 ease-out"
+                      style={{ width: `${Math.max(10, ocrAccuracyPercent)}%` }}
+                    />
+                  </div>
+                </div>
               </div>
             ) : null}
 
@@ -595,42 +962,48 @@ export default function StaffOcrIssuancePage() {
           </div>
         </SectionCard>
 
-        {/* 2-Column Split: Extracted Form Fields & Live Document Template Preview */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-          {/* Left Column: Form Details (5 Columns) */}
-          <div className="lg:col-span-5">
-            <SectionCard title="Extracted Document Data">
-              <div className="grid gap-4">
-                <div className="flex items-center justify-between text-xs text-(--portal-ink-600)">
-                  <span>
-                    Status:{' '}
-                    <strong className="text-(--portal-ink-800) uppercase font-semibold">
-                      {issuance?.status || 'Draft'}
-                    </strong>
+        {/* Extracted Form Fields & Document Issuance Card */}
+        <SectionCard title="Extracted Document Data">
+          <div className="grid gap-4">
+            <div className="flex items-center justify-between text-xs text-(--portal-ink-600)">
+              <div className="flex items-center gap-2">
+                <span>
+                  Status:{' '}
+                  <strong className="text-(--portal-ink-800) uppercase font-semibold">
+                    {issuance?.status || 'Draft'}
+                  </strong>
+                </span>
+                {(hasScanCompleted || Boolean(issuance?.extractedText)) ? (
+                  <span className="inline-flex items-center rounded-full bg-[#eaf6ef] border border-[#bce3cd] px-2.5 py-0.5 text-[11px] font-bold text-[#1b7a50]">
+                    {ocrAccuracyPercent}% Accuracy
                   </span>
-                  {issuance ? (
-                    <span className="font-mono text-[11px] text-(--portal-ink-500)">
-                      ID: {issuance.id.slice(0, 8)}...
-                    </span>
-                  ) : null}
-                </div>
+                ) : null}
+              </div>
+              {issuance ? (
+                <span className="font-mono text-[11px] text-(--portal-ink-500)">
+                  ID: {issuance.id.slice(0, 8)}...
+                </span>
+              ) : null}
+            </div>
 
-                {/* Primary Document Fields */}
-                <div className="grid gap-3 border-t border-(--portal-border-soft) pt-3">
-                  <label className="grid gap-1 text-xs font-semibold text-(--portal-ink-800)">
-                    <span>Resident Full Name *</span>
-                    <Input
-                      placeholder="e.g. Juan Dela Cruz"
-                      value={fieldDraft.residentName ?? ''}
-                      onChange={(e) =>
-                        setFieldDraft((prev) => ({
-                          ...prev,
-                          residentName: e.target.value,
-                        }))
-                      }
-                    />
-                  </label>
+            {/* Primary Document Fields */}
+            <div className="grid gap-4 border-t border-(--portal-border-soft) pt-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <label className="grid gap-1 text-xs font-semibold text-(--portal-ink-800)">
+                  <span>{isLuponDoc ? 'Respondent / Resident Name *' : 'Resident Full Name *'}</span>
+                  <Input
+                    placeholder="e.g. Juan Dela Cruz"
+                    value={fieldDraft.residentName ?? ''}
+                    onChange={(e) =>
+                      setFieldDraft((prev) => ({
+                        ...prev,
+                        residentName: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
 
+                {!isLuponDoc && (
                   <label className="grid gap-1 text-xs font-semibold text-(--portal-ink-800)">
                     <span>Residence / Postal Address *</span>
                     <Input
@@ -646,85 +1019,181 @@ export default function StaffOcrIssuancePage() {
                       }
                     />
                   </label>
+                )}
+              </div>
 
-                  <label className="grid gap-1 text-xs font-semibold text-(--portal-ink-800)">
-                    <span>Date Issued *</span>
+              {/* Document Type Purpose Dropdown (Official Purposes from Admin) */}
+              <div className="grid gap-1.5 text-xs font-semibold text-(--portal-ink-800)">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    <span>{isFil ? 'Layunin ng Dokumento (Document Purpose) *' : 'Document Purpose / Request Reason *'}</span>
+                  </span>
+                  {availablePurposes.length > 0 && (
+                    <span className="text-[11px] font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                      {availablePurposes.length} {isFil ? 'opsyon' : 'options'}
+                    </span>
+                  )}
+                </div>
+
+                <Select
+                  value={
+                    availablePurposes.includes(fieldDraft.purpose ?? '')
+                      ? fieldDraft.purpose
+                      : isOtherPurposeSelected
+                        ? otherPurposeOptionValue
+                        : availablePurposes[0] ?? ''
+                  }
+                  onChange={(e) => {
+                    const selected = e.target.value;
+                    setFieldDraft((prev) => ({
+                      ...prev,
+                      purpose: selected,
+                    }));
+                  }}
+                  className="bg-white font-normal text-xs"
+                >
+                  {availablePurposes.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </Select>
+
+                {/* If 'Other Purpose' is selected or specified in OCR, show the exact input box */}
+                {isOtherPurposeSelected && (
+                  <div className="mt-1">
+                    <span className="text-[11px] text-slate-600 font-normal">
+                      {isFil ? 'Pakitukoy ang partikular na layunin (Other Purpose Specification) *:' : 'Please specify other purpose details *:'}
+                    </span>
                     <Input
-                      type="date"
-                      value={fieldDraft.issuedDate ?? fieldDraft.dateIssued ?? ''}
+                      placeholder={isFil ? 'Hal. Para sa partikular na transaksyon / requirement...' : 'e.g. For specific transaction or requirement...'}
+                      value={fieldDraft.otherPurposeDetails ?? (availablePurposes.includes(fieldDraft.purpose ?? '') ? '' : fieldDraft.purpose ?? '')}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFieldDraft((prev) => ({
+                          ...prev,
+                          otherPurposeDetails: val,
+                          purpose: val.trim() ? val : (otherPurposeOptionValue || 'Other Purpose'),
+                        }));
+                      }}
+                      className="mt-1 bg-white font-normal text-xs"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Lupon Specific Fields */}
+              {isLuponDoc && (
+                <>
+                  <label className="grid gap-1 text-xs font-semibold text-(--portal-ink-800)">
+                    <span>Complainant Full Name (Lupon) *</span>
+                    <Input
+                      placeholder="e.g. Pedro Santos"
+                      value={fieldDraft.complainantName ?? ''}
                       onChange={(e) =>
                         setFieldDraft((prev) => ({
                           ...prev,
-                          issuedDate: e.target.value,
-                          dateIssued: e.target.value,
+                          complainantName: e.target.value,
                         }))
                       }
                     />
                   </label>
-                </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <label className="grid gap-1 text-xs font-semibold text-(--portal-ink-800)">
+                      <span>Barangay Case No.</span>
+                      <Input
+                        placeholder="e.g. KP-2026-001"
+                        value={fieldDraft.caseNumber ?? ''}
+                        onChange={(e) =>
+                          setFieldDraft((prev) => ({
+                            ...prev,
+                            caseNumber: e.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+                    <label className="grid gap-1 text-xs font-semibold text-(--portal-ink-800)">
+                      <span>Date Filed</span>
+                      <Input
+                        type="date"
+                        value={fieldDraft.dateFiled ?? ''}
+                        onChange={(e) =>
+                          setFieldDraft((prev) => ({
+                            ...prev,
+                            dateFiled: e.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+                  </div>
+                </>
+              )}
 
-                {missingRequiredFields.length ? (
-                  <p className="text-xs font-medium text-[#a33b32]">
-                    Missing required fields: {missingRequiredFields.map((field) => field.label).join(', ')}
-                  </p>
-                ) : null}
-
-                {/* Issuance Action Bar */}
-                <div className="flex flex-col gap-2 border-t border-(--portal-border-soft) pt-4">
-                  <Button
-                    type="button"
-                    variant="resident"
-                    onClick={() => void handleIssueAndPrint()}
-                    disabled={
-                      isIssuing ||
-                      (issuance?.status !== 'issued' && missingRequiredFields.length > 0) ||
-                      (issuance?.status === 'issued' && !issuance?.generatedDocumentId)
+              {/* Business Clearance Specific Fields */}
+              {isBusinessDoc && (
+                <label className="grid gap-1 text-xs font-semibold text-(--portal-ink-800)">
+                  <span>Business / Establishment Name *</span>
+                  <Input
+                    placeholder="e.g. Progreso Sari-Sari Store"
+                    value={fieldDraft.businessName ?? ''}
+                    onChange={(e) =>
+                      setFieldDraft((prev) => ({
+                        ...prev,
+                        businessName: e.target.value,
+                      }))
                     }
-                    className="w-full py-2.5 text-sm font-semibold shadow-sm"
-                  >
-                    <Printer className="mr-1.5 h-4 w-4" />
-                    {isIssuing
-                      ? 'Preparing print...'
-                      : issuance?.status === 'issued'
-                        ? `Reprint ${activeSelectedTemplate?.name || 'Document'}`
-                        : `Issue and Print ${activeSelectedTemplate?.name || 'Document'}`}
-                  </Button>
-                </div>
-              </div>
-            </SectionCard>
-          </div>
-
-          {/* Right Column: Live Document Template Preview (7 Columns) */}
-          <div className="lg:col-span-7">
-            <SectionCard title="Document Template Live Preview">
-              <div className="grid gap-3">
-                <div className="flex items-center justify-between text-xs text-(--portal-ink-600)">
-                  <span>
-                    Template:{' '}
-                    <strong className="text-(--portal-ink-800)">
-                      {activeSelectedTemplate?.name || 'Barangay Document'}
-                    </strong>
-                  </span>
-                  <span className="text-[11px] text-(--portal-ink-500)">
-                    Updates in real-time as you type
-                  </span>
-                </div>
-
-                {/* Document Certificate Paper Container (Exact 1:1 format from Admin Document Templates) */}
-                <div className="relative overflow-hidden rounded-lg border border-slate-300 bg-white p-4 shadow-md">
-                  <div
-                    className="prose prose-slate max-w-none text-black"
-                    style={{
-                      fontFamily: '"Times New Roman", Georgia, serif',
-                      lineHeight: '1.6',
-                    }}
-                    dangerouslySetInnerHTML={{ __html: livePreviewHtml }}
                   />
-                </div>
-              </div>
-            </SectionCard>
+                </label>
+              )}
+
+              {/* Construction / Transient / Hauling / Special Permits Location */}
+              {isSiteLocationDoc && (
+                <label className="grid gap-1 text-xs font-semibold text-(--portal-ink-800)">
+                  <span>Project / Activity Site Location (Kung saan gaganapin)</span>
+                  <Input
+                    placeholder="e.g. Lot 4 Block 2, Progreso St., San Juan City"
+                    value={fieldDraft.addWhere ?? ''}
+                    onChange={(e) =>
+                      setFieldDraft((prev) => ({
+                        ...prev,
+                        addWhere: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+              )}
+            </div>
+
+            {missingRequiredFields.length ? (
+              <p className="text-xs font-medium text-[#a33b32]">
+                Missing required fields: {missingRequiredFields.map((field) => field.label).join(', ')}
+              </p>
+            ) : null}
+
+            {/* Issuance Action Bar */}
+            <div className="flex flex-col gap-2 border-t border-(--portal-border-soft) pt-4">
+              <Button
+                type="button"
+                variant="resident"
+                onClick={() => void handleIssueAndPrint()}
+                disabled={
+                  isIssuing ||
+                  (issuance?.status !== 'issued' && missingRequiredFields.length > 0) ||
+                  (issuance?.status === 'issued' && !issuance?.generatedDocumentId)
+                }
+                className="w-full py-2.5 text-sm font-semibold shadow-sm"
+              >
+                <Printer className="mr-1.5 h-4 w-4" />
+                {isIssuing
+                  ? 'Preparing print...'
+                  : issuance?.status === 'issued'
+                    ? `Reprint ${activeSelectedTemplate?.name || 'Document'}`
+                    : `Issue and Print ${activeSelectedTemplate?.name || 'Document'}`}
+              </Button>
+            </div>
           </div>
-        </div>
+        </SectionCard>
       </div>
     </PortalShell>
   );

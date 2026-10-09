@@ -1,10 +1,12 @@
-export type DocumentCategoryDefinition = {
+export type DocumentTypeDefinition = {
   id: string;
   labelEn: string;
   labelFil: string;
   descriptionEn?: string;
   descriptionFil?: string;
 };
+
+export type DocumentCategoryDefinition = DocumentTypeDefinition;
 
 export type DefaultTemplateDefinition = {
   id: string;
@@ -15,8 +17,9 @@ export type DefaultTemplateDefinition = {
   description?: string;
 };
 
-// 7 Official Document Categories Catalog matching Admin and Resident
-export const OFFICIAL_DOCUMENT_CATEGORIES: DocumentCategoryDefinition[] = [
+
+// 7 Official Document Types of the Barangay
+export const OFFICIAL_DOCUMENT_TYPES: DocumentTypeDefinition[] = [
   {
     id: 'barangay_certification',
     labelEn: 'Barangay Certification',
@@ -40,8 +43,8 @@ export const OFFICIAL_DOCUMENT_CATEGORIES: DocumentCategoryDefinition[] = [
   },
   {
     id: 'business_clearance',
-    labelEn: 'Business Clearance (New & Renewal)',
-    labelFil: 'Business Clearance (New & Renewal)',
+    labelEn: 'Business Clearance',
+    labelFil: 'Business Clearance',
     descriptionEn: 'Barangay clearance for new and renewal commercial & micro-businesses',
     descriptionFil: 'Barangay clearance para sa bago at renewal na negosyo o commercial establishment',
   },
@@ -67,6 +70,9 @@ export const OFFICIAL_DOCUMENT_CATEGORIES: DocumentCategoryDefinition[] = [
     descriptionFil: 'Espesyal na permit para sa shooting, pamimigay ng flyer, sampling, at pagkakabit ng kable',
   },
 ];
+
+export const OFFICIAL_DOCUMENT_CATEGORIES = OFFICIAL_DOCUMENT_TYPES;
+
 
 export type OfficialWordTemplateDefinition = {
   id: string;
@@ -125,6 +131,15 @@ export const OFFICIAL_WORD_TEMPLATES: OfficialWordTemplateDefinition[] = [
     dynamicFields: ['resident_name', 'complainant_name', 'case_number', 'date_filed', 'purpose', 'date_issued', 'punong_barangay', 'barangay_name', 'city'],
   },
   {
+    id: 'tpl_transient_workers',
+    name: 'Transient Employees & Worker Certification',
+    fileName: 'TRANSIENT-WORKERS-CERT.docx',
+    categoryId: 'transient_employees',
+    documentType: 'transient_employees',
+    description: 'Official Certification for transient workers, kasambahay, company employees, and construction personnel',
+    dynamicFields: ['resident_name', 'resident_address', 'add_where', 'purpose', 'date_issued', 'punong_barangay', 'barangay_name', 'city'],
+  },
+  {
     id: 'tpl_business_clearance',
     name: 'Barangay Business Clearance',
     fileName: 'BUSINESS-PERMIT.docx',
@@ -140,327 +155,89 @@ export const OFFICIAL_WORD_TEMPLATES: OfficialWordTemplateDefinition[] = [
     categoryId: 'construction_clearances',
     documentType: 'construction_clearances',
     description: 'Official Multi-Permit Clearance (Building, Occupancy, Excavation, Demolition, Renovation, Hauling, Signage)',
-    dynamicFields: ['resident_name', 'resident_address', 'permit_type', 'purpose', 'date_issued', 'punong_barangay', 'barangay_name', 'city'],
+    dynamicFields: ['resident_name', 'resident_address', 'add_where', 'permit_type', 'purpose', 'date_issued', 'punong_barangay', 'barangay_name', 'city'],
+  },
+  {
+    id: 'tpl_delivery_hauling',
+    name: 'Delivery & Hauling Clearance',
+    fileName: 'DELIVERY-HAULING-CLEARANCE.docx',
+    categoryId: 'delivery_hauling_clearances',
+    documentType: 'delivery_hauling_clearances',
+    description: 'Entry and transport permit for ready-mix concrete, debris hauling, and heavy construction equipment',
+    dynamicFields: ['resident_name', 'resident_address', 'add_where', 'purpose', 'date_issued', 'punong_barangay', 'barangay_name', 'city'],
+  },
+  {
+    id: 'tpl_special_permits',
+    name: 'Special & Commercial Permits',
+    fileName: 'SPECIAL-COMMERCIAL-PERMIT.docx',
+    categoryId: 'special_commercial_permits',
+    documentType: 'special_commercial_permits',
+    description: 'Special permit for commercial shooting, promotional flyers, cable installation, and special activities',
+    dynamicFields: ['resident_name', 'resident_address', 'add_where', 'purpose', 'date_issued', 'punong_barangay', 'barangay_name', 'city'],
   },
 ];
 
-// Official Default Templates across each of the 7 Categories (Clean & Deduplicated)
+// Official Primary Document Types of the Barangay
 export const DEFAULT_OFFICIAL_TEMPLATES: DefaultTemplateDefinition[] = [
-  // 1. Barangay Certification
   {
-    id: 'tpl_brgy_clearance',
-    name: 'Barangay Certification (General)',
+    id: 'barangay_certification',
+    name: 'Barangay Certification',
     categoryId: 'barangay_certification',
     price: 0,
-    description: 'Official General Multipurpose Barangay Certification (BLANK-BARANGAY-CERT-NEW-LOGO-doc.docx)',
+    pricingNote: 'Free for assistance / ₱100.00 - ₱200.00 for clearances',
+    description: 'Official Barangay Certification and Clearances for residency, identification, indigency, employment, and legal requirements.',
   },
   {
-    id: 'tpl_cert_indigency',
-    name: 'Certificate of Indigency',
-    categoryId: 'barangay_certification',
-    price: 0,
-    description: 'For indigency, financial assistance, medical aid, burial assistance, or educational subsidy (BLANK-INDIGENCY-WITH-NEW-LOGO-KIM.docx)',
-  },
-  {
-    id: 'tpl_cert_residency',
-    name: 'Certificate of Residency',
-    categoryId: 'barangay_certification',
-    price: 0,
-    description: 'Official proof of bona fide residence in the barangay',
-  },
-  {
-    id: 'tpl_good_moral',
-    name: 'Certificate of Good Moral Character',
-    categoryId: 'barangay_certification',
-    price: 0,
-    description: 'Attestation of good moral standing and lack of derogatory record',
-  },
-  {
-    id: 'tpl_brgy_school_req',
-    name: 'Barangay Certification - School Requirement',
-    categoryId: 'barangay_certification',
-    price: 0,
-    description: 'Barangay certification for school enrollment, scholarship, and student requirements',
-  },
-  {
-    id: 'tpl_brgy_pwd_senior',
-    name: 'Barangay Certification - PWD / Senior Citizen Application',
-    categoryId: 'barangay_certification',
-    price: 0,
-    description: 'For Persons with Disability (PWD) or Senior Citizen ID and benefits registration',
-  },
-  {
-    id: 'tpl_brgy_health_card',
-    name: 'Barangay Certification - Health Card Application',
-    categoryId: 'barangay_certification',
-    price: 0,
-    description: 'For securing municipal health card, medical clearance, and clinic processing',
-  },
-  {
-    id: 'tpl_brgy_death_cert',
-    name: 'Barangay Death Certification',
-    categoryId: 'barangay_certification',
-    price: 0,
-    description: 'Barangay certification confirming residency and death within the jurisdiction',
-  },
-  {
-    id: 'tpl_brgy_employment',
-    name: 'Barangay Certification - Employment',
-    categoryId: 'barangay_certification',
-    price: 0,
-    description: 'Certification for local job application, employment onboarding, and pre-employment requirements',
-  },
-  {
-    id: 'tpl_brgy_clearance_police_nbi',
-    name: 'Barangay Clearance - Police / NBI / Court Clearance',
-    categoryId: 'barangay_certification',
-    price: 0,
-    description: 'Clearance required for securing Police, NBI, or Court clearance',
-  },
-  {
-    id: 'tpl_brgy_passport_visa',
-    name: 'Barangay Certification - Passport, Postal & Visa Applications',
-    categoryId: 'barangay_certification',
-    price: 0,
-    description: 'For passport application/renewal, postal ID, and foreign embassy visa applications',
-  },
-  {
-    id: 'tpl_brgy_overseas_visa',
-    name: 'Barangay Certification - Visa Extension / Overseas Employment',
-    categoryId: 'barangay_certification',
-    price: 0,
-    description: 'For OFW requirements, overseas job placement, and visa extension',
-  },
-  {
-    id: 'tpl_brgy_no_operation',
-    name: 'Certificate of No Operation of Business',
-    categoryId: 'barangay_certification',
-    price: 0,
-    description: 'Certification declaring business cessation or non-operation within the barangay',
-  },
-  {
-    id: 'tpl_brgy_other_purposes',
-    name: 'Barangay Certification - Other Purposes',
-    categoryId: 'barangay_certification',
-    price: 0,
-    description: 'Official barangay certification for other legal and personal purposes',
-  },
-
-  // 2. Transient Employees & Worker Certification
-  {
-    id: 'tpl_transient_household',
-    name: 'Kasambahay & Household Worker Certification',
+    id: 'transient_employees',
+    name: 'Transient Employees & Worker Certification',
     categoryId: 'transient_employees',
-    price: 0,
-    description: 'For domestic helpers, housemaids, family drivers, and household staff',
+    price: 100,
+    pricingNote: '₱100.00 per certification',
+    description: 'Certifications for transient workers, kasambahay, agency workers, and construction personnel.',
   },
   {
-    id: 'tpl_transient_company',
-    name: 'Company & Agency Worker Certification',
-    categoryId: 'transient_employees',
-    price: 0,
-    description: 'For transient company employees, security guards, agency workers, and staff',
-  },
-  {
-    id: 'tpl_transient_construction',
-    name: 'Construction Project Worker Certification',
-    categoryId: 'transient_employees',
-    price: 0,
-    description: 'For construction laborers, foremen, and temporary project workers',
-  },
-  {
-    id: 'tpl_transient_other',
-    name: 'Transient Worker Certification (Other)',
-    categoryId: 'transient_employees',
-    price: 0,
-    description: 'Certification for other transient and temporary workers',
-  },
-
-  // 3. Lupon ng mga Tagapamayapa (Summons, Hearing Notice, CFA)
-  {
-    id: 'tpl_lupon_summons',
-    name: 'Summons / Patawag (KP Form #9)',
+    id: 'lupon_tagapamayapa',
+    name: 'Lupon ng mga Tagapamayapa',
     categoryId: 'lupon_tagapamayapa',
-    price: 0,
-    description: 'Summons notice issued to respondents for Katarungang Pambarangay conciliation (BLANK-LUPON-SUMMONS-KP2026.docx)',
+    price: 100,
+    pricingNote: '₱100.00 Filing Fee / ₱300.00 CFA',
+    description: 'Official Katarungang Pambarangay documents (Summons / Patawag, Certificate to File Action, Notice of Hearing).',
   },
   {
-    id: 'tpl_lupon_cfa',
-    name: 'Certificate to File Action (CFA - KP Form #20)',
-    categoryId: 'lupon_tagapamayapa',
-    price: 0,
-    description: 'Certification authorizing the filing of action in regular court after failed conciliation',
-  },
-  {
-    id: 'tpl_lupon_notice',
-    name: 'Notice of Hearing / Reconciliation Notice (KP Form #8)',
-    categoryId: 'lupon_tagapamayapa',
-    price: 0,
-    description: 'General notice of mediation and hearing schedule before the Lupon',
-  },
-
-  // 4. Business Clearance (New & Renewal)
-  {
-    id: 'tpl_business_clearance',
-    name: 'Barangay Business Clearance',
+    id: 'business_clearance',
+    name: 'Business Clearance',
     categoryId: 'business_clearance',
-    price: 0,
-    description: 'Official Barangay Business Clearance (BUSINESS-PERMIT.docx)',
+    price: 500,
+    pricingNote: '₱500.00 - ₱1,500.00 based on business capital',
+    description: 'Barangay clearance for new and renewal commercial, micro, small, medium, and large business operations.',
   },
   {
-    id: 'tpl_business_micro_small',
-    name: 'Business Clearance - Micro / Small Enterprise',
-    categoryId: 'business_clearance',
-    price: 0,
-    description: 'Barangay clearance for sari-sari stores, kiosks, micro and small businesses',
-  },
-  {
-    id: 'tpl_business_medium',
-    name: 'Business Clearance - Medium Enterprise',
-    categoryId: 'business_clearance',
-    price: 0,
-    description: 'Barangay business clearance for medium-sized commercial enterprises',
-  },
-  {
-    id: 'tpl_business_large',
-    name: 'Business Clearance - Large Enterprise',
-    categoryId: 'business_clearance',
-    price: 0,
-    description: 'Barangay business clearance for large commercial establishments and corporations',
-  },
-  {
-    id: 'tpl_business_renewal',
-    name: 'Business Clearance Renewal',
-    categoryId: 'business_clearance',
-    price: 0,
-    description: 'Annual barangay business clearance renewal for existing enterprises',
-  },
-
-  // 5. Construction Clearances
-  {
-    id: 'tpl_construction_permit',
-    name: 'Barangay Clearance - Construction & Multi-Permit',
+    id: 'construction_clearances',
+    name: 'Construction Clearances',
     categoryId: 'construction_clearances',
-    price: 0,
-    description: 'Official multi-purpose clearance for Building, Renovation, Demolition, Excavation, and Hauling (CONSTRUCTION-PERMIT.docx)',
+    price: 1000,
+    pricingNote: '₱1,000.00 base or ₱10.00/sqm whichever is higher (see specific sub-clearance fee schedule)',
+    description: 'Clearances for building construction, occupancy, renovation, fencing, demolition, utilities, and excavation.',
   },
   {
-    id: 'tpl_construction_new',
-    name: 'New Structure Construction Permit',
-    categoryId: 'construction_clearances',
-    price: 0,
-    description: 'Barangay permit for newly constructed residential or commercial buildings',
-  },
-  {
-    id: 'tpl_construction_occupancy',
-    name: 'Certificate of Occupancy Clearance',
-    categoryId: 'construction_clearances',
-    price: 0,
-    description: 'Clearance required prior to obtaining city/municipal certificate of occupancy',
-  },
-  {
-    id: 'tpl_construction_renovation',
-    name: 'Renovation / Repair Clearance',
-    categoryId: 'construction_clearances',
-    price: 0,
-    description: 'Clearance for interior/exterior remodeling, repairs, and minor improvements',
-  },
-  {
-    id: 'tpl_construction_expansion',
-    name: 'Building Expansion Permit',
-    categoryId: 'construction_clearances',
-    price: 0,
-    description: 'Clearance for building extensions, additional storeys, or structural expansion',
-  },
-  {
-    id: 'tpl_construction_fencing',
-    name: 'Fencing Clearance',
-    categoryId: 'construction_clearances',
-    price: 0,
-    description: 'Clearance for perimeter fence, gate, and perimeter boundary construction',
-  },
-  {
-    id: 'tpl_construction_utilities',
-    name: 'Installation of Electric Post / Utilities Clearance',
-    categoryId: 'construction_clearances',
-    price: 0,
-    description: 'Permit for utility post erection, power line tapping, water, and telecom works',
-  },
-  {
-    id: 'tpl_construction_excavation',
-    name: 'Excavation Clearance',
-    categoryId: 'construction_clearances',
-    price: 0,
-    description: 'Permit for earth-moving, digging, drainage, and ground excavation works',
-  },
-  {
-    id: 'tpl_construction_demolition',
-    name: 'Demolition Clearance',
-    categoryId: 'construction_clearances',
-    price: 0,
-    description: 'Barangay clearance for demolition or dismantling of structures',
-  },
-
-  // 6. Delivery & Hauling Clearances
-  {
-    id: 'tpl_delivery_mixer',
-    name: 'Concrete Mixer Delivery Entry Clearance',
+    id: 'delivery_hauling_clearances',
+    name: 'Delivery & Hauling Clearances',
     categoryId: 'delivery_hauling_clearances',
-    price: 0,
-    description: 'Entry and unloading permit for ready-mix concrete trucks and transit mixers',
+    price: 300,
+    pricingNote: '₱300.00 per trip / ₱1,000.00 - ₱2,000.00 per day',
+    description: 'Entry and transport permits for ready-mix concrete, debris hauling, sand, gravel, and heavy equipment.',
   },
   {
-    id: 'tpl_hauling_debris',
-    name: 'Hauling of Debris / Waste Materials Clearance',
-    categoryId: 'delivery_hauling_clearances',
-    price: 0,
-    description: 'Permit for hauling away construction rubble, demolition debris, and waste materials',
-  },
-  {
-    id: 'tpl_delivery_sand_gravel',
-    name: 'Delivery of Sand, Gravel & Filling Materials Clearance',
-    categoryId: 'delivery_hauling_clearances',
-    price: 0,
-    description: 'Entry permit for trucks carrying sand, gravel, soil, and aggregate materials',
-  },
-  {
-    id: 'tpl_delivery_heavy_equipment',
-    name: 'Heavy Equipment / Construction Materials Delivery Clearance',
-    categoryId: 'delivery_hauling_clearances',
-    price: 0,
-    description: 'Permit for heavy equipment delivery (cranes, backhoes, bulldozers, steel)',
-  },
-
-  // 7. Special & Commercial Permits
-  {
-    id: 'tpl_special_shooting',
-    name: 'Commercial Shooting / Photography Permit',
+    id: 'special_commercial_permits',
+    name: 'Special & Commercial Permits',
     categoryId: 'special_commercial_permits',
-    price: 0,
-    description: 'Permit for film, TV, commercial photography, vlog, or advertisement shoot',
-  },
-  {
-    id: 'tpl_special_cables',
-    name: 'Installation of Cables & Wires Clearance',
-    categoryId: 'special_commercial_permits',
-    price: 0,
-    description: 'Permit for telco, fiber optic, internet, and electrical cable laying or maintenance',
-  },
-  {
-    id: 'tpl_special_flyers',
-    name: 'Distribution of Promotional Materials / Flyers Permit',
-    categoryId: 'special_commercial_permits',
-    price: 0,
-    description: 'Permit for room-to-room, street-level flyers, leaflet distribution, or sampling',
-  },
-  {
-    id: 'tpl_special_activities',
-    name: 'Other Special Activities Permit',
-    categoryId: 'special_commercial_permits',
-    price: 0,
-    description: 'Permit for motorcades, exhibits, community events, and other special operations',
+    price: 1000,
+    pricingNote: '₱1,000.00 - ₱4,000.00 per activity/day',
+    description: 'Permits for commercial shooting, promotional materials / flyers, cable installation, and special activities.',
   },
 ];
+
+export const DOCUMENT_PURPOSES_STORAGE_KEY = 'eserbisyo.document-purposes';
 
 export function getCategoryForDocType(docType?: string | null, name?: string | null): string {
   const combined = `${docType || ''} ${name || ''}`.toLowerCase();
@@ -546,7 +323,223 @@ export function getCategoryForDocType(docType?: string | null, name?: string | n
   return 'barangay_certification';
 }
 
-export function getCategoryLabel(categoryId: string): string {
+export function getCategoryLabel(categoryId?: string | null): string {
+  if (!categoryId) return 'Barangay Certification';
   const cat = OFFICIAL_DOCUMENT_CATEGORIES.find((c) => c.id === categoryId);
   return cat ? cat.labelEn : 'Barangay Certification';
 }
+
+export type DocumentTypeCatalogItem = {
+  id: string;
+  name: string;
+  categoryId: string;
+  categoryLabel?: string;
+  price?: number;
+  pricingNote?: string;
+  description?: string;
+  purposes?: string[];
+  isActive?: boolean;
+  isCustom?: boolean;
+};
+
+export const DOCUMENT_TYPES_CATALOG_STORAGE_KEY = 'eserbisyo.document-types-catalog';
+
+export function getDefaultDocumentTypesCatalog(): DocumentTypeCatalogItem[] {
+  return [
+    {
+      id: 'barangay_certification',
+      name: 'Barangay Certification',
+      categoryId: 'barangay_certification',
+      categoryLabel: 'Barangay Certification',
+      price: 0,
+      description: 'Official Barangay Certification and Clearances for residency, identification, indigency, employment, and legal requirements.',
+      purposes: [
+        'School Requirement (Free)',
+        'Indigency, Financial, Medical, or Educational Assistance (Free)',
+        'PWD or Senior Citizen Application (Free)',
+        'Health Card Application (Free)',
+        'Death Certification (Free)',
+        'Employment (₱100.00)',
+        'Police, NBI, or Court Clearance Application (₱100.00)',
+        'Passport, Postal ID, or Visa Application (₱100.00)',
+        'Visa Extension or Overseas Employment (₱100.00)',
+        'Certificate of No Business Operation (₱200.00)',
+        'Other Purposes Not Mentioned Above (₱200.00)',
+      ],
+      isActive: true,
+      isCustom: false,
+    },
+    {
+      id: 'transient_employees',
+      name: 'Transient Employees & Worker Certification',
+      categoryId: 'transient_employees',
+      categoryLabel: 'Transient Employees & Worker Certification',
+      price: 100,
+      description: 'Certifications for transient workers, kasambahay, agency workers, and construction personnel.',
+      purposes: [
+        'Household Employees (Kasambahay, Driver, Caretaker, etc.) (₱100.00)',
+        'Company Employees (₱100.00)',
+        'Construction Workers (₱100.00)',
+        'Other Transient Workers (₱100.00)',
+      ],
+      isActive: true,
+      isCustom: false,
+    },
+    {
+      id: 'lupon_tagapamayapa',
+      name: 'Lupon ng mga Tagapamayapa',
+      categoryId: 'lupon_tagapamayapa',
+      categoryLabel: 'Lupon ng mga Tagapamayapa',
+      price: 100,
+      description: 'Official Katarungang Pambarangay documents (Summons / Patawag, Certificate to File Action, Notice of Hearing).',
+      purposes: [
+        'Lupon Filing Fee (₱100.00)',
+        'Certificate to File Action (₱300.00)',
+        'Summons / Patawag (KP Form #9)',
+        'Notice of Hearing / Reconciliation Notice (KP Form #8)',
+      ],
+      isActive: true,
+      isCustom: false,
+    },
+    {
+      id: 'business_clearance',
+      name: 'Business Clearance',
+      categoryId: 'business_clearance',
+      categoryLabel: 'Business Clearance',
+      price: 500,
+      pricingNote: 'Based on business capital (₱500.00 - ₱1,500.00)',
+      description: 'Barangay clearance for new and renewal commercial, micro, small, medium, and large business operations.',
+      purposes: [
+        'Capital not exceeding ₱20,000.00 (₱500.00)',
+        'Capital more than ₱20,000.00 but not exceeding ₱200,000.00 (₱1,000.00)',
+        'Capital more than ₱200,000.00 (₱1,500.00)',
+        'New Business Clearance',
+        'Business Clearance Renewal',
+      ],
+      isActive: true,
+      isCustom: false,
+    },
+    {
+      id: 'construction_clearances',
+      name: 'Construction Clearances',
+      categoryId: 'construction_clearances',
+      categoryLabel: 'Construction Clearances',
+      price: 1000,
+      pricingNote: '₱1,000.00 base or ₱10.00/sqm whichever is higher (see specific clearance fee schedule)',
+      description: 'Clearances for building construction, occupancy, renovation, fencing, demolition, utilities, and excavation.',
+      purposes: [
+        'Construction of a New Structure (Based on Total Accumulated Floor Area)',
+        'Occupancy - Single-Detached House (₱1,000.00)',
+        'Occupancy - Apartment (₱1,000.00/unit)',
+        'Occupancy - Townhouse (₱1,200.00/unit)',
+        'Occupancy - Condominium (₱1,500.00/unit)',
+        'Renovation Without Expansion - Single-Detached House (₱1,000.00)',
+        'Renovation Without Expansion - Apartment (₱1,000.00/unit)',
+        'Renovation Without Expansion - Townhouse (₱1,200.00/unit)',
+        'Renovation Without Expansion - Condominium (₱1,500.00/unit)',
+        'Expansion Based on Total Accumulated Floor Area',
+        'Renovation With Expansion',
+        'Fencing Clearance (₱1,000.00)',
+        'Installation of Electric or Communication Posts (₱1,000.00/post)',
+        'Manila Water Excavation (₱1,000.00/point)',
+        'Drainage Works (Per Street, One Side) (₱1,000.00)',
+        'Drainage Works (Per Street, Both Sides) (₱2,000.00)',
+        'Other Excavation Works Not Mentioned Above (₱1,000.00/point)',
+        'Demolition - Single-Detached House (₱1,000.00)',
+        'Demolition - Apartment (₱1,000.00/unit)',
+        'Demolition - Townhouse (₱1,200.00/unit)',
+        'Demolition - Condominium (₱1,500.00/unit)',
+      ],
+      isActive: true,
+      isCustom: false,
+    },
+    {
+      id: 'delivery_hauling_clearances',
+      name: 'Delivery & Hauling Clearances',
+      categoryId: 'delivery_hauling_clearances',
+      categoryLabel: 'Delivery & Hauling Clearances',
+      price: 300,
+      pricingNote: '₱300.00 per trip / ₱1,000.00 - ₱2,000.00 per truck per day',
+      description: 'Entry and transport permits for ready-mix concrete, debris hauling, sand, gravel, and heavy equipment.',
+      purposes: [
+        'Concrete Pouring Using a Concrete Mixer (₱300.00/trip)',
+        'Hauling of Debris Using a 10-Wheeler Truck or Larger (₱1,000.00/day)',
+        'Delivery of Filling Materials Using a 10-Wheeler Truck or Larger (₱1,000.00/day)',
+        'Delivery of Equipment, Materials, and Fixtures Using a 10-Wheeler Truck or Larger (₱2,000.00/day)',
+        'Hauling of Equipment and Materials Using a 10-Wheeler Truck or Larger (₱2,000.00/day)',
+      ],
+      isActive: true,
+      isCustom: false,
+    },
+    {
+      id: 'special_commercial_permits',
+      name: 'Special & Commercial Permits',
+      categoryId: 'special_commercial_permits',
+      categoryLabel: 'Special & Commercial Permits',
+      price: 1000,
+      pricingNote: '₱1,000.00 - ₱4,000.00 per activity/day',
+      description: 'Permits for commercial shooting, promotional materials / flyers, cable installation, and special activities.',
+      purposes: [
+        'Installation of Wires and Cables (₱1,000.00/street)',
+        'Movie, Television, or Commercial Shooting (₱4,000.00/day)',
+        'Distribution of Business Flyers and Product Samples (₱1,000.00/day)',
+        'Other Purposes Not Mentioned Above (₱2,000.00)',
+      ],
+      isActive: true,
+      isCustom: false,
+    },
+  ];
+}
+
+export function loadDocumentTypesCatalog(): DocumentTypeCatalogItem[] {
+  if (typeof window === 'undefined') {
+    return getDefaultDocumentTypesCatalog();
+  }
+  try {
+    const raw = localStorage.getItem(DOCUMENT_TYPES_CATALOG_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch {
+    // fallback
+  }
+  return getDefaultDocumentTypesCatalog();
+}
+
+export function saveDocumentTypesCatalog(items: DocumentTypeCatalogItem[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(DOCUMENT_TYPES_CATALOG_STORAGE_KEY, JSON.stringify(items));
+    window.dispatchEvent(new Event('eserbisyo:document-types-catalog-updated'));
+  } catch {
+    // ignore
+  }
+}
+
+export function getPurposesForDocumentType(
+  docTypeNameOrId?: string | null,
+  category?: string | null
+): string[] {
+  if (!docTypeNameOrId) return [];
+  const catalog = loadDocumentTypesCatalog();
+  const lower = docTypeNameOrId.toLowerCase().trim();
+  const catLower = category ? category.toLowerCase().trim() : '';
+
+  const match = catalog.find((c) => {
+    const matchesName = c.id.toLowerCase() === lower || c.name.toLowerCase() === lower;
+    if (!matchesName) return false;
+    if (catLower) {
+      return (
+        c.categoryId.toLowerCase() === catLower ||
+        (c.categoryLabel && c.categoryLabel.toLowerCase() === catLower)
+      );
+    }
+    return true;
+  }) || catalog.find((c) => c.id.toLowerCase() === lower || c.name.toLowerCase() === lower);
+
+  return match?.purposes || [];
+}
+
