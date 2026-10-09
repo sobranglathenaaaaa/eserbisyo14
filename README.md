@@ -68,7 +68,7 @@ npm run dev
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```text
 eserbisyo14/
@@ -83,6 +83,6 @@ eserbisyo14/
 
 ---
 
-## 📄 License
+## License
 
 Developed for Barangay Progreso, San Juan City. All rights reserved.
