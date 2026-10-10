@@ -185,7 +185,10 @@ export async function renderOcrTemplateFromDocx(
       .from('document_templates')
       .select('id, name, body, dynamic_fields')
       .order('updated_at', { ascending: false });
-    const storedTemplates = (dbTemplates ?? []) as StoredDocumentTemplate[];
+    const storedTemplates = ((dbTemplates ?? []) as StoredDocumentTemplate[]).filter((template) => {
+      const metadata = getTemplateMetadata(template.body);
+      return metadata?.isActive !== false;
+    });
 
     const keyLower = templateKey.toLowerCase();
     const isLuponKey = keyLower.includes('lupon') || keyLower.includes('summons') || keyLower.includes('cfa') || keyLower.includes('notice');
@@ -323,4 +326,3 @@ export async function renderOcrTemplateFromDocx(
     };
   }
 }
-

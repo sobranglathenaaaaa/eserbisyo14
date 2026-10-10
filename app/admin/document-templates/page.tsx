@@ -1903,12 +1903,8 @@ export default function AdminDocumentTemplatesPage() {
       let matchesStatus = true;
       if (statusFilter === 'active') {
         matchesStatus = item.isActive !== false;
-      } else if (statusFilter === 'overwritten') {
-        matchesStatus = Boolean(item.isOverwritten);
       } else if (statusFilter === 'inactive') {
         matchesStatus = item.isActive === false;
-      } else if (statusFilter === 'custom') {
-        matchesStatus = item.sourceType === 'uploaded' || item.sourceType === 'custom';
       }
 
       return matchesSearch && matchesType && matchesStatus;
@@ -2811,7 +2807,8 @@ export default function AdminDocumentTemplatesPage() {
 
     const targetId = customOverrideTargetId || (overwriteConfirmed && overwriteSaveModal ? overwriteSaveModal.conflictingTemplate.id : selectedTemplateId);
     const finalName = saveAsNewCopy ? `${editorName.trim()} (New)` : editorName.trim();
-    const shouldMarkOverwritten = Boolean(overwriteConfirmed || editorIsOverwritten || targetId);
+    // The record being replaced is updated in place, so the saved/current template remains active.
+    const shouldMarkOverwritten = false;
 
     const dynamicFields = dynamicFieldsInput.split(',').map((f) => f.trim()).filter(Boolean);
     const autoCompiledHtml = buildDefaultHtmlLayout(
@@ -3082,8 +3079,6 @@ export default function AdminDocumentTemplatesPage() {
               <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-10 w-full">
                 <option value="all">{isFil ? 'Lahat ng Katayuan' : 'All Status'}</option>
                 <option value="active">{isFil ? 'Aktibo' : 'Active'}</option>
-                <option value="overwritten">{isFil ? 'Na-overwrite' : 'Overwritten'}</option>
-                <option value="custom">{isFil ? 'Custom / Na-upload' : 'Custom / Uploaded'}</option>
                 <option value="inactive">{isFil ? 'Hindi Aktibo' : 'Inactive'}</option>
               </Select>
             </div>
@@ -3128,22 +3123,14 @@ export default function AdminDocumentTemplatesPage() {
                 const isUploaded = item.sourceType === 'uploaded';
                 const isCustom = item.sourceType === 'custom' || !docTypesCatalog.some((dt) => dt.id === itemDocType);
                 const typeLabel = docTypeObj?.name || (isUploaded ? (isFil ? 'Na-upload na (.docx) Template' : 'Uploaded (.docx) Template') : isCustom ? (isFil ? 'Custom na Template' : 'Custom Template') : (isFil ? 'Dokumento ng Barangay' : 'Barangay Document'));
-                const isOverwritten = Boolean(item.isOverwritten);
                 const isActive = item.isActive !== false;
-                const statusTone = isOverwritten ? 'warning' : statusToneFromState(isActive ? 'active' : 'inactive');
+                const statusTone = statusToneFromState(isActive ? 'active' : 'inactive');
 
                 return (
                   <TableRow key={item.id} className="transition-colors hover:bg-[color:var(--portal-surface-1)]">
                     <TableCell className="px-4 py-3.5 text-left">
                       <div className="min-w-[240px]">
-                        <div className="flex items-center gap-2">
-                          <h3 className="truncate text-sm font-bold text-[color:var(--portal-ink-900)]">{item.name}</h3>
-                          {isOverwritten ? (
-                            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 border border-amber-300">
-                              {isFil ? 'Na-overwrite' : 'Overwritten'}
-                            </span>
-                          ) : null}
-                        </div>
+                        <h3 className="truncate text-sm font-bold text-[color:var(--portal-ink-900)]">{item.name}</h3>
                         {item.originalFileName ? (
                           <p className="mt-0.5 truncate text-xs text-[color:var(--portal-ink-700)]">{item.originalFileName}</p>
                         ) : null}
@@ -3154,7 +3141,7 @@ export default function AdminDocumentTemplatesPage() {
                     </TableCell>
                     <TableCell className="px-4 py-3.5 text-center">
                       <StatusBadge tone={statusTone}>
-                        {isOverwritten ? (isFil ? 'Na-overwrite' : 'Overwritten') : isActive ? (isFil ? 'Aktibo' : 'Active') : (isFil ? 'Hindi Aktibo' : 'Inactive')}
+                        {isActive ? (isFil ? 'Aktibo' : 'Active') : (isFil ? 'Hindi Aktibo' : 'Inactive')}
                       </StatusBadge>
                     </TableCell>
                     <TableCell className="whitespace-nowrap px-4 py-3.5 text-center text-xs text-[color:var(--portal-ink-700)]">

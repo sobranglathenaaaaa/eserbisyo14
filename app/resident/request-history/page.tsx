@@ -2,7 +2,7 @@
 
 import { Suspense, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { PageGuide, StatusBadge, statusToneFromState } from '@/components/portal-ui';
+import { FormFeedback, PageGuide, StatusBadge, statusToneFromState } from '@/components/portal-ui';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -15,6 +15,7 @@ import { ResidentShell } from '@/features/resident/view/resident-shell';
 import { formatDateTime, formatIncidentCaseNumber, getReportStatusLabel, getRequestStatusLabel } from '@/lib/formatters';
 import { useAppState } from '@/lib/frontend-data/use-app-state';
 import { getRolePageCopy, resolveRoleCopy, resolveSteps } from '@/lib/content/role-pages';
+import { cancelPendingRequest } from '@/lib/frontend-data/store';
 import type { CheckupAppointmentStatus, ReportStatus, RequestStatus, ReservationStatus } from '@/lib/types/models';
 
 type HistoryCategory = 'all' | 'requests' | 'reservations' | 'report-progress' | 'appointments' | 'feedback';
@@ -168,6 +169,8 @@ function ResidentRequestHistoryPageContent() {
   const [historyPage, setHistoryPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<HistoryStatusFilter>('all');
   const [summaryRequestId, setSummaryRequestId] = useState<string | null>(null);
+  const [isCancellingRequest, setIsCancellingRequest] = useState(false);
+  const [cancellationFeedback, setCancellationFeedback] = useState<{ tone: 'success' | 'error' | 'info'; text: string } | null>(null);
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryFeedItem | null>(null);
   const pageCopy = getRolePageCopy('resident/request-history') ?? {
     title: { en: 'Service History', fil: 'Kasaysayan ng Serbisyo' },
@@ -336,6 +339,30 @@ function ResidentRequestHistoryPageContent() {
     setSelectedHistoryItem(item);
   };
 
+  const handleCancelRequest = async () => {
+    if (!summaryRequestId) return;
+
+    setIsCancellingRequest(true);
+    try {
+      await cancelPendingRequest(summaryRequestId);
+      setSummaryRequestId(null);
+      setCancellationFeedback({
+        tone: 'success',
+        text: copyText(locale, 'Request cancelled successfully.', 'Matagumpay na nakansela ang request.'),
+      });
+    } catch (error) {
+      console.error('Failed to cancel request from history:', error);
+      setCancellationFeedback({
+        tone: 'error',
+        text: error instanceof Error
+          ? error.message
+          : copyText(locale, 'Unable to cancel this request.', 'Hindi makansela ang request na ito.'),
+      });
+    } finally {
+      setIsCancellingRequest(false);
+    }
+  };
+
   const reviewButton = (item: HistoryFeedItem) => (
     <div className="flex justify-center">
       <Button type="button" variant="ghost" onClick={() => openHistoryReview(item)}>
@@ -435,6 +462,8 @@ function ResidentRequestHistoryPageContent() {
           cta={{ label: resolveRoleCopy(locale, pageCopy.guide.cta.label), href: pageCopy.guide.cta.href }}
         />
       ) : null}
+
+      {cancellationFeedback ? <FormFeedback tone={cancellationFeedback.tone} text={cancellationFeedback.text} /> : null}
 
       <ResidentSection
         title={copyText(locale, 'History Categories', 'Mga Kategorya ng History')}
@@ -615,6 +644,8 @@ function ResidentRequestHistoryPageContent() {
         requestItem={summaryRequest}
         locale={locale}
         onClose={() => setSummaryRequestId(null)}
+        onCancel={handleCancelRequest}
+        isCancelling={isCancellingRequest}
       />
       <Dialog open={selectedHistoryItem !== null} onOpenChange={(open) => { if (!open) setSelectedHistoryItem(null); }}>
         <DialogContent className="gap-5 sm:max-w-lg">

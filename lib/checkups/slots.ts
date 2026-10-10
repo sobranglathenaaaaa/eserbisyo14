@@ -55,3 +55,7 @@ export function toClock(isoValue: string) {
   return match?.[1] ?? '';
 }
 
+export function isSlotInFuture(endAt: string, now = new Date()) {
+  const endTime = new Date(endAt).getTime();
+  return Number.isFinite(endTime) && endTime > now.getTime();
+}

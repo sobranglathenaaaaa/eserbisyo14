@@ -41,9 +41,8 @@ type RegistrationQueueItem = {
 };
 
 export default function StaffRegistrationReviewsPage() {
-  const { locale, state } = useAppState();
+  const { locale } = useAppState();
   const pageCopy = getRolePageCopy('staff/registration-reviews');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'approved' | 'pending' | 'declined'>('all');
   const [userSearch, setUserSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
@@ -81,52 +80,13 @@ export default function StaffRegistrationReviewsPage() {
         }
       }
 
-      // Also supplement with local app state users for registrations that
-      // have been forwarded to admin or rejected by staff so they appear in
-      // the Approved / Declined filters even though the staff API returns
-      // only pending items with signed ID preview URLs.
-      const supplemental: RegistrationQueueItem[] = (state?.users ?? [])
-        .filter((u) => u.role === 'resident' && !u.isDeleted && (u.approvalStatus === 'staff_forwarded_to_admin' || u.approvalStatus === 'staff_rejected'))
-        .map((u) => ({
-          id: u.id,
-          full_name: u.fullName,
-          sex: u.sex ?? null,
-          civil_status: u.civilStatus ?? null,
-          citizenship: u.citizenship ?? null,
-          birthdate: u.birthdate ?? null,
-          email: u.email,
-          phone: u.phone ?? null,
-          address: u.address ?? null,
-          address_line: u.addressLine ?? null,
-          province: u.province ?? null,
-          city: u.city ?? null,
-          barangay: u.barangay ?? null,
-          id_type: u.idType ?? null,
-          id_number: u.idNumber ?? null,
-          id_file_name: u.idFileName ?? null,
-          id_file_path: u.idFilePath ?? null,
-          id_file_url: null,
-          id_file_name_back: u.idFileNameBack ?? null,
-          id_file_path_back: u.idFilePathBack ?? null,
-          id_file_url_back: null,
-          approval_status: u.approvalStatus ?? 'pending_staff_review',
-          staff_review_note: u.staffReviewNote ?? null,
-          created_at: u.createdAt,
-          updated_at: u.updatedAt,
-        }));
-
-      // Merge API pending items (which include signed preview URLs) with supplemental
-      // entries from app state and dedupe by id, preferring the API item when present.
-      const map = new Map<string, RegistrationQueueItem>();
-      supplemental.forEach((s) => map.set(s.id, s));
-      pendingFromApi.forEach((p) => map.set(p.id, p));
-      const merged = Array.from(map.values());
-
-      setQueue(merged);
+      // The staff API is the single source for this queue and returns only
+      // registrations waiting for staff review.
+      setQueue(pendingFromApi.filter((item) => item.approval_status === 'pending_staff_review'));
     } finally {
       setLoadingQueue(false);
     }
-  }, [state]);
+  }, []);
 
   useEffect(() => {
     void loadQueue();
@@ -222,10 +182,10 @@ export default function StaffRegistrationReviewsPage() {
     };
   }, [loadQueue]);
 
-  // Reset to first page when search or filter or queue changes
+  // Reset to first page when search or queue changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [userSearch, statusFilter, queue.length]);
+  }, [userSearch, queue.length]);
 
   const runDecision = async (decision: 'staff_forwarded_to_admin' | 'staff_rejected') => {
     if (!selectedRegistration) return;
@@ -295,8 +255,6 @@ export default function StaffRegistrationReviewsPage() {
               : 'Staff performs first review before records appear in admin final queue.'}
           </p>
         </div>
-        {/* red dot moved to Pending filter button below */}
-
         <div className="mt-2 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div className="flex-1 w-full max-w-full md:max-w-[420px]">
             <label className="grid gap-1 text-sm">
@@ -308,48 +266,6 @@ export default function StaffRegistrationReviewsPage() {
                 placeholder={locale === 'fil' ? 'Pangalan, email, o ID' : 'Name, email, or ID'}
               />
             </label>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                className={`rounded px-3 py-1 text-sm ${statusFilter === 'all' ? 'bg-[color:var(--portal-border-soft)]' : 'hover:bg-[color:var(--portal-border-soft)]'}`}
-                onClick={() => setStatusFilter('all')}
-              >
-                {locale === 'fil' ? 'Lahat' : 'All'} ({pendingRegistrations.length})
-              </button>
-              <button
-                type="button"
-                className={`rounded px-3 py-1 text-sm ${statusFilter === 'approved' ? 'bg-[color:#ecfdf5]' : 'hover:bg-[color:#ecfdf5]'}`}
-                onClick={() => setStatusFilter('approved')}
-              >
-                {locale === 'fil' ? 'Aprubado' : 'Approved'} ({pendingRegistrations.filter(p => p.approval_status === 'staff_forwarded_to_admin').length})
-              </button>
-              {
-                (() => {
-                  const pendingCount = pendingRegistrations.filter((p) => p.approval_status === 'pending_staff_review').length;
-                  return (
-                    <button
-                      type="button"
-                      className={`relative rounded px-3 py-1 text-sm ${statusFilter === 'pending' ? 'bg-[color:#fff7ed]' : 'hover:bg-[color:#fff7ed]'}`}
-                      onClick={() => setStatusFilter('pending')}
-                    >
-                      {locale === 'fil' ? 'Pending' : 'Pending'} ({pendingCount})
-                      {pendingCount > 0 ? (
-                        <span className="absolute -right-2 -top-2 inline-block h-3 w-3 rounded-full bg-red-600" aria-hidden></span>
-                      ) : null}
-                    </button>
-                  );
-                })()
-              }
-              <button
-                type="button"
-                className={`rounded px-3 py-1 text-sm ${statusFilter === 'declined' ? 'bg-[color:#fff1f2]' : 'hover:bg-[color:#fff1f2]'}`}
-                onClick={() => setStatusFilter('declined')}
-              >
-                {locale === 'fil' ? 'Tinanggihan' : 'Declined'} ({pendingRegistrations.filter(p => p.approval_status === 'staff_rejected').length})
-              </button>
-            </div>
           </div>
         </div>
 
@@ -367,15 +283,10 @@ export default function StaffRegistrationReviewsPage() {
             />
           ) : (
             (() => {
-              let base = pendingRegistrations;
-              if (statusFilter === 'all') base = pendingRegistrations;
-              else if (statusFilter === 'approved') base = pendingRegistrations.filter((p) => p.approval_status === 'staff_forwarded_to_admin');
-              else if (statusFilter === 'pending') base = pendingRegistrations.filter((p) => p.approval_status === 'pending_staff_review');
-              else base = pendingRegistrations.filter((p) => p.approval_status === 'staff_rejected');
               const query = userSearch.trim().toLowerCase();
               const filtered = !query
-                ? base
-                : base.filter((p) => `${p.full_name} ${p.email} ${p.id}`.toLowerCase().includes(query));
+                ? pendingRegistrations
+                : pendingRegistrations.filter((p) => `${p.full_name} ${p.email} ${p.id}`.toLowerCase().includes(query));
               const PAGE_SIZE = 10;
               if (filtered.length === 0) {
                 return (
@@ -395,9 +306,6 @@ export default function StaffRegistrationReviewsPage() {
                   {/* Mobile View: Cards */}
                   <div className="block md:hidden space-y-3">
                     {paginated.map((item) => {
-                      const status = item.approval_status;
-                      const tone = status === 'staff_forwarded_to_admin' ? 'success' : status === 'staff_rejected' ? 'danger' : 'warning';
-                      const label = status === 'staff_forwarded_to_admin' ? (locale === 'fil' ? 'Aprubado' : 'Approved') : status === 'staff_rejected' ? (locale === 'fil' ? 'Tinanggihan' : 'Declined') : (locale === 'fil' ? 'Pending' : 'Pending');
                       return (
                         <div key={`mob-reg-${item.id}`} className="rounded-xl border border-[color:var(--portal-border-soft)] bg-white p-3.5 shadow-xs">
                           <div className="flex items-start justify-between gap-2">
@@ -405,7 +313,7 @@ export default function StaffRegistrationReviewsPage() {
                               <h4 className="text-sm font-bold text-[color:var(--portal-ink-900)] leading-tight">{item.full_name}</h4>
                               <p className="mt-0.5 text-xs text-[color:var(--portal-ink-600)] truncate">{item.email}</p>
                             </div>
-                            <StatusBadge tone={tone as any}>{label}</StatusBadge>
+                            <StatusBadge tone="warning">{locale === 'fil' ? 'Pending' : 'Pending'}</StatusBadge>
                           </div>
 
                           <div className="mt-2.5 flex items-center justify-between border-t border-[color:var(--portal-border-soft)] pt-2.5 text-xs text-[color:var(--portal-ink-500)]">
@@ -453,10 +361,7 @@ export default function StaffRegistrationReviewsPage() {
                             </td>
                             <td className="py-2.5 px-2 text-center align-middle">
                               {(() => {
-                                const status = item.approval_status;
-                                const tone = status === 'staff_forwarded_to_admin' ? 'success' : status === 'staff_rejected' ? 'danger' : 'warning';
-                                const label = status === 'staff_forwarded_to_admin' ? (locale === 'fil' ? 'Aprubado' : 'Approved') : status === 'staff_rejected' ? (locale === 'fil' ? 'Tinanggihan' : 'Declined') : (locale === 'fil' ? 'Pending' : 'Pending');
-                                return <StatusBadge tone={tone as any}>{label}</StatusBadge>;
+                                return <StatusBadge tone="warning">{locale === 'fil' ? 'Pending' : 'Pending'}</StatusBadge>;
                               })()}
                             </td>
                             <td className="py-2.5 px-3 text-center align-middle">

@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useMemo, useState } from 'react';
-import { FormFeedback, PageGuide, StatusBadge, statusToneFromState } from '@/components/portal-ui';
+import { FormFeedback, InfoNotice, PageGuide, StatusBadge, statusToneFromState } from '@/components/portal-ui';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
@@ -13,6 +13,7 @@ import { getRolePageCopy, resolveRoleCopy, resolveSteps } from '@/lib/content/ro
 import { cancelCheckupAppointment, createCheckupAppointment } from '@/lib/frontend-data/store';
 import { useAppState } from '@/lib/frontend-data/use-app-state';
 import { formatDateTime } from '@/lib/formatters';
+import { isSlotInFuture } from '@/lib/checkups/slots';
 
 function slotLabel(startAt: string, endAt: string) {
   const start = new Date(startAt);
@@ -58,7 +59,12 @@ export default function ResidentMedicinesPage() {
   const availableSlots = useMemo(
     () =>
       state.doctorAvailabilitySlots
-        .filter((slot) => !slot.isBlocked && (slotBookedCounts[slot.id] || 0) < (slot.capacity || 7))
+        .filter(
+          (slot) =>
+            !slot.isBlocked &&
+            isSlotInFuture(slot.endAt) &&
+            (slotBookedCounts[slot.id] || 0) < (slot.capacity || 7)
+        )
         .sort((a, b) => a.startAt.localeCompare(b.startAt)),
     [state.doctorAvailabilitySlots, slotBookedCounts]
   );
@@ -219,10 +225,16 @@ export default function ResidentMedicinesPage() {
               </form>
             )}
           </Card>
-
+          <InfoNotice
+            title={copyText(locale, 'Cancellation and status rules', 'Mga panuntunan sa cancellation at status')}
+            description={copyText(
+              locale,
+              'Pending requests can be cancelled in Request History section. Once approved, cancellation is disabled while staff prepares your appointment and sends status updates.',
+              'Ang pending requests ay maaaring kanselahin sa Request History section. Kapag approved na, disabled ang cancellation habang inihahanda ng staff ang iyong appointment at nagpapadala ng status updates.'
+            )}
+          />
         </div>
       </ResidentSection>
     </ResidentShell>
   );
 }
-

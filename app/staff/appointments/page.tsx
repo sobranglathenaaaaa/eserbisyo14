@@ -135,8 +135,8 @@ export default function StaffAppointmentsPage() {
   const [showAddSlotModal, setShowAddSlotModal] = useState(false);
   const [showSlotsModal, setShowSlotsModal] = useState(false);
   const [showDoctorsModal, setShowDoctorsModal] = useState(false);
-  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [appointmentPage, setAppointmentPage] = useState(1);
+  const [slotPage, setSlotPage] = useState(1);
   const slotsSectionRef = useRef<HTMLDivElement | null>(null);
 
   const doctorSpecializationMap = useMemo(() => {
@@ -157,7 +157,6 @@ export default function StaffAppointmentsPage() {
       selectedAppointmentId ||
         confirmDeleteSlotId ||
         showAddSlotModal ||
-        showSlotsModal ||
         showDoctorsModal
     )
   );
@@ -212,6 +211,20 @@ export default function StaffAppointmentsPage() {
     [filteredAppointments, appointmentPage]
   );
 
+  const totalSlotPages = Math.max(
+    1,
+    Math.ceil(slots.length / itemsPerPage)
+  );
+
+  const paginatedSlots = useMemo(
+    () =>
+      slots.slice(
+        (slotPage - 1) * itemsPerPage,
+        slotPage * itemsPerPage
+      ),
+    [slots, slotPage]
+  );
+
   const selectedAppointment = useMemo(
     () =>
       selectedAppointmentId
@@ -234,6 +247,10 @@ export default function StaffAppointmentsPage() {
   useEffect(() => {
     setAppointmentPage((page) => Math.min(page, totalPages));
   }, [totalPages]);
+
+  useEffect(() => {
+    setSlotPage((page) => Math.min(page, totalSlotPages));
+  }, [totalSlotPages]);
 
   useEffect(() => {
     if (!feedback) return;
@@ -1001,7 +1018,7 @@ export default function StaffAppointmentsPage() {
                     </thead>
 
                     <tbody>
-                      {slots.map((slot) => {
+                      {paginatedSlots.map((slot) => {
                         const specialization =
                           doctorSpecializationMap.get(
                             slot.doctorName.trim().toLowerCase()
@@ -1084,18 +1101,6 @@ export default function StaffAppointmentsPage() {
                                 <Button
                                   type="button"
                                   size="sm"
-                                  variant="secondary"
-                                  className="border border-[color:var(--portal-border-soft)]"
-                                  onClick={() =>
-                                    setSelectedSlotId(slot.id)
-                                  }
-                                >
-                                  Show
-                                </Button>
-
-                                <Button
-                                  type="button"
-                                  size="sm"
                                   variant="ghost"
                                   className="h-8 w-8 p-0 text-red-600 hover:bg-red-50 hover:text-red-700"
                                   title={
@@ -1127,6 +1132,56 @@ export default function StaffAppointmentsPage() {
                   </table>
                 </div>
               )}
+
+              {slots.length > 0 ? (
+                <div className="mt-4 flex items-center justify-between border-t border-[color:var(--portal-border-soft)] pt-3">
+                  <div className="text-xs text-[color:var(--portal-ink-500)]">
+                    {locale === 'fil'
+                      ? `Ipinapakita ang ${
+                          (slotPage - 1) * itemsPerPage + 1
+                        } hanggang ${Math.min(
+                          slotPage * itemsPerPage,
+                          slots.length
+                        )} ng ${slots.length}`
+                      : `Showing ${
+                          (slotPage - 1) * itemsPerPage + 1
+                        } to ${Math.min(
+                          slotPage * itemsPerPage,
+                          slots.length
+                        )} of ${slots.length}`}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() =>
+                        setSlotPage((page) => Math.max(1, page - 1))
+                      }
+                      disabled={slotPage === 1}
+                    >
+                      {locale === 'fil' ? 'Nakaraan' : 'Previous'}
+                    </Button>
+
+                    <div className="text-sm text-[color:var(--portal-ink-600)]">
+                      {`${slotPage} / ${totalSlotPages}`}
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() =>
+                        setSlotPage((page) =>
+                          Math.min(totalSlotPages, page + 1)
+                        )
+                      }
+                      disabled={slotPage === totalSlotPages}
+                    >
+                      {locale === 'fil' ? 'Susunod' : 'Next'}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
             </SectionCard>
           </div>
         ) : null}
@@ -1710,137 +1765,6 @@ export default function StaffAppointmentsPage() {
                   text={feedback.text}
                 />
               ) : null}
-            </div>
-          </section>
-        </div>
-      ) : null}
-
-      {selectedSlotId ? (
-        <div className="fixed inset-0 z-[90] grid place-items-center bg-[color:rgba(10,24,18,0.55)] p-4">
-          <section
-            aria-labelledby="slot-detail-modal-title"
-            aria-modal="true"
-            className="w-full max-w-[620px] overflow-hidden rounded-[var(--portal-radius-lg)] border border-[color:var(--portal-border-soft)] bg-[color:var(--portal-surface-1)] shadow-[0_24px_70px_rgba(13,45,29,0.28)]"
-            role="dialog"
-          >
-            <div className="flex items-start justify-between gap-3 border-b border-[color:var(--portal-border-soft)] px-5 py-4">
-              <div>
-                <p className="text-xs text-[color:var(--portal-ink-500)]">
-                  {selectedSlotId.substring(0, 8)}
-                </p>
-
-                <h2
-                  id="slot-detail-modal-title"
-                  className="mt-1 text-base font-semibold text-[color:var(--portal-ink-900)]"
-                >
-                  {locale === 'fil'
-                    ? 'Doctor Availability Slot'
-                    : 'Doctor Availability Slot'}
-                </h2>
-              </div>
-
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-8 min-h-8 px-2"
-                onClick={() => setSelectedSlotId(null)}
-                aria-label={locale === 'fil' ? 'Isara' : 'Close'}
-              >
-                <X size={14} aria-hidden="true" />
-              </Button>
-            </div>
-
-            <div className="grid gap-4 px-5 py-4">
-              {slots.find((s) => s.id === selectedSlotId) ? (
-                (() => {
-                  const slot = slots.find(
-                    (s) => s.id === selectedSlotId
-                  )!;
-
-                  return (
-                    <div className="grid gap-3 rounded-[var(--portal-radius-md)] border border-[color:var(--portal-border-soft)] bg-[color:var(--portal-surface-2)] p-3">
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <p className="text-sm font-semibold text-[color:var(--portal-ink-900)]">
-                            Dr. {slot.doctorName}
-                          </p>
-
-                          {doctorSpecializationMap.get(
-                            slot.doctorName.trim().toLowerCase()
-                          ) && (
-                            <p className="text-xs text-[color:var(--portal-ink-500)]">
-                              {doctorSpecializationMap.get(
-                                slot.doctorName
-                                  .trim()
-                                  .toLowerCase()
-                              )}
-                            </p>
-                          )}
-                        </div>
-
-                        <StatusBadge
-                          tone={
-                            slot.isBlocked
-                              ? 'neutral'
-                              : 'success'
-                          }
-                        >
-                          {slot.isBlocked
-                            ? locale === 'fil'
-                              ? 'Close'
-                              : 'Close'
-                            : locale === 'fil'
-                              ? 'Open'
-                              : 'Open'}
-                        </StatusBadge>
-                      </div>
-
-                      <div className="grid gap-1 text-sm text-[color:var(--portal-ink-700)]">
-                        <p>
-                          {locale === 'fil' ? 'Petsa' : 'Date'}:{' '}
-                          <strong>{slot.date}</strong>
-                        </p>
-
-                        <p>
-                          {locale === 'fil' ? 'Oras' : 'Time'}:{' '}
-                          <strong>
-                            {slotLabel(
-                              slot.startAt,
-                              slot.endAt
-                            )}
-                          </strong>
-                        </p>
-
-                        {slot.notes && (
-                          <p>
-                            {locale === 'fil'
-                              ? 'Tala'
-                              : 'Notes'}:{' '}
-                            <strong>{slot.notes}</strong>
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })()
-              ) : (
-                <p>
-                  {locale === 'fil'
-                    ? 'Hindi nahanap ang slot.'
-                    : 'Slot not found.'}
-                </p>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-2 border-t border-[color:var(--portal-border-soft)] px-5 py-4">
-              <Button
-                variant="ghost"
-                type="button"
-                onClick={() => setSelectedSlotId(null)}
-              >
-                {locale === 'fil' ? 'Isara' : 'Close'}
-              </Button>
             </div>
           </section>
         </div>

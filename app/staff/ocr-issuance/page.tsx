@@ -541,7 +541,7 @@ export default function StaffOcrIssuancePage() {
   }, [fieldDraft, isLuponDoc, isBusinessDoc]);
 
   const ocrAccuracyPercent = useMemo(() => {
-    if (!hasScanCompleted && !issuance?.extractedText) return 0;
+    if (!hasScanCompleted) return 0;
     const nameFilled = Boolean((fieldDraft.residentName ?? fieldDraft.ownerName ?? '').trim());
     const addressFilled = Boolean((fieldDraft.residentAddress ?? fieldDraft.address ?? fieldDraft.postalAddress ?? '').trim());
     const purposeFilled = Boolean((fieldDraft.otherPurposeDetails || fieldDraft.purpose || '').trim());
@@ -558,7 +558,10 @@ export default function StaffOcrIssuancePage() {
     }
     const filledCount = checks.filter(Boolean).length;
     const totalCount = checks.length;
-    return Math.round((filledCount / totalCount) * 100);
+    const completeness = Math.round((filledCount / totalCount) * 100);
+    const extractedTextLength = issuance?.extractedText?.trim().length ?? 0;
+    const textQualityPenalty = extractedTextLength < 80 ? 8 : extractedTextLength < 180 ? 4 : 0;
+    return Math.min(95, Math.max(0, completeness - textQualityPenalty));
   }, [fieldDraft, isBusinessDoc, isLuponDoc, isSiteLocationDoc, hasScanCompleted, issuance?.extractedText]);
 
   const handleStartNewIssuance = () => {
@@ -656,6 +659,10 @@ export default function StaffOcrIssuancePage() {
     setIsUploadingOcr(true);
     setHasScanCompleted(false);
     setFeedback(null);
+    setFieldDraft({
+      issuedDate: new Date().toISOString().slice(0, 10),
+      dateIssued: new Date().toISOString().slice(0, 10),
+    });
 
     try {
       let activeIssuance = issuance;
@@ -671,7 +678,16 @@ export default function StaffOcrIssuancePage() {
 
       const updated = await runStandaloneOcrIssuanceScan(activeIssuance.id, { file: selectedFile });
       setIssuance(updated);
-      setHasScanCompleted(true);
+
+      if (updated.errorMessage) {
+        setHasScanCompleted(false);
+        setFieldDraft({
+          issuedDate: new Date().toISOString().slice(0, 10),
+          dateIssued: new Date().toISOString().slice(0, 10),
+        });
+        setFeedback({ tone: 'warning', text: updated.errorMessage });
+        return;
+      }
 
       const mapped = extractDraftFromOcr(
         updated.parsedFields ?? {},
@@ -679,6 +695,7 @@ export default function StaffOcrIssuancePage() {
         fieldDraft
       );
       setFieldDraft(mapped);
+      setHasScanCompleted(true);
 
       // Note: We don't set a duplicate success banner here because the Quality Match banner will render clearly.
       setFeedback(null);
@@ -930,7 +947,7 @@ export default function StaffOcrIssuancePage() {
                       </span>
                     </div>
                     <p className="text-xs text-[#1e6141]">
-                      Binabasa ang text at sinusuri ang match threshold para sa {activeSelectedTemplate?.name || 'Document'}.
+                      Tinitingnan muna kung tugma ang uploaded form sa {activeSelectedTemplate?.name || 'Document'} bago kunin ang lahat ng fields.
                     </p>
                   </div>
                 </div>
@@ -941,7 +958,7 @@ export default function StaffOcrIssuancePage() {
             ) : null}
 
             {/* OCR Quality Match & Accuracy Threshold Card (When Scan Completed or Extracted Text Loaded) */}
-            {!isUploadingOcr && (hasScanCompleted || Boolean(issuance?.extractedText)) ? (
+            {!isUploadingOcr && hasScanCompleted ? (
               <div className="grid gap-3 rounded-(--portal-radius-md) border border-[#bce3cd] bg-[linear-gradient(180deg,#f4fbf7_0%,#eaf6ef_100%)] p-4 text-xs shadow-xs">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -1005,7 +1022,7 @@ export default function StaffOcrIssuancePage() {
         </SectionCard>
 
         {/* Extracted Form Fields & Document Issuance Card */}
-        <SectionCard title="Extracted Document Data">
+        {hasScanCompleted ? <SectionCard title="Extracted Document Data">
           <div className="grid gap-4">
             <div className="flex items-center justify-between text-xs text-(--portal-ink-600)">
               <div className="flex items-center gap-2">
@@ -1015,7 +1032,7 @@ export default function StaffOcrIssuancePage() {
                     {issuance?.status || 'Draft'}
                   </strong>
                 </span>
-                {(hasScanCompleted || Boolean(issuance?.extractedText)) ? (
+                {hasScanCompleted ? (
                   <span className="inline-flex items-center rounded-full bg-[#eaf6ef] border border-[#bce3cd] px-2.5 py-0.5 text-[11px] font-bold text-[#1b7a50]">
                     {ocrAccuracyPercent}% Accuracy
                   </span>
@@ -1235,7 +1252,7 @@ export default function StaffOcrIssuancePage() {
               </Button>
             </div>
           </div>
-        </SectionCard>
+        </SectionCard> : null}
       </div>
     </PortalShell>
   );

@@ -895,6 +895,10 @@ export function renderDocumentTemplateHtml(
     (data.residentAddress as string) ||
     (data.address as string) ||
     (data.residentAddressLine as string) ||
+    (data.permanentAddress as string) ||
+    (data.permanent_address as string) ||
+    (data.addressLine as string) ||
+    (data.address_line as string) ||
     (data.residenceAddress as string) ||
     'Barangay Progreso, City of San Juan';
   const rawPurpose = (data.purpose as string) || (data.reason as string) || 'For whatever legal purpose it may serve';
@@ -964,62 +968,84 @@ export function renderDocumentTemplateHtml(
     residentAddress;
 
   let rendered = rawHtml;
-  rendered = rendered.replaceAll('{{resident_name}}', residentName);
-  rendered = rendered.replaceAll('{{residentName}}', residentName);
-  rendered = rendered.replaceAll('{{name}}', residentName);
-  rendered = rendered.replaceAll('{{resident_address}}', residentAddress);
-  rendered = rendered.replaceAll('{{residentAddress}}', residentAddress);
-  rendered = rendered.replaceAll('{{address}}', residentAddress);
-  rendered = rendered.replaceAll('{{add_where}}', addWhere);
-  rendered = rendered.replaceAll('{{addWhere}}', addWhere);
-  rendered = rendered.replaceAll('{{location}}', addWhere);
-  rendered = rendered.replaceAll('{{site_address}}', addWhere);
-  rendered = rendered.replaceAll('{{siteAddress}}', addWhere);
-  rendered = rendered.replaceAll('{{project_location}}', addWhere);
-  rendered = rendered.replaceAll('{{projectLocation}}', addWhere);
-  rendered = rendered.replaceAll('{{purpose}}', purpose);
-  rendered = rendered.replaceAll('{{reason}}', purpose);
-  rendered = rendered.replaceAll('{{date_issued}}', formattedDateIssued);
-  rendered = rendered.replaceAll('{{day}}', formattedDay);
-  rendered = rendered.replaceAll('{{month}}', formattedMonth);
-  rendered = rendered.replaceAll('{{year}}', formattedYear);
-  rendered = rendered.replaceAll('{{dateIssued}}', dateIssued);
-  rendered = rendered.replaceAll('{{issuedDate}}', dateIssued);
-  rendered = rendered.replaceAll('{{reference_number}}', referenceNumber);
-  rendered = rendered.replaceAll('{{referenceNumber}}', referenceNumber);
-  rendered = rendered.replaceAll('{{case_number}}', referenceNumber);
-  rendered = rendered.replaceAll('{{date_filed}}', formattedDateIssued);
-  rendered = rendered.replaceAll('{{hearing_date_time}}', `${formattedDateIssued} at 9:00 AM`);
-  rendered = rendered.replaceAll('{{complainant_name}}', complainantName || 'Complainant Name');
-  rendered = rendered.replaceAll('{{complainants}}', complainantName || 'Complainant Name');
-  rendered = rendered.replaceAll('{{punong_barangay}}', punongBarangay);
-  rendered = rendered.replaceAll('{{punongBarangay}}', punongBarangay);
-  rendered = rendered.replaceAll('{{barangay_secretary}}', barangaySecretary);
-  rendered = rendered.replaceAll('{{barangaySecretary}}', barangaySecretary);
-  rendered = rendered.replaceAll('{{barangay_treasurer}}', barangayTreasurer);
-  rendered = rendered.replaceAll('{{barangayTreasurer}}', barangayTreasurer);
+  const escapeHtml = (value: string): string =>
+    value.replace(/[&<>"']/g, (character) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    })[character] ?? character);
+  const formatDynamicValue = (value: unknown): string =>
+    `<span style="text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px;">${escapeHtml(String(value ?? ''))}</span>`;
+  const replaceDynamic = (placeholder: string, value: unknown): void => {
+    rendered = rendered.replaceAll(placeholder, formatDynamicValue(value));
+  };
+
+  replaceDynamic('{{resident_name}}', residentName);
+  replaceDynamic('{{residentName}}', residentName);
+  replaceDynamic('{{name}}', residentName);
+  replaceDynamic('{{resident_address}}', residentAddress);
+  replaceDynamic('{{residentAddress}}', residentAddress);
+  replaceDynamic('{{resident_address_line}}', residentAddress);
+  replaceDynamic('{{residentAddressLine}}', residentAddress);
+  replaceDynamic('{{permanent_address}}', residentAddress);
+  replaceDynamic('{{permanentAddress}}', residentAddress);
+  replaceDynamic('{{address}}', residentAddress);
+  replaceDynamic('{{postal_address}}', residentAddress);
+  replaceDynamic('{{postalAddress}}', residentAddress);
+  replaceDynamic('{{add_where}}', addWhere);
+  replaceDynamic('{{addWhere}}', addWhere);
+  replaceDynamic('{{location}}', addWhere);
+  replaceDynamic('{{site_address}}', addWhere);
+  replaceDynamic('{{siteAddress}}', addWhere);
+  replaceDynamic('{{project_location}}', addWhere);
+  replaceDynamic('{{projectLocation}}', addWhere);
+  replaceDynamic('{{purpose}}', purpose);
+  replaceDynamic('{{reason}}', purpose);
+  replaceDynamic('{{date_issued}}', formattedDateIssued);
+  replaceDynamic('{{day}}', formattedDay);
+  replaceDynamic('{{month}}', formattedMonth);
+  replaceDynamic('{{year}}', formattedYear);
+  replaceDynamic('{{dateIssued}}', dateIssued);
+  replaceDynamic('{{issuedDate}}', dateIssued);
+  replaceDynamic('{{reference_number}}', referenceNumber);
+  replaceDynamic('{{referenceNumber}}', referenceNumber);
+  replaceDynamic('{{case_number}}', referenceNumber);
+  replaceDynamic('{{date_filed}}', formattedDateIssued);
+  replaceDynamic('{{hearing_date_time}}', `${formattedDateIssued} at 9:00 AM`);
+  replaceDynamic('{{complainant_name}}', complainantName || 'Complainant Name');
+  replaceDynamic('{{complainants}}', complainantName || 'Complainant Name');
+  replaceDynamic('{{punong_barangay}}', punongBarangay);
+  replaceDynamic('{{punongBarangay}}', punongBarangay);
+  replaceDynamic('{{barangay_secretary}}', barangaySecretary);
+  replaceDynamic('{{barangaySecretary}}', barangaySecretary);
+  replaceDynamic('{{barangay_treasurer}}', barangayTreasurer);
+  replaceDynamic('{{barangayTreasurer}}', barangayTreasurer);
   rendered = rendered.replaceAll('{{kagawad_list}}', formattedKagawadListHtml);
-  rendered = rendered.replaceAll('{{barangay_name}}', barangayName);
-  rendered = rendered.replaceAll('{{barangayName}}', barangayName);
-  rendered = rendered.replaceAll('{{city}}', city);
-  rendered = rendered.replaceAll('{{cityName}}', city);
+  replaceDynamic('{{barangay_name}}', barangayName);
+  replaceDynamic('{{barangayName}}', barangayName);
+  replaceDynamic('{{city}}', city);
+  replaceDynamic('{{cityName}}', city);
   rendered = rendered.replaceAll('{{country_seal}}', sealImgs.country);
   rendered = rendered.replaceAll('{{city_seal}}', sealImgs.city);
   rendered = rendered.replaceAll('{{barangay_seal}}', sealImgs.barangay);
   rendered = rendered.replaceAll('{{barangay_watermark}}', sealImgs.watermark);
   rendered = rendered.replaceAll('{{official_seal}}', '<div style="display:inline-block;border:2px solid #1e3a8a;color:#1e3a8a;padding:4px 10px;border-radius:9999px;font-weight:bold;font-size:10px;">[ OFFICIAL BARANGAY SEAL ]</div>');
-  rendered = rendered.replaceAll('{{barangay_address}}', barangayAddress);
-  rendered = rendered.replaceAll('{{barangay_email}}', barangayEmail);
-  rendered = rendered.replaceAll('{{barangay_phone}}', barangayPhone);
+  replaceDynamic('{{barangay_address}}', barangayAddress);
+  replaceDynamic('{{barangay_email}}', barangayEmail);
+  replaceDynamic('{{barangay_phone}}', barangayPhone);
 
   // Replace other dynamic fields from data map
   for (const [key, val] of Object.entries(data)) {
     if (val !== undefined && val !== null && typeof val !== 'object') {
-      rendered = rendered.replaceAll(`{{${key}}}`, String(val));
+      replaceDynamic(`{{${key}}}`, val);
       const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-      rendered = rendered.replaceAll(`{{${snakeKey}}}`, String(val));
+      replaceDynamic(`{{${snakeKey}}}`, val);
     }
   }
 
-  return rendered;
+  // A custom template may contain a field that is not part of the current
+  // OCR payload. Never expose its token in a document that is shown or printed.
+  return rendered.replace(/\{\{[^{}]+\}\}/g, '');
 }

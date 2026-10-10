@@ -639,6 +639,7 @@ export function detectTemplateKeyFromText(extractedText: string): string | null 
     [LUPON_SUMMONS_TEMPLATE_KEY]: 0,
     [BUSINESS_PERMIT_TEMPLATE_KEY]: 0,
     [CONSTRUCTION_PERMIT_TEMPLATE_KEY]: 0,
+    transient_employees: 0,
   };
 
   // Lupon Summons signals
@@ -662,6 +663,16 @@ export function detectTemplateKeyFromText(extractedText: string): string | null 
   if (lower.includes('excavation permit')) scores[CONSTRUCTION_PERMIT_TEMPLATE_KEY] += 3;
   if (lower.includes('demolition permit')) scores[CONSTRUCTION_PERMIT_TEMPLATE_KEY] += 3;
   if (lower.includes('renovation/repair')) scores[CONSTRUCTION_PERMIT_TEMPLATE_KEY] += 3;
+
+  // Transient employee and worker certification signals
+  if (lower.includes('transient employee')) scores.transient_employees += 6;
+  if (lower.includes('transient worker')) scores.transient_employees += 6;
+  if (lower.includes('transient personnel')) scores.transient_employees += 6;
+  if (lower.includes('kasambahay')) scores.transient_employees += 5;
+  if (lower.includes('company personnel')) scores.transient_employees += 5;
+  if (lower.includes('employer name')) scores.transient_employees += 4;
+  if (lower.includes('workplace address')) scores.transient_employees += 4;
+  if (lower.includes('position')) scores.transient_employees += 2;
 
   // Business Permit signals
   if (lower.includes('business permit')) scores[BUSINESS_PERMIT_TEMPLATE_KEY] += 6;

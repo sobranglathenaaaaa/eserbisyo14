@@ -54,12 +54,12 @@ export async function POST(request: NextRequest) {
     return fail('VALIDATION_ERROR', 'Invalid reservation startAt or endAt date format', 400);
   }
 
-  // 1. Advance lead time check (must be booked 1 to 2 days in advance; cannot be today or past)
+  // 1. Advance lead time check (must be booked at least 2 days in advance)
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const minAllowedStart = todayStart + (1 * 24 * 60 * 60 * 1000); // at least 1 day in advance from today
+  const minAllowedStart = todayStart + (2 * 24 * 60 * 60 * 1000);
   if (startDate.getTime() < minAllowedStart) {
-    return fail('VALIDATION_ERROR', 'Ang reservation ay kailangang i-book nang 1 hanggang 2 araw bago ang mismong petsa ng reservation. / Reservations must be booked 1 to 2 days before the actual reservation date.', 400);
+    return fail('VALIDATION_ERROR', 'Ang reservation ay kailangang i-book nang hindi bababa sa 2 araw bago ang mismong petsa ng reservation. / Reservations must be booked at least 2 days before the actual reservation date.', 400);
   }
 
   // 2. Maximum duration check (maximum 7 days / 1 week per request)

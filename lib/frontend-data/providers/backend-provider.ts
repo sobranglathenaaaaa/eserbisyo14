@@ -2096,6 +2096,13 @@ export const backendProvider: DataProvider = {
     emitStateChanged();
   },
 
+  async deleteEquipment(equipmentId: string) {
+    await apiFetch(`/api/v1/equipment/${equipmentId}`, {
+      method: 'DELETE',
+    });
+    emitStateChanged();
+  },
+
   // Medicine requests endpoints removed (table deleted) stubs to satisfy interface
   async submitMedicineRequest(payload: {
     medicineId: string;

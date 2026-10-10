@@ -18,7 +18,28 @@ export async function GET(request: NextRequest) {
     .order('name', { ascending: true });
 
   if (error) return fail('INTERNAL_ERROR', error.message, 500);
-  return ok({ equipment: data ?? [] });
+
+  const { data: receivedReservations, error: reservationsError } = await admin
+    .from('reservations')
+    .select('item_name,quantity_requested')
+    .eq('tenant_id', auth.tenantId)
+    .eq('resource', 'equipment')
+    .eq('status', 'received');
+
+  if (reservationsError) return fail('INTERNAL_ERROR', reservationsError.message, 500);
+
+  const borrowedByName = new Map<string, number>();
+  for (const reservation of receivedReservations ?? []) {
+    const key = String(reservation.item_name ?? '').trim().toLowerCase();
+    borrowedByName.set(key, (borrowedByName.get(key) ?? 0) + Number(reservation.quantity_requested ?? 0));
+  }
+
+  return ok({
+    equipment: (data ?? []).map((item) => ({
+      ...item,
+      quantity: Math.max(0, Number(item.quantity ?? 0) - (borrowedByName.get(item.name.trim().toLowerCase()) ?? 0)),
+    })),
+  });
 }
 
 export async function POST(request: NextRequest) {

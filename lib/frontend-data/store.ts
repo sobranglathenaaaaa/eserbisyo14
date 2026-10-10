@@ -304,6 +304,7 @@ export const upsertEquipment = (payload: { id?: string; name: string; quantity: 
   provider.upsertEquipment(payload);
 
 export const softDeleteEquipment = (equipmentId: string, isDeleted: boolean) => provider.softDeleteEquipment(equipmentId, isDeleted);
+export const deleteEquipment = (equipmentId: string) => provider.deleteEquipment(equipmentId);
 export const submitMedicineRequest = (payload: { medicineId: string; purpose: string; requestedQuantity: number }) =>
   provider.submitMedicineRequest(payload);
 export const cancelPendingMedicineRequest = (requestId: string) => provider.cancelPendingMedicineRequest(requestId);

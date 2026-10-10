@@ -473,7 +473,7 @@ function PortalShellContent({
                     <p className="flex flex-col items-start font-heading leading-tight">
                       <span className="text-xl sm:text-2xl md:text-[2rem] font-serif font-bold tracking-tight text-white">eSerbisyo</span>
                       <span className="hidden sm:inline-block text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.08em] text-[color:var(--portal-shell-muted)] truncate max-w-[200px] sm:max-w-xs md:max-w-md">
-                        {locale === 'fil' ? `${roleTitle.fil} Workspace` : `${roleTitle.en} Workspace`} | Service & Record System
+                        {locale === 'fil' ? `${roleTitle.fil} Workspace` : `${roleTitle.en} Workspace`} | Service & Record Management System
                       </span>
                       <span className="sm:hidden text-[10px] font-medium text-emerald-200/90 truncate">
                         {locale === 'fil' ? `${roleTitle.fil} Portal` : `${roleTitle.en} Portal`}

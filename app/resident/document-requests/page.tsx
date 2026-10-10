@@ -783,8 +783,8 @@ export default function ResidentDocumentRequestsPage() {
             title={copyText(locale, 'Cancellation and status rules', 'Mga panuntunan sa cancellation at status')}
             description={copyText(
               locale,
-              'Pending requests can be cancelled. Once approved, cancellation is disabled while staff prepares your document and sends status updates.',
-              'Ang pending request lang ang puwedeng kanselahin. Kapag approved na, disabled na ang cancellation habang inihahanda ng staff ang dokumento at nagpapadala ng update.'
+              'Pending requests can be cancelled in Request History section. Once approved, cancellation is disabled while staff prepares your document and sends status updates.',
+              'Ang pending requests ay maaaring kanselahin sa Request History section. Kapag approved na, disabled ang cancellation habang inihahanda ng staff ang iyong dokumento at nagpapadala ng status updates.'
             )}
           />
         </div>

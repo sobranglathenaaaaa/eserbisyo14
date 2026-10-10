@@ -3,7 +3,7 @@ import { requireAuth } from '@/lib/auth/request-auth';
 import { fail, ok } from '@/lib/api/contracts';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { writeAuditLog } from '@/lib/api/audit';
-import { validateSlotWindow } from '@/lib/checkups/slots';
+import { isSlotInFuture, validateSlotWindow } from '@/lib/checkups/slots';
 
 type SlotPayload = {
   doctorName?: string;
@@ -51,7 +51,12 @@ export async function GET(request: NextRequest) {
   const bookedSlotIds = new Set(((booked as Array<{ slot_id: string }> | null) ?? []).map((item) => item.slot_id));
 
   const available =
-    (slots ?? []).filter((slot) => !slot.is_blocked && !bookedSlotIds.has(slot.id));
+    (slots ?? []).filter(
+      (slot) =>
+        !slot.is_blocked &&
+        isSlotInFuture(slot.end_at) &&
+        !bookedSlotIds.has(slot.id)
+    );
 
   return ok({ slots: available });
 }
@@ -108,4 +113,3 @@ export async function POST(request: NextRequest) {
 
   return ok(data, { status: 201 });
 }
-

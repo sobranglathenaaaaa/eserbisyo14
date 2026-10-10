@@ -4,6 +4,7 @@ import { fail, ok } from '@/lib/api/contracts';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { writeAuditLog } from '@/lib/api/audit';
 import { notifyResident } from '@/lib/api/notifications';
+import { isSlotInFuture } from '@/lib/checkups/slots';
 
 type AppointmentPayload = {
   slotId?: string;
@@ -50,6 +51,9 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
   if (!slot) return fail('RESOURCE_NOT_FOUND', 'Doctor slot not found', 404);
   if (slot.is_blocked) return fail('RESOURCE_CONFLICT', 'Doctor slot is blocked', 409);
+  if (!isSlotInFuture(slot.end_at)) {
+    return fail('RESOURCE_CONFLICT', 'This doctor slot is no longer available', 409);
+  }
 
   const { data: created, error } = await admin
     .from('checkup_appointments')

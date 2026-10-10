@@ -7,7 +7,7 @@ import {
   Calendar as CalendarIcon,
   Info,
 } from 'lucide-react';
-import { FormFeedback } from '@/components/portal-ui';
+import { FormFeedback, InfoNotice } from '@/components/portal-ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -91,7 +91,7 @@ export default function ResidentReservationsPage() {
       } | null;
       if (equipData?.success && equipData.data?.equipment) {
         setEquipment(equipData.data.equipment
-          .filter((item) => !item.is_deleted)
+          .filter((item) => !item.is_deleted && Number(item.quantity ?? 0) > 0)
           .map((item) => ({
             id: item.id,
             name: item.name,
@@ -183,9 +183,18 @@ export default function ResidentReservationsPage() {
   const todayIso = useMemo(() => formatDateIso(new Date()), []);
   const minLeadDateIso = useMemo(() => {
     const d = new Date();
-    d.setDate(d.getDate() + 1); // minimum 1 to 2 days in advance
+    d.setDate(d.getDate() + 2);
     return formatDateIso(d);
   }, []);
+  const maxEndAt = useMemo(() => {
+    if (!startAt) return undefined;
+    const startDate = new Date(startAt);
+    if (Number.isNaN(startDate.getTime())) return undefined;
+    startDate.setDate(startDate.getDate() + 7);
+    const hours = String(startDate.getHours()).padStart(2, '0');
+    const minutes = String(startDate.getMinutes()).padStart(2, '0');
+    return `${formatDateIso(startDate)}T${hours}:${minutes}`;
+  }, [startAt]);
 
   const weekHeaders = useMemo(() => {
     const formatter = new Intl.DateTimeFormat(locale === 'fil' ? 'fil-PH' : 'en-US', { weekday: 'short' });
@@ -261,7 +270,7 @@ export default function ResidentReservationsPage() {
     }
 
     return days;
-  }, [calendarMonth, filteredAvailability, todayIso]);
+  }, [calendarMonth, filteredAvailability, minLeadDateIso, todayIso]);
 
   const startDateStr = useMemo(() => (startAt ? startAt.slice(0, 10) : ''), [startAt]);
   const endDateStr = useMemo(() => (endAt ? endAt.slice(0, 10) : ''), [endAt]);
@@ -378,8 +387,8 @@ export default function ResidentReservationsPage() {
         tone: 'error',
         text: copyText(
           locale,
-          'Reservations must be booked 1 to 2 days before the actual reservation date.',
-          'Ang reservation ay kailangang i-book nang 1 hanggang 2 araw bago ang mismong petsa ng reservation.'
+          'Reservations must be booked at least 2 days before the actual reservation date.',
+          'Ang reservation ay kailangang i-book nang hindi bababa sa 2 araw bago ang mismong petsa ng reservation.'
         ),
       });
       return;
@@ -680,7 +689,7 @@ export default function ResidentReservationsPage() {
                     type="datetime-local"
                     value={startAt}
                     onChange={(e) => setStartAt(e.target.value)}
-                    min={`${todayIso}T00:00`}
+                    min={`${minLeadDateIso}T00:00`}
                     required
                     className="h-10 text-xs sm:text-sm border-[color:rgba(18,55,38,0.22)] focus:ring-2 focus:ring-[color:#1d7a53]"
                   />
@@ -695,7 +704,8 @@ export default function ResidentReservationsPage() {
                     type="datetime-local"
                     value={endAt}
                     onChange={(e) => setEndAt(e.target.value)}
-                    min={`${todayIso}T00:00`}
+                    min={`${minLeadDateIso}T00:00`}
+                    max={maxEndAt}
                     required
                     className="h-10 text-xs sm:text-sm border-[color:rgba(18,55,38,0.22)] focus:ring-2 focus:ring-[color:#1d7a53]"
                   />
@@ -972,6 +982,16 @@ export default function ResidentReservationsPage() {
             </div>
           </div>
         </form>
+        <div className="mt-5">
+          <InfoNotice
+            title={copyText(locale, 'Cancellation and status rules', 'Mga panuntunan sa cancellation at status')}
+            description={copyText(
+              locale,
+              'Pending requests can be cancelled in Request History section. Once approved, cancellation is disabled while staff prepares your reservation and sends status updates.',
+              'Ang pending requests ay maaaring kanselahin sa Request History section. Kapag approved na, disabled ang cancellation habang inihahanda ng staff ang iyong reservation at nagpapadala ng status updates.'
+            )}
+          />
+        </div>
       </ResidentSection>
 
       <Dialog

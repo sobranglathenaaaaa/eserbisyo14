@@ -266,6 +266,7 @@ export interface DataProvider {
     isDeleted?: boolean;
   }): Promise<void>;
   softDeleteEquipment(equipmentId: string, isDeleted: boolean): Promise<void>;
+  deleteEquipment(equipmentId: string): Promise<void>;
 
   submitMedicineRequest(payload: {
     medicineId: string;

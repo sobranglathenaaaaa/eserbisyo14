@@ -59,3 +59,40 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   return ok(data);
 }
+
+export async function DELETE(request: NextRequest, context: RouteContext) {
+  const auth = await requireAuth(request);
+  if (auth instanceof Response) return auth;
+  if (!can(auth.role, 'process_document_requests')) {
+    return fail('AUTH_FORBIDDEN', 'Staff access required', 403);
+  }
+
+  const { equipmentId } = await context.params;
+  const admin = getSupabaseAdminClient();
+  const { data: existing, error: existingError } = await admin
+    .from('equipment')
+    .select('id,name,is_deleted')
+    .eq('id', equipmentId)
+    .eq('tenant_id', auth.tenantId)
+    .maybeSingle();
+
+  if (existingError) return fail('INTERNAL_ERROR', existingError.message, 500);
+  if (!existing) return fail('RESOURCE_NOT_FOUND', 'Equipment not found', 404);
+  const { error } = await admin
+    .from('equipment')
+    .delete()
+    .eq('id', equipmentId)
+    .eq('tenant_id', auth.tenantId);
+
+  if (error) return fail('INTERNAL_ERROR', error.message, 500);
+
+  await writeAuditLog({
+    tenantId: auth.tenantId,
+    actorId: auth.userId,
+    actorRole: auth.role,
+    action: 'equipment.delete',
+    targetId: equipmentId,
+  });
+
+  return ok({ id: equipmentId, deleted: true });
+}
