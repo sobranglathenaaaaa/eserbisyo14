@@ -8,13 +8,12 @@ const OCR_MODELS = Array.from(
       process.env.GEMINI_OCR_MODEL,
       process.env.GEMINI_MODEL,
       'gemini-2.0-flash',
-      'gemini-1.5-flash',
       'gemini-2.5-flash',
-      'gemini-3.8-flash',
+      'gemini-1.5-flash',
     ].filter(Boolean) as string[]
   )
 );
-const OCR_RETRY_DELAYS_MS = [750, 1500];
+const OCR_RETRY_DELAYS_MS = [500, 1000];
 
 export class OcrModelUnavailableError extends Error {
   constructor(message: string) {
@@ -353,12 +352,8 @@ Rules:
         }
       } catch (err) {
         lastGenError = err;
-        const msg = normalizeErrorMessage(err).toLowerCase();
-        if (msg.includes('404') || msg.includes('not_found') || msg.includes('not found') || msg.includes('no longer available')) {
-          console.warn(`[Gemini OCR] Model "${candidateModel}" unavailable or not found. Trying next candidate model...`);
-          continue;
-        }
-        break;
+        console.warn(`[Gemini OCR] Model "${candidateModel}" failed:`, normalizeErrorMessage(err), 'Trying next candidate model...');
+        continue;
       }
     }
 

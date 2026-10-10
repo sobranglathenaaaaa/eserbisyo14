@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { fail, ok } from '@/lib/api/contracts';
 import { writeAuditLog } from '@/lib/api/audit';
 import { requireAuth } from '@/lib/auth/request-auth';
-import { OcrModelUnavailableError, extractTextWithGemini, extractTextWithTesseract } from '@/lib/ocr/extract';
+import { OcrModelUnavailableError, extractTextWithGemini } from '@/lib/ocr/extract';
 import { getSupabaseAdminClient } from '@/lib/supabase/admin';
 import { validateOcrTemplateMatch } from '@/lib/ocr/templates';
 import {
@@ -170,40 +170,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
       }
 
       const template = getTemplateConfig(existing.template_key, dynamicDef);
-      await setIssuanceProgress(admin, auth, issuanceId, 40);
+      await setIssuanceProgress(admin, auth, issuanceId, 45);
 
-      // Use the local OCR engine as a quick template gate. This prevents a
-      // clearly mismatched form from waiting for the full Gemini extraction.
-      try {
-        const quickText = await extractTextWithTesseract(file);
-        const quickValidation = validateOcrTemplateMatch(existing.template_key, quickText.extractedText);
-        if (!quickValidation.isMatch && quickValidation.errorMessage) {
-          const { data: failed } = await admin
-            .from('ocr_issuances')
-            .update({
-              status: 'draft',
-              extracted_text: quickText.extractedText,
-              parsed_fields: {},
-              ocr_progress_percent: null,
-              error_message: quickValidation.errorMessage,
-              source_file_name: file.name,
-              source_file_path: objectPath,
-              source_mime_type: file.type,
-              source_file_size_bytes: file.size,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', issuanceId)
-            .eq('tenant_id', auth.tenantId)
-            .select('*')
-            .single();
-
-          return ok(toStandaloneIssuance((failed ?? existing) as StandaloneIssuanceRow));
-        }
-      } catch (quickValidationError) {
-        console.warn('[OCR route] quick template check unavailable; continuing with Gemini.', quickValidationError);
-      }
-
-      await setIssuanceProgress(admin, auth, issuanceId, 55);
       const extracted = await extractTextWithGemini(file, {
         templateFields: template.fields,
         templateLabels: template.labels,
