@@ -17,7 +17,7 @@ type ChatRequestBody = {
   text?: unknown;
 };
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-flash-lite-latest';
 const MAX_INPUT_LENGTH = 1200;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_MESSAGES = 12;

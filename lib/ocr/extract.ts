@@ -7,13 +7,17 @@ const OCR_MODELS = Array.from(
     [
       process.env.GEMINI_OCR_MODEL,
       process.env.GEMINI_MODEL,
-      'gemini-2.0-flash',
-      'gemini-2.5-flash',
-      'gemini-1.5-flash',
+      'gemini-flash-lite-latest',
+      'gemini-3.1-flash-lite',
+      'gemini-3.5-flash-lite',
+      'gemini-flash-latest',
+      'gemini-3.7-flash',
+      'gemini-3.5-flash',
+      'gemini-3.8-flash',
     ].filter(Boolean) as string[]
   )
 );
-const OCR_RETRY_DELAYS_MS = [500, 1000];
+const OCR_RETRY_DELAYS_MS = [400, 800];
 
 export class OcrModelUnavailableError extends Error {
   constructor(message: string) {
