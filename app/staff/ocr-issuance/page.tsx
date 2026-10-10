@@ -867,7 +867,7 @@ export default function StaffOcrIssuancePage() {
                   aria-hidden="true"
                 />
                 <div className="flex min-h-11 items-center gap-3 rounded-(--portal-radius-md) border border-(--portal-border-soft) bg-white px-3 py-2 text-xs text-(--portal-ink-600)">
-                  <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                  <Button type="button" variant="residentOutline" onClick={() => fileInputRef.current?.click()}>
                     Choose File
                   </Button>
                   {selectedFile && selectedFilePreviewUrl ? (

@@ -354,7 +354,7 @@ export type TemplateStructuredContent = {
 };
 
 // Default Structured Content Catalog per Document Type
-export function getDefaultTemplateStructure(docTypeKey: string): TemplateStructuredContent {
+function getDefaultTemplateStructure(docTypeKey: string): TemplateStructuredContent {
   const normalized = docTypeKey.toLowerCase();
 
   if (normalized.includes('indigency')) {
@@ -692,7 +692,7 @@ function getDefaultPlainWording(docTypeKey: string): string {
 }
 
 // Intelligent OCR / Upload Parser to extract Title, Salutation, Body, Closing, and Signatures from scanned text
-export function parseExtractedDocumentText(
+function parseExtractedDocumentText(
   extractedText: string,
   fallbackStruct: TemplateStructuredContent
 ): TemplateStructuredContent {

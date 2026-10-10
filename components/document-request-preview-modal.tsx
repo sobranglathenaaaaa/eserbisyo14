@@ -957,12 +957,12 @@ ${customHtml}`;
     <div style="flex:1;padding:26px 30px 18px 30px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;box-sizing:border-box;background:transparent;">
       <!-- MAIN CONTENT LAYER -->
       <div style="position:relative;z-index:2;">
-        <h2 style="text-align:center;font-size:${docTypeKey === 'business_clearance' || docTypeKey === 'business_permit' ? '22px' : '23px'};font-weight:800;font-family:'Times New Roman',serif;letter-spacing:1.8px;color:#000;text-transform:uppercase;text-decoration:${docTypeKey === 'business_clearance' || docTypeKey === 'business_permit' ? 'underline' : 'none'};text-underline-offset:3px;margin:6px 0 28px 0;">
+        <h2 style="text-align:center;font-size:${currentDocKey === 'business_clearance' || currentDocKey === 'business_permit' ? '22px' : '23px'};font-weight:800;font-family:'Times New Roman',serif;letter-spacing:1.8px;color:#000;text-transform:uppercase;text-decoration:${currentDocKey === 'business_clearance' || currentDocKey === 'business_permit' ? 'underline' : 'none'};text-underline-offset:3px;margin:6px 0 28px 0;">
           ${docTitleUpper}
         </h2>
 
         ${
-          docTypeKey === 'business_clearance' || docTypeKey === 'business_permit'
+          currentDocKey === 'business_clearance' || currentDocKey === 'business_permit'
             ? ''
             : `<p style="font-size:14.5px;font-weight:bold;margin-bottom:24px;color:#000;">TO WHOM IT MAY CONCERN:</p>`
         }
